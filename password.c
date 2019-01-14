@@ -6,8 +6,8 @@
 #include <unistd.h>
 #include <wlr/util/log.h>
 #include <xkbcommon/xkbcommon.h>
-#include "swaylock/swaylock.h"
-#include "swaylock/seat.h"
+#include "swaylock.h"
+#include "seat.h"
 #include "loop.h"
 #include "unicode.h"
 

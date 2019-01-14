@@ -6,7 +6,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <wlr/util/log.h>
-#include "swaylock/swaylock.h"
+#include "swaylock.h"
 
 void initialize_pw_backend(void) {
 	// TODO: only call pam_start once. keep the same handle the whole time

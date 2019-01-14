@@ -16,21 +16,55 @@
 #include <wayland-client.h>
 #include <wordexp.h>
 #include <wlr/util/log.h>
-#include "swaylock/seat.h"
-#include "swaylock/swaylock.h"
 #include "background-image.h"
+#include "seat.h"
+#include "swaylock.h"
 #include "pool-buffer.h"
 #include "cairo.h"
-#include "log.h"
 #include "loop.h"
-#include "stringop.h"
-#include "util.h"
 #include "wlr-input-inhibitor-unstable-v1-client-protocol.h"
 #include "wlr-layer-shell-unstable-v1-client-protocol.h"
 #include "xdg-output-unstable-v1-client-protocol.h"
 
 void sway_terminate(int exit_code) {
 	exit(exit_code);
+}
+
+void sway_abort(const char *format, ...) {
+	va_list args;
+	va_start(args, format);
+	_wlr_vlog(WLR_ERROR, format, args);
+	va_end(args);
+	sway_terminate(EXIT_FAILURE);
+}
+
+static uint32_t parse_color(const char *color) {
+	if (color[0] == '#') {
+		++color;
+	}
+
+	int len = strlen(color);
+	if (len != 6 && len != 8) {
+		wlr_log(WLR_DEBUG, "Invalid color %s, defaulting to color 0xFFFFFFFF", color);
+		return 0xFFFFFFFF;
+	}
+	uint32_t res = (uint32_t)strtoul(color, NULL, 16);
+	if (strlen(color) == 6) {
+		res = (res << 8) | 0xFF;
+	}
+	return res;
+}
+
+int lenient_strcmp(char *a, char *b) {
+	if (a == b) {
+		return 0;
+	} else if (!a) {
+		return -1;
+	} else if (!b) {
+		return 1;
+	} else {
+		return strcmp(a, b);
+	}
 }
 
 static void daemonize(void) {

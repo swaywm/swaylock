@@ -1,0 +1,5 @@
+option('sway-version', type : 'string', description: 'The version string reported in `sway --version`.')
+option('zsh-completions', type: 'boolean', value: true, description: 'Install zsh shell completions.')
+option('bash-completions', type: 'boolean', value: true, description: 'Install bash shell completions.')
+option('fish-completions', type: 'boolean', value: true, description: 'Install fish shell completions.')
+option('enable-tray', type: 'boolean', value: false, description: 'Enable support for swaybar tray')

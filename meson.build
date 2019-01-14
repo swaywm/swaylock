@@ -1,4 +1,119 @@
+project(
+	'swaylock',
+	'c',
+	license: 'MIT',
+	default_options: [
+		'c_std=c11',
+		'warning_level=2',
+		'werror=true',
+	],
+)
+
+add_project_arguments(
+	[
+		'-Wno-unused-parameter',
+		'-Wno-unused-result',
+		'-Wundef',
+	],
+	language: 'c',
+)
+
+cc = meson.get_compiler('c')
+
 sysconfdir = get_option('sysconfdir')
+prefix = get_option('prefix')
+is_freebsd = host_machine.system().startswith('freebsd')
+
+add_project_arguments(
+	'-DSYSCONFDIR="/@0@"'.format(join_paths(prefix, sysconfdir)),
+	language : 'c')
+
+if is_freebsd
+	add_project_arguments('-D_C11_SOURCE', language: 'c')
+endif
+
+wlroots        = dependency('wlroots', fallback: ['wlroots', 'wlroots'])
+wayland_client = dependency('wayland-client')
+wayland_protos = dependency('wayland-protocols', version: '>=1.14')
+xkbcommon      = dependency('xkbcommon')
+cairo          = dependency('cairo')
+pango          = dependency('pango')
+pangocairo     = dependency('pangocairo')
+gdk_pixbuf     = dependency('gdk-pixbuf-2.0', required: false)
+libpam         = cc.find_library('pam', required: false)
+crypt          = cc.find_library('crypt', required: false)
+math           = cc.find_library('m')
+
+git = find_program('git', required: false)
+scdoc = find_program('scdoc', required: false)
+wayland_scanner = find_program('wayland-scanner')
+
+version = get_option('sway-version')
+if version != ''
+	version = '"@0@"'.format(version)
+else
+	if not git.found()
+		error('git is required to make the version string')
+	endif
+
+	git_commit_hash = run_command([git.path(), 'describe', '--always', '--tags']).stdout().strip()
+	git_branch = run_command([git.path(), 'rev-parse', '--abbrev-ref', 'HEAD']).stdout().strip()
+	version = '"@0@ (" __DATE__ ", branch \'@1@\')"'.format(git_commit_hash, git_branch)
+endif
+add_project_arguments('-DSWAY_VERSION=@0@'.format(version), language: 'c')
+
+wl_protocol_dir = wayland_protos.get_pkgconfig_variable('pkgdatadir')
+
+if wayland_client.version().version_compare('>=1.14.91')
+	code_type = 'private-code'
+else
+	code_type = 'code'
+endif
+
+wayland_scanner_code = generator(
+	wayland_scanner,
+	output: '@BASENAME@-protocol.c',
+	arguments: [code_type, '@INPUT@', '@OUTPUT@'],
+)
+
+wayland_scanner_client = generator(
+	wayland_scanner,
+	output: '@BASENAME@-client-protocol.h',
+	arguments: ['client-header', '@INPUT@', '@OUTPUT@'],
+)
+
+client_protos_src = []
+client_protos_headers = []
+
+client_protocols = [
+	[wl_protocol_dir, 'stable/xdg-shell/xdg-shell.xml'],
+	[wl_protocol_dir, 'unstable/xdg-output/xdg-output-unstable-v1.xml'],
+	['wlr-layer-shell-unstable-v1.xml'],
+	['wlr-input-inhibitor-unstable-v1.xml'],
+]
+
+foreach p : client_protocols
+	xml = join_paths(p)
+	client_protos_src += wayland_scanner_code.process(xml)
+	client_protos_headers += wayland_scanner_client.process(xml)
+endforeach
+
+lib_client_protos = static_library(
+	'client_protos',
+	client_protos_src + client_protos_headers,
+	dependencies: [wayland_client]
+) # for the include directory
+
+client_protos = declare_dependency(
+	link_with: lib_client_protos,
+	sources: client_protos_headers,
+)
+
+conf_data = configuration_data()
+conf_data.set10('HAVE_GDK_PIXBUF', gdk_pixbuf.found())
+conf_data.set10('HAVE_TRAY', get_option('enable-tray') and (systemd.found() or elogind.found()))
+
+subdir('include')
 
 dependencies = [
     cairo,
@@ -13,10 +128,17 @@ dependencies = [
 ]
 
 sources = [
-    'main.c',
-    'password.c',
-    'render.c',
-    'seat.c'
+	'background-image.c',
+	'cairo.c',
+	'list.c',
+	'loop.c',
+	'main.c',
+	'pango.c',
+	'password.c',
+	'pool-buffer.c',
+	'render.c',
+	'seat.c',
+	'unicode.c',
 ]
 
 if libpam.found()
@@ -31,12 +153,12 @@ else
     endif
 endif
 
+swaylock_inc = include_directories('include')
+
 executable('swaylock',
-    sources,
-	include_directories: [sway_inc],
+  sources,
+	include_directories: [swaylock_inc],
 	dependencies: dependencies,
-	link_with: [lib_sway_common, lib_sway_client],
-	install_rpath : rpathdir,
 	install: true
 )
 

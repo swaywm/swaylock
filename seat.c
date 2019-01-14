@@ -4,8 +4,8 @@
 #include <unistd.h>
 #include <wlr/util/log.h>
 #include <xkbcommon/xkbcommon.h>
-#include "swaylock/swaylock.h"
-#include "swaylock/seat.h"
+#include "swaylock.h"
+#include "seat.h"
 
 static void keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard,
 		uint32_t format, int32_t fd, uint32_t size) {

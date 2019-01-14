@@ -3,7 +3,7 @@
 #include <wayland-client.h>
 #include "cairo.h"
 #include "background-image.h"
-#include "swaylock/swaylock.h"
+#include "swaylock.h"
 
 #define M_PI 3.14159265358979323846
 const float TYPE_INDICATOR_RANGE = M_PI / 3.0f;
