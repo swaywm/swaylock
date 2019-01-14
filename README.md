@@ -8,7 +8,7 @@ with any Wayland compositor which implements the following Wayland protocols:
 - xdg-output
 - xdg-shell
 
-See the man page, `swayidle(1)`, for instructions on using swaylock.
+See the man page, `swaylock(1)`, for instructions on using swaylock.
 
 ## Release Signatures
 
@@ -20,7 +20,7 @@ releases are managed independently of sway releases.
 
 ### From Packages
 
-Sway is available in many distributions. Try installing the "swayidle" package
+Sway is available in many distributions. Try installing the "swaylock" package
 for yours. If it's not available, check out [this wiki
 page](https://github.com/swaywm/sway/wiki/Unsupported-packages) for information
 on installation for your distributions.
