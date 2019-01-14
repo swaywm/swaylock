@@ -29,23 +29,6 @@ cairo_subpixel_order_t to_cairo_subpixel_order(enum wl_output_subpixel subpixel)
 	return CAIRO_SUBPIXEL_ORDER_DEFAULT;
 }
 
-cairo_surface_t *cairo_image_surface_scale(cairo_surface_t *image,
-		int width, int height) {
-	int image_width = cairo_image_surface_get_width(image);
-	int image_height = cairo_image_surface_get_height(image);
-
-	cairo_surface_t *new =
-		cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
-	cairo_t *cairo = cairo_create(new);
-	cairo_scale(cairo, (double)width / image_width,
-			(double)height / image_height);
-	cairo_set_source_surface(cairo, image, 0, 0);
-
-	cairo_paint(cairo);
-	cairo_destroy(cairo);
-	return new;
-}
-
 #if HAVE_GDK_PIXBUF
 cairo_surface_t* gdk_cairo_image_surface_create_from_pixbuf(const GdkPixbuf *gdkbuf) {
 	int chan = gdk_pixbuf_get_n_channels(gdkbuf);
