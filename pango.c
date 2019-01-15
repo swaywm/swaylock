@@ -6,8 +6,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <wlr/util/log.h>
 #include "cairo.h"
+#include "log.h"
 
 static const char overflow[] = "[buffer overflow]";
 static const int max_chars = 16384;
@@ -70,8 +70,8 @@ PangoLayout *get_pango_layout(cairo_t *cairo, const char *font,
 			pango_layout_set_text(layout, buf, -1);
 			free(buf);
 		} else {
-			wlr_log(WLR_ERROR, "pango_parse_markup '%s' -> error %s", text,
-					error->message);
+			swaylock_log(LOG_ERROR, "pango_parse_markup '%s' -> error %s",
+					text, error->message);
 			g_error_free(error);
 			markup = false; // fallback to plain text
 		}

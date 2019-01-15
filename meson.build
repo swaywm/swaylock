@@ -32,7 +32,6 @@ if is_freebsd
 	add_project_arguments('-D_C11_SOURCE', language: 'c')
 endif
 
-wlroots        = dependency('wlroots', fallback: ['wlroots', 'wlroots'])
 wayland_client = dependency('wayland-client')
 wayland_protos = dependency('wayland-protocols', version: '>=1.14')
 xkbcommon      = dependency('xkbcommon')
@@ -123,13 +122,13 @@ dependencies = [
     pangocairo,
     xkbcommon,
     wayland_client,
-    wlroots,
 ]
 
 sources = [
 	'background-image.c',
 	'cairo.c',
 	'list.c',
+	'log.c',
 	'loop.c',
 	'main.c',
 	'pango.c',
