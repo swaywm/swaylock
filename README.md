@@ -33,7 +33,6 @@ channel or shoot an email to sir@cmpwn.com for advice.
 Install dependencies:
 
 * meson \*
-* [wlroots](https://github.com/swaywm/wlroots)
 * wayland
 * wayland-protocols \*
 * pango

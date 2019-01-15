@@ -4,11 +4,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <wlr/util/log.h>
 #include <xkbcommon/xkbcommon.h>
-#include "swaylock.h"
-#include "seat.h"
+#include "log.h"
 #include "loop.h"
+#include "seat.h"
+#include "swaylock.h"
 #include "unicode.h"
 
 void clear_password_buffer(struct swaylock_password *pw) {

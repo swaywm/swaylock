@@ -21,6 +21,9 @@ Locks your Wayland session.
 	All leading dashes should be omitted and the equals sign is required for
 	flags that take an argument.
 
+*-d, --debug*
+	Enable debugging output.
+
 *-e, --ignore-empty-password*
 	When an empty password is provided by the user, do not validate it.
 

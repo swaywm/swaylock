@@ -15,28 +15,16 @@
 #include <unistd.h>
 #include <wayland-client.h>
 #include <wordexp.h>
-#include <wlr/util/log.h>
 #include "background-image.h"
+#include "cairo.h"
+#include "log.h"
+#include "loop.h"
+#include "pool-buffer.h"
 #include "seat.h"
 #include "swaylock.h"
-#include "pool-buffer.h"
-#include "cairo.h"
-#include "loop.h"
 #include "wlr-input-inhibitor-unstable-v1-client-protocol.h"
 #include "wlr-layer-shell-unstable-v1-client-protocol.h"
 #include "xdg-output-unstable-v1-client-protocol.h"
-
-void sway_terminate(int exit_code) {
-	exit(exit_code);
-}
-
-void sway_abort(const char *format, ...) {
-	va_list args;
-	va_start(args, format);
-	_wlr_vlog(WLR_ERROR, format, args);
-	va_end(args);
-	sway_terminate(EXIT_FAILURE);
-}
 
 static uint32_t parse_color(const char *color) {
 	if (color[0] == '#') {
@@ -45,7 +33,8 @@ static uint32_t parse_color(const char *color) {
 
 	int len = strlen(color);
 	if (len != 6 && len != 8) {
-		wlr_log(WLR_DEBUG, "Invalid color %s, defaulting to color 0xFFFFFFFF", color);
+		swaylock_log(LOG_DEBUG, "Invalid color %s, defaulting to 0xFFFFFFFF",
+				color);
 		return 0xFFFFFFFF;
 	}
 	uint32_t res = (uint32_t)strtoul(color, NULL, 16);
@@ -70,7 +59,7 @@ int lenient_strcmp(char *a, char *b) {
 static void daemonize(void) {
 	int fds[2];
 	if (pipe(fds) != 0) {
-		wlr_log(WLR_ERROR, "Failed to pipe");
+		swaylock_log(LOG_ERROR, "Failed to pipe");
 		exit(1);
 	}
 	if (fork() == 0) {
@@ -94,7 +83,7 @@ static void daemonize(void) {
 		close(fds[1]);
 		uint8_t success;
 		if (read(fds[0], &success, 1) != 1 || !success) {
-			wlr_log(WLR_ERROR, "Failed to daemonize");
+			swaylock_log(LOG_ERROR, "Failed to daemonize");
 			exit(1);
 		}
 		close(fds[0]);
@@ -278,7 +267,7 @@ static void handle_xdg_output_logical_position(void *data,
 
 static void handle_xdg_output_name(void *data, struct zxdg_output_v1 *output,
 		const char *name) {
-	wlr_log(WLR_DEBUG, "output name is %s", name);
+	swaylock_log(LOG_DEBUG, "output name is %s", name);
 	struct swaylock_surface *surface = data;
 	surface->xdg_output = output;
 	surface->output_name = strdup(name);
@@ -391,11 +380,11 @@ static void load_image(char *arg, struct swaylock_state *state) {
 	wl_list_for_each_safe(iter_image, temp, &state->images, link) {
 		if (lenient_strcmp(iter_image->output_name, image->output_name) == 0) {
 			if (image->output_name) {
-				wlr_log(WLR_DEBUG,
+				swaylock_log(LOG_DEBUG,
 						"Replacing image defined for output %s with %s",
 						image->output_name, image->path);
 			} else {
-				wlr_log(WLR_DEBUG, "Replacing default image with %s",
+				swaylock_log(LOG_DEBUG, "Replacing default image with %s",
 						image->path);
 			}
 			wl_list_remove(&iter_image->link);
@@ -422,8 +411,8 @@ static void load_image(char *arg, struct swaylock_state *state) {
 		return;
 	}
 	wl_list_insert(&state->images, &image->link);
-	wlr_log(WLR_DEBUG, "Loaded image %s for output %s",
-			image->path, image->output_name ? image->output_name : "*");
+	swaylock_log(LOG_DEBUG, "Loaded image %s for output %s", image->path,
+			image->output_name ? image->output_name : "*");
 }
 
 static void set_default_colors(struct swaylock_colors *colors) {
@@ -505,6 +494,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 	static struct option long_options[] = {
 		{"config", required_argument, NULL, 'C'},
 		{"color", required_argument, NULL, 'c'},
+		{"debug", no_argument, NULL, 'd'},
 		{"ignore-empty-password", no_argument, NULL, 'e'},
 		{"daemonize", no_argument, NULL, 'f'},
 		{"help", no_argument, NULL, 'h'},
@@ -556,6 +546,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Path to the config file.\n"
 		"  -c, --color <color>              "
 			"Turn the screen into the given color instead of white.\n"
+		"  -d, --debug                      "
+			"Enable debugging output.\n"
 		"  -e, --ignore-empty-password      "
 			"When an empty password is provided, do not validate it.\n"
 		"  -f, --daemonize                  "
@@ -651,7 +643,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 	optind = 1;
 	while (1) {
 		int opt_idx = 0;
-		c = getopt_long(argc, argv, "c:efhi:Llnrs:tuvC:", long_options, &opt_idx);
+		c = getopt_long(argc, argv, "c:defhi:Llnrs:tuvC:", long_options,
+				&opt_idx);
 		if (c == -1) {
 			break;
 		}
@@ -666,6 +659,9 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 				state->args.colors.background = parse_color(optarg);
 				state->args.mode = BACKGROUND_MODE_SOLID_COLOR;
 			}
+			break;
+		case 'd':
+			swaylock_log_init(LOG_DEBUG);
 			break;
 		case 'e':
 			if (state) {
@@ -889,12 +885,12 @@ static char *get_config_path(void) {
 		char *home = getenv("HOME");
 		char *config_home = malloc(strlen(home) + strlen("/.config") + 1);
 		if (!config_home) {
-			wlr_log(WLR_ERROR, "Unable to allocate $HOME/.config");
+			swaylock_log(LOG_ERROR, "Unable to allocate $HOME/.config");
 		} else {
 			strcpy(config_home, home);
 			strcat(config_home, "/.config");
 			setenv("XDG_CONFIG_HOME", config_home, 1);
-			wlr_log(WLR_DEBUG, "Set XDG_CONFIG_HOME to %s", config_home);
+			swaylock_log(LOG_DEBUG, "Set XDG_CONFIG_HOME to %s", config_home);
 			free(config_home);
 		}
 	}
@@ -919,7 +915,7 @@ static int load_config(char *path, struct swaylock_state *state,
 		enum line_mode *line_mode) {
 	FILE *config = fopen(path, "r");
 	if (!config) {
-		wlr_log(WLR_ERROR, "Failed to read config. Running without it.");
+		swaylock_log(LOG_ERROR, "Failed to read config. Running without it.");
 		return 0;
 	}
 	char *line = NULL;
@@ -938,7 +934,7 @@ static int load_config(char *path, struct swaylock_state *state,
 			continue;
 		}
 
-		wlr_log(WLR_DEBUG, "Config Line #%d: %s", line_number, line);
+		swaylock_log(LOG_DEBUG, "Config Line #%d: %s", line_number, line);
 		char flag[nread + 3];
 		sprintf(flag, "--%s", line);
 		char *argv[] = {"swaylock", flag};
@@ -961,7 +957,7 @@ static void display_in(int fd, short mask, void *data) {
 }
 
 int main(int argc, char **argv) {
-	wlr_log_init(WLR_DEBUG, NULL);
+	swaylock_log_init(LOG_ERROR);
 	initialize_pw_backend();
 
 	enum line_mode line_mode = LM_LINE;
@@ -989,18 +985,20 @@ int main(int argc, char **argv) {
 	}
 
 	if (config_path) {
-		wlr_log(WLR_DEBUG, "Found config at %s", config_path);
+		swaylock_log(LOG_DEBUG, "Found config at %s", config_path);
 		int config_status = load_config(config_path, &state, &line_mode);
 		free(config_path);
 		if (config_status != 0) {
+			free(state.args.font);
 			return config_status;
 		}
 	}
 
 	if (argc > 1) {
-		wlr_log(WLR_DEBUG, "Parsing CLI Args");
+		swaylock_log(LOG_DEBUG, "Parsing CLI Args");
 		int result = parse_options(argc, argv, &state, &line_mode, NULL);
 		if (result != 0) {
+			free(state.args.font);
 			return result;
 		}
 	}
@@ -1014,7 +1012,8 @@ int main(int argc, char **argv) {
 #ifdef __linux__
 	// Most non-linux platforms require root to mlock()
 	if (mlock(state.password.buffer, sizeof(state.password.buffer)) != 0) {
-		sway_abort("Unable to mlock() password memory.");
+		swaylock_log(LOG_ERROR, "Unable to mlock() password memory.");
+		return EXIT_FAILURE;
 	}
 #endif
 
@@ -1022,9 +1021,11 @@ int main(int argc, char **argv) {
 	state.xkb.context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 	state.display = wl_display_connect(NULL);
 	if (!state.display) {
-		sway_abort("Unable to connect to the compositor. "
+		free(state.args.font);
+		swaylock_log(LOG_ERROR, "Unable to connect to the compositor. "
 				"If your compositor is running, check or set the "
 				"WAYLAND_DISPLAY environment variable.");
+		return EXIT_FAILURE;
 	}
 
 	struct wl_registry *registry = wl_display_get_registry(state.display);
@@ -1032,19 +1033,22 @@ int main(int argc, char **argv) {
 	wl_display_roundtrip(state.display);
 	assert(state.compositor && state.layer_shell && state.shm);
 	if (!state.input_inhibit_manager) {
-		wlr_log(WLR_ERROR, "Compositor does not support the input inhibitor "
-				"protocol, refusing to run insecurely");
+		free(state.args.font);
+		swaylock_log(LOG_ERROR, "Compositor does not support the input "
+				"inhibitor protocol, refusing to run insecurely");
 		return 1;
 	}
 
 	if (wl_list_empty(&state.surfaces)) {
-		wlr_log(WLR_DEBUG, "Exiting - no outputs to show on.");
+		free(state.args.font);
+		swaylock_log(LOG_ERROR, "Exiting - no outputs to show on.");
 		return 0;
 	}
 
 	zwlr_input_inhibit_manager_v1_get_inhibitor(state.input_inhibit_manager);
 	if (wl_display_roundtrip(state.display) == -1) {
-		wlr_log(WLR_ERROR, "Exiting - failed to inhibit input:"
+		free(state.args.font);
+		swaylock_log(LOG_ERROR, "Exiting - failed to inhibit input:"
 				" is another lockscreen already running?");
 		return 2;
 	}
@@ -1059,8 +1063,8 @@ int main(int argc, char **argv) {
 		}
 		wl_display_roundtrip(state.display);
 	} else {
-		wlr_log(WLR_INFO, "Compositor does not support zxdg output manager, "
-				"images assigned to named outputs will not work");
+		swaylock_log(LOG_INFO, "Compositor does not support zxdg output "
+				"manager, images assigned to named outputs will not work");
 	}
 
 	struct swaylock_surface *surface;
