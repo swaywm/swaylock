@@ -7,19 +7,21 @@
 #include <poll.h>
 #include <time.h>
 #include <unistd.h>
-#include "list.h"
+#include <wayland-client.h>
 #include "log.h"
 #include "loop.h"
 
 struct loop_fd_event {
 	void (*callback)(int fd, short mask, void *data);
 	void *data;
+	struct wl_list link; // struct loop_fd_event::link
 };
 
 struct loop_timer {
 	void (*callback)(void *data);
 	void *data;
 	struct timespec expiry;
+	struct wl_list link; // struct loop_timer::link
 };
 
 struct loop {
@@ -27,8 +29,8 @@ struct loop {
 	int fd_length;
 	int fd_capacity;
 
-	list_t *fd_events; // struct loop_fd_event
-	list_t *timers; // struct loop_timer
+	struct wl_list fd_events; // struct loop_fd_event::link
+	struct wl_list timers; // struct loop_timer::link
 };
 
 struct loop *loop_create(void) {
@@ -39,14 +41,22 @@ struct loop *loop_create(void) {
 	}
 	loop->fd_capacity = 10;
 	loop->fds = malloc(sizeof(struct pollfd) * loop->fd_capacity);
-	loop->fd_events = create_list();
-	loop->timers = create_list();
+	wl_list_init(&loop->fd_events);
+	wl_list_init(&loop->timers);
 	return loop;
 }
 
 void loop_destroy(struct loop *loop) {
-	list_free_items_and_destroy(loop->fd_events);
-	list_free_items_and_destroy(loop->timers);
+	struct loop_fd_event *event = NULL, *tmp_event = NULL;
+	wl_list_for_each_safe(event, tmp_event, &loop->fd_events, link) {
+		wl_list_remove(&event->link);
+		free(event);
+	}
+	struct loop_timer *timer = NULL, *tmp_timer = NULL;
+	wl_list_for_each_safe(timer, tmp_timer, &loop->timers, link) {
+		wl_list_remove(&timer->link);
+		free(timer);
+	}
 	free(loop->fds);
 	free(loop);
 }
@@ -54,11 +64,11 @@ void loop_destroy(struct loop *loop) {
 void loop_poll(struct loop *loop) {
 	// Calculate next timer in ms
 	int ms = INT_MAX;
-	if (loop->timers->length) {
+	if (!wl_list_empty(&loop->timers)) {
 		struct timespec now;
 		clock_gettime(CLOCK_MONOTONIC, &now);
-		for (int i = 0; i < loop->timers->length; ++i) {
-			struct loop_timer *timer = loop->timers->items[i];
+		struct loop_timer *timer = NULL;
+		wl_list_for_each(timer, &loop->timers, link) {
 			int timer_ms = (timer->expiry.tv_sec - now.tv_sec) * 1000;
 			timer_ms += (timer->expiry.tv_nsec - now.tv_nsec) / 1000000;
 			if (timer_ms < ms) {
@@ -73,9 +83,10 @@ void loop_poll(struct loop *loop) {
 	poll(loop->fds, loop->fd_length, ms);
 
 	// Dispatch fds
-	for (int i = 0; i < loop->fd_length; ++i) {
-		struct pollfd pfd = loop->fds[i];
-		struct loop_fd_event *event = loop->fd_events->items[i];
+	size_t fd_index = 0;
+	struct loop_fd_event *event = NULL;
+	wl_list_for_each(event, &loop->fd_events, link) {
+		struct pollfd pfd = loop->fds[fd_index];
 
 		// Always send these events
 		unsigned events = pfd.events | POLLHUP | POLLERR;
@@ -83,21 +94,22 @@ void loop_poll(struct loop *loop) {
 		if (pfd.revents & events) {
 			event->callback(pfd.fd, pfd.revents, event->data);
 		}
+
+		++fd_index;
 	}
 
 	// Dispatch timers
-	if (loop->timers->length) {
+	if (!wl_list_empty(&loop->timers)) {
 		struct timespec now;
 		clock_gettime(CLOCK_MONOTONIC, &now);
-		for (int i = 0; i < loop->timers->length; ++i) {
-			struct loop_timer *timer = loop->timers->items[i];
+		struct loop_timer *timer = NULL, *tmp_timer = NULL;
+		wl_list_for_each_safe(timer, tmp_timer, &loop->timers, link) {
 			bool expired = timer->expiry.tv_sec < now.tv_sec ||
 				(timer->expiry.tv_sec == now.tv_sec &&
 				 timer->expiry.tv_nsec < now.tv_nsec);
 			if (expired) {
 				timer->callback(timer->data);
 				loop_remove_timer(loop, timer);
-				--i;
 			}
 		}
 	}
@@ -112,7 +124,7 @@ void loop_add_fd(struct loop *loop, int fd, short mask,
 	}
 	event->callback = callback;
 	event->data = data;
-	list_add(loop->fd_events, event);
+	wl_list_insert(&loop->fd_events, &event->link);
 
 	struct pollfd pfd = {fd, mask, 0};
 
@@ -145,31 +157,34 @@ struct loop_timer *loop_add_timer(struct loop *loop, int ms,
 	}
 	timer->expiry.tv_nsec += nsec;
 
-	list_add(loop->timers, timer);
+	wl_list_insert(&loop->timers, &timer->link);
 
 	return timer;
 }
 
 bool loop_remove_fd(struct loop *loop, int fd) {
-	for (int i = 0; i < loop->fd_length; ++i) {
-		if (loop->fds[i].fd == fd) {
-			free(loop->fd_events->items[i]);
-			list_del(loop->fd_events, i);
+	size_t fd_index = 0;
+	struct loop_fd_event *event = NULL, *tmp_event = NULL;
+	wl_list_for_each_safe(event, tmp_event, &loop->fd_events, link) {
+		if (loop->fds[fd_index].fd == fd) {
+			wl_list_remove(&event->link);
+			free(event);
 
 			loop->fd_length--;
-			memmove(&loop->fds[i], &loop->fds[i + 1],
-					sizeof(struct pollfd) * (loop->fd_length - i));
-
+			memmove(&loop->fds[fd_index], &loop->fds[fd_index + 1],
+					sizeof(struct pollfd) * (loop->fd_length - fd_index));
 			return true;
 		}
+		++fd_index;
 	}
 	return false;
 }
 
-bool loop_remove_timer(struct loop *loop, struct loop_timer *timer) {
-	for (int i = 0; i < loop->timers->length; ++i) {
-		if (loop->timers->items[i] == timer) {
-			list_del(loop->timers, i);
+bool loop_remove_timer(struct loop *loop, struct loop_timer *remove) {
+	struct loop_timer *timer = NULL, *tmp_timer = NULL;
+	wl_list_for_each_safe(timer, tmp_timer, &loop->timers, link) {
+		if (timer == remove) {
+			wl_list_remove(&timer->link);
 			free(timer);
 			return true;
 		}
