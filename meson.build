@@ -199,6 +199,8 @@ if scdoc.found()
 	endforeach
 endif
 
+datadir = get_option('datadir')
+
 if (get_option('zsh-completions'))
 	zsh_files = files(
 		'completions/zsh/_swaylock',
