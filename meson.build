@@ -111,7 +111,6 @@ client_protos = declare_dependency(
 
 conf_data = configuration_data()
 conf_data.set10('HAVE_GDK_PIXBUF', gdk_pixbuf.found())
-conf_data.set10('HAVE_TRAY', get_option('enable-tray') and (systemd.found() or elogind.found()))
 
 subdir('include')
 
