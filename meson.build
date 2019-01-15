@@ -199,3 +199,30 @@ if scdoc.found()
 		)
 	endforeach
 endif
+
+if (get_option('zsh-completions'))
+	zsh_files = files(
+		'completions/zsh/_swaylock',
+	)
+	zsh_install_dir = datadir + '/zsh/site-functions'
+
+	install_data(zsh_files, install_dir: zsh_install_dir)
+endif
+
+if (get_option('bash-completions'))
+	bash_files = files(
+		'completions/bash/swaylock',
+	)
+	bash_install_dir = datadir + '/bash-completion/completions'
+
+	install_data(bash_files, install_dir: bash_install_dir)
+endif
+
+if (get_option('fish-completions'))
+	fish_files = files(
+		'completions/fish/swaylock.fish',
+	)
+	fish_install_dir = datadir + '/fish/completions'
+
+	install_data(fish_files, install_dir: fish_install_dir)
+endif
