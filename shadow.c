@@ -5,7 +5,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include "log.h"
-#include "swaylock/swaylock.h"
+#include "swaylock.h"
 #ifdef __GLIBC__
 // GNU, you damn slimy bastard
 #include <crypt.h>
