@@ -5,6 +5,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <xkbcommon/xkbcommon.h>
+#include <time.h>
+#include <stdio.h>
 #include "log.h"
 #include "loop.h"
 #include "seat.h"
@@ -123,6 +125,10 @@ static void submit_password(struct swaylock_state *state) {
 
 void swaylock_handle_key(struct swaylock_state *state,
 		xkb_keysym_t keysym, uint32_t codepoint) {
+
+	static clock_t last_time_pressed_key = 0;
+	clock_t present_time = clock();
+
 	switch (keysym) {
 	case XKB_KEY_KP_Enter: /* fallthrough */
 	case XKB_KEY_Return:
@@ -178,12 +184,13 @@ void swaylock_handle_key(struct swaylock_state *state,
 		}
 		// fallthrough
 	default:
-		if (codepoint) {
+		if (codepoint && (double)(present_time - last_time_pressed_key)/CLOCKS_PER_SEC >=0.005455) {
 			append_ch(&state->password, codepoint);
 			state->auth_state = AUTH_STATE_INPUT;
 			damage_state(state);
 			schedule_indicator_clear(state);
 			schedule_password_clear(state);
+			last_time_pressed_key = clock();
 		}
 		break;
 	}
