@@ -128,70 +128,71 @@ void swaylock_handle_key(struct swaylock_state *state,
 
 	static clock_t last_time_pressed_key = 0;
 	clock_t present_time = clock();
-
-	switch (keysym) {
-	case XKB_KEY_KP_Enter: /* fallthrough */
-	case XKB_KEY_Return:
-		submit_password(state);
-		break;
-	case XKB_KEY_Delete:
-	case XKB_KEY_BackSpace:
-		if (backspace(&state->password)) {
-			state->auth_state = AUTH_STATE_BACKSPACE;
-		} else {
-			state->auth_state = AUTH_STATE_CLEAR;
-		}
-		damage_state(state);
-		schedule_indicator_clear(state);
-		schedule_password_clear(state);
-		break;
-	case XKB_KEY_Escape:
-		clear_password_buffer(&state->password);
-		state->auth_state = AUTH_STATE_CLEAR;
-		damage_state(state);
-		schedule_indicator_clear(state);
-		break;
-	case XKB_KEY_Caps_Lock:
-	case XKB_KEY_Shift_L:
-	case XKB_KEY_Shift_R:
-	case XKB_KEY_Control_L:
-	case XKB_KEY_Control_R:
-	case XKB_KEY_Meta_L:
-	case XKB_KEY_Meta_R:
-	case XKB_KEY_Alt_L:
-	case XKB_KEY_Alt_R:
-	case XKB_KEY_Super_L:
-	case XKB_KEY_Super_R:
-		state->auth_state = AUTH_STATE_INPUT_NOP;
-		damage_state(state);
-		schedule_indicator_clear(state);
-		schedule_password_clear(state);
-		break;
-	case XKB_KEY_d:
-		if (state->xkb.control) {
+	if ((double)(present_time - last_time_pressed_key)/CLOCKS_PER_SEC >=0.000955) {
+		last_time_pressed_key = clock();
+		switch (keysym) {
+		case XKB_KEY_KP_Enter: /* fallthrough */
+		case XKB_KEY_Return:
 			submit_password(state);
 			break;
-		}
-		// fallthrough
-	case XKB_KEY_c: /* fallthrough */
-	case XKB_KEY_u:
-		if (state->xkb.control) {
+		case XKB_KEY_Delete:
+		case XKB_KEY_BackSpace:
+			if (backspace(&state->password)) {
+				state->auth_state = AUTH_STATE_BACKSPACE;
+			} else {
+				state->auth_state = AUTH_STATE_CLEAR;
+			}
+			damage_state(state);
+			schedule_indicator_clear(state);
+			schedule_password_clear(state);
+			break;
+		case XKB_KEY_Escape:
 			clear_password_buffer(&state->password);
 			state->auth_state = AUTH_STATE_CLEAR;
 			damage_state(state);
 			schedule_indicator_clear(state);
 			break;
-		}
-		// fallthrough
-	default:
-		if (codepoint && (double)(present_time - last_time_pressed_key)/CLOCKS_PER_SEC >=0.005455) {
-			append_ch(&state->password, codepoint);
-			state->auth_state = AUTH_STATE_INPUT;
+		case XKB_KEY_Caps_Lock:
+		case XKB_KEY_Shift_L:
+		case XKB_KEY_Shift_R:
+		case XKB_KEY_Control_L:
+		case XKB_KEY_Control_R:
+		case XKB_KEY_Meta_L:
+		case XKB_KEY_Meta_R:
+		case XKB_KEY_Alt_L:
+		case XKB_KEY_Alt_R:
+		case XKB_KEY_Super_L:
+		case XKB_KEY_Super_R:
+			state->auth_state = AUTH_STATE_INPUT_NOP;
 			damage_state(state);
 			schedule_indicator_clear(state);
 			schedule_password_clear(state);
-			last_time_pressed_key = clock();
+			break;
+		case XKB_KEY_d:
+			if (state->xkb.control) {
+				submit_password(state);
+				break;
+			}
+			// fallthrough
+		case XKB_KEY_c: /* fallthrough */
+		case XKB_KEY_u:
+			if (state->xkb.control) {
+				clear_password_buffer(&state->password);
+				state->auth_state = AUTH_STATE_CLEAR;
+				damage_state(state);
+				schedule_indicator_clear(state);
+				break;
+			}
+			// fallthrough
+		default:
+			if (codepoint) {
+				append_ch(&state->password, codepoint);
+				state->auth_state = AUTH_STATE_INPUT;
+				damage_state(state);
+				schedule_indicator_clear(state);
+				schedule_password_clear(state);
+			}
+			break;
 		}
-		break;
 	}
 }
