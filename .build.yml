@@ -1,0 +1,21 @@
+image: alpine/edge
+packages:
+  - meson
+  - pango-dev
+  - cairo-dev
+  - wayland-dev
+  - wayland-protocols
+  - libxkbcommon-dev
+  - gdk-pixbuf-dev
+  - linux-pam-dev
+  - scdoc
+sources:
+  - https://github.com/swaywm/swaylock
+tasks:
+  - setup: |
+      cd swaylock
+      meson build
+  - build: |
+      cd swaylock
+      ninja -C build
+
