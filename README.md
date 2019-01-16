@@ -35,6 +35,7 @@ Install dependencies:
 * meson \*
 * wayland
 * wayland-protocols \*
+* libxkbcommon
 * pango
 * cairo
 * gdk-pixbuf2 \*\*
