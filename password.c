@@ -11,13 +11,17 @@
 #include "swaylock.h"
 #include "unicode.h"
 
-void clear_password_buffer(struct swaylock_password *pw) {
+void clear_buffer(char *buf, size_t size) {
 	// Use volatile keyword so so compiler can't optimize this out.
-	volatile char *buffer = pw->buffer;
+	volatile char *buffer = buf;
 	volatile char zero = '\0';
-	for (size_t i = 0; i < sizeof(pw->buffer); ++i) {
+	for (size_t i = 0; i < size; ++i) {
 		buffer[i] = zero;
 	}
+}
+
+void clear_password_buffer(struct swaylock_password *pw) {
+	clear_buffer(pw->buffer, sizeof(pw->buffer));
 	pw->len = 0;
 }
 

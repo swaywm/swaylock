@@ -110,8 +110,11 @@ void render_frame(struct swaylock_surface *surface);
 void render_frames(struct swaylock_state *state);
 void damage_surface(struct swaylock_surface *surface);
 void damage_state(struct swaylock_state *state);
-void initialize_pw_backend(void);
 bool attempt_password(struct swaylock_password *pw);
 void clear_password_buffer(struct swaylock_password *pw);
+
+void initialize_pw_backend(void);
+void run_pw_backend_child(void);
+void clear_buffer(char *buf, size_t size);
 
 #endif
