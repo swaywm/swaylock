@@ -39,7 +39,7 @@ cairo          = dependency('cairo')
 pango          = dependency('pango')
 pangocairo     = dependency('pangocairo')
 gdk_pixbuf     = dependency('gdk-pixbuf-2.0', required: false)
-libpam         = cc.find_library('pam', required: false)
+libpam         = cc.find_library('pam', required: get_option('pam') == 'enabled')
 crypt          = cc.find_library('crypt', required: false)
 math           = cc.find_library('m')
 
@@ -114,14 +114,14 @@ conf_data.set10('HAVE_GDK_PIXBUF', gdk_pixbuf.found())
 subdir('include')
 
 dependencies = [
-    cairo,
-    client_protos,
-    gdk_pixbuf,
-    math,
-    pango,
-    pangocairo,
-    xkbcommon,
-    wayland_client,
+	cairo,
+	client_protos,
+	gdk_pixbuf,
+	math,
+	pango,
+	pangocairo,
+	xkbcommon,
+	wayland_client,
 ]
 
 sources = [
@@ -138,22 +138,22 @@ sources = [
 	'unicode.c',
 ]
 
-if libpam.found()
-    sources += ['pam.c']
-    dependencies += [libpam]
+if libpam.found() and get_option('pam') != 'disabled'
+	sources += ['pam.c']
+	dependencies += [libpam]
 else
-    warning('The swaylock binary must be setuid when compiled without libpam')
-    warning('You must do this manually post-install: chmod a+s /path/to/swaylock')
-    sources += ['shadow.c']
-    if crypt.found()
-        dependencies += [crypt]
-    endif
+	warning('The swaylock binary must be setuid when compiled without libpam')
+	warning('You must do this manually post-install: chmod a+s /path/to/swaylock')
+	sources += ['shadow.c']
+	if crypt.found()
+		dependencies += [crypt]
+	endif
 endif
 
 swaylock_inc = include_directories('include')
 
 executable('swaylock',
-  sources,
+	sources,
 	include_directories: [swaylock_inc],
 	dependencies: dependencies,
 	install: true
@@ -199,7 +199,7 @@ endif
 
 datadir = get_option('datadir')
 
-if (get_option('zsh-completions'))
+if get_option('zsh-completions')
 	zsh_files = files(
 		'completions/zsh/_swaylock',
 	)
@@ -208,7 +208,7 @@ if (get_option('zsh-completions'))
 	install_data(zsh_files, install_dir: zsh_install_dir)
 endif
 
-if (get_option('bash-completions'))
+if get_option('bash-completions')
 	bash_files = files(
 		'completions/bash/swaylock',
 	)
@@ -217,7 +217,7 @@ if (get_option('bash-completions'))
 	install_data(bash_files, install_dir: bash_install_dir)
 endif
 
-if (get_option('fish-completions'))
+if get_option('fish-completions')
 	fish_files = files(
 		'completions/fish/swaylock.fish',
 	)
