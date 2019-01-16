@@ -33,30 +33,56 @@ static int function_conversation(int num_msg, const struct pam_message **msg,
 	return PAM_SUCCESS;
 }
 
+static const char *get_pam_auth_error(int pam_status) {
+	switch (pam_status) {
+	case PAM_AUTH_ERR:
+		return "invalid credentials";
+	case PAM_CRED_INSUFFICIENT:
+		return "swaylock cannot authenticate users; check /etc/pam.d/swaylock "
+			"has been installed properly";
+	case PAM_AUTHINFO_UNAVAIL:
+		return "authentication information unavailable";
+	case PAM_MAXTRIES:
+		return "maximum number of authentication tries exceeded";
+	default:;
+		static char msg[64];
+		snprintf(msg, sizeof(msg), "unknown error (%d)", pam_status);
+		return msg;
+	}
+}
+
 bool attempt_password(struct swaylock_password *pw) {
 	struct passwd *passwd = getpwuid(getuid());
 	char *username = passwd->pw_name;
+
+	bool success = false;
+
 	const struct pam_conv local_conversation = {
-		function_conversation, pw
+		.conv = function_conversation,
+		.appdata_ptr = pw,
 	};
 	pam_handle_t *local_auth_handle = NULL;
-	int pam_err;
-	if ((pam_err = pam_start("swaylock", username,
-					&local_conversation, &local_auth_handle)) != PAM_SUCCESS) {
-		swaylock_log(LOG_ERROR, "PAM returned error %d", pam_err);
+	if (pam_start("swaylock", username, &local_conversation, &local_auth_handle)
+			!= PAM_SUCCESS) {
+		swaylock_log(LOG_ERROR, "pam_start failed");
+		goto out;
 	}
-	if ((pam_err = pam_authenticate(local_auth_handle, 0)) != PAM_SUCCESS) {
-		swaylock_log(LOG_ERROR, "pam_authenticate failed");
-		goto fail;
+
+	int pam_status = pam_authenticate(local_auth_handle, 0);
+	if (pam_status == PAM_SUCCESS) {
+		swaylock_log(LOG_DEBUG, "pam_authenticate succeeded");
+		success = true;
+	} else {
+		swaylock_log(LOG_ERROR, "pam_authenticate failed: %s",
+			get_pam_auth_error(pam_status));
 	}
-	// TODO: only call pam_end once we succeed at authing. refresh tokens beforehand
-	if ((pam_err = pam_end(local_auth_handle, pam_err)) != PAM_SUCCESS) {
+
+	if (pam_end(local_auth_handle, pam_status) != PAM_SUCCESS) {
 		swaylock_log(LOG_ERROR, "pam_end failed");
-		goto fail;
+		success = false;
 	}
+
+out:
 	clear_password_buffer(pw);
-	return true;
-fail:
-	clear_password_buffer(pw);
-	return false;
+	return success;
 }
