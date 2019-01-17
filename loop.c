@@ -124,7 +124,7 @@ void loop_add_fd(struct loop *loop, int fd, short mask,
 	}
 	event->callback = callback;
 	event->data = data;
-	wl_list_insert(&loop->fd_events, &event->link);
+	wl_list_insert(loop->fd_events.prev, &event->link);
 
 	struct pollfd pfd = {fd, mask, 0};
 

@@ -5,25 +5,37 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include "comm.h"
 #include "log.h"
 #include "swaylock.h"
 
+static char *pw_buf = NULL;
+
 void initialize_pw_backend(void) {
-	// TODO: only call pam_start once. keep the same handle the whole time
+	if (!spawn_comm_child()) {
+		exit(EXIT_FAILURE);
+	}
 }
 
-static int function_conversation(int num_msg, const struct pam_message **msg,
+static int handle_conversation(int num_msg, const struct pam_message **msg,
 		struct pam_response **resp, void *data) {
-	struct swaylock_password *pw = data;
 	/* PAM expects an array of responses, one for each message */
-	struct pam_response *pam_reply = calloc(
-			num_msg, sizeof(struct pam_response));
+	struct pam_response *pam_reply =
+		calloc(num_msg, sizeof(struct pam_response));
+	if (pam_reply == NULL) {
+		swaylock_log(LOG_ERROR, "Allocation failed");
+		return PAM_ABORT;
+	}
 	*resp = pam_reply;
 	for (int i = 0; i < num_msg; ++i) {
 		switch (msg[i]->msg_style) {
 		case PAM_PROMPT_ECHO_OFF:
 		case PAM_PROMPT_ECHO_ON:
-			pam_reply[i].resp = strdup(pw->buffer); // PAM clears and frees this
+			pam_reply[i].resp = strdup(pw_buf); // PAM clears and frees this
+			if (pam_reply[i].resp == NULL) {
+				swaylock_log(LOG_ERROR, "Allocation failed");
+				return PAM_ABORT;
+			}
 			break;
 		case PAM_ERROR_MSG:
 		case PAM_TEXT_INFO:
@@ -51,38 +63,53 @@ static const char *get_pam_auth_error(int pam_status) {
 	}
 }
 
-bool attempt_password(struct swaylock_password *pw) {
+void run_pw_backend_child(void) {
 	struct passwd *passwd = getpwuid(getuid());
 	char *username = passwd->pw_name;
 
-	bool success = false;
-
-	const struct pam_conv local_conversation = {
-		.conv = function_conversation,
-		.appdata_ptr = pw,
+	const struct pam_conv conv = {
+		.conv = handle_conversation,
+		.appdata_ptr = NULL,
 	};
-	pam_handle_t *local_auth_handle = NULL;
-	if (pam_start("swaylock", username, &local_conversation, &local_auth_handle)
-			!= PAM_SUCCESS) {
+	pam_handle_t *auth_handle = NULL;
+	if (pam_start("swaylock", username, &conv, &auth_handle) != PAM_SUCCESS) {
 		swaylock_log(LOG_ERROR, "pam_start failed");
-		goto out;
+		exit(EXIT_FAILURE);
 	}
 
-	int pam_status = pam_authenticate(local_auth_handle, 0);
-	if (pam_status == PAM_SUCCESS) {
-		swaylock_log(LOG_DEBUG, "pam_authenticate succeeded");
-		success = true;
-	} else {
-		swaylock_log(LOG_ERROR, "pam_authenticate failed: %s",
-			get_pam_auth_error(pam_status));
+	/* This code does not run as root */
+	swaylock_log(LOG_DEBUG, "Prepared to authorize user %s", username);
+
+	int pam_status = PAM_SUCCESS;
+	while (1) {
+		ssize_t size = read_comm_request(&pw_buf);
+		if (size < 0) {
+			exit(EXIT_FAILURE);
+		} else if (size == 0) {
+			break;
+		}
+
+		int pam_status = pam_authenticate(auth_handle, 0);
+		bool success = pam_status == PAM_SUCCESS;
+		if (!success) {
+			swaylock_log(LOG_ERROR, "pam_authenticate failed: %s",
+				get_pam_auth_error(pam_status));
+		}
+
+		if (!write_comm_reply(success)) {
+			clear_buffer(pw_buf, size);
+			exit(EXIT_FAILURE);
+		}
+
+		clear_buffer(pw_buf, size);
+		free(pw_buf);
+		pw_buf = NULL;
 	}
 
-	if (pam_end(local_auth_handle, pam_status) != PAM_SUCCESS) {
+	if (pam_end(auth_handle, pam_status) != PAM_SUCCESS) {
 		swaylock_log(LOG_ERROR, "pam_end failed");
-		success = false;
+		exit(EXIT_FAILURE);
 	}
 
-out:
-	clear_password_buffer(pw);
-	return success;
+	exit((pam_status == PAM_SUCCESS) ? EXIT_SUCCESS : EXIT_FAILURE);
 }
