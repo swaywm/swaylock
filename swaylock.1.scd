@@ -43,9 +43,10 @@ Locks your Wayland session.
 *-u, --no-unlock-indicator*
 	Disable the unlock indicator.
 
-*-i, --image* [<output>:]<path>
+*-i, --image* [[<output>]:]<path>
 	Display the given image, optionally only on the given output. Use -c to set
-	a background color.
+	a background color. If the path potentially contains a ':', prefix it with another
+	':' to prevent interpreting part of it as <output>.
 
 *-L, --disable-caps-lock-text*
 	Disable the Caps Lock Text.
