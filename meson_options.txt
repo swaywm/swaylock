@@ -1,4 +1,4 @@
-option('sway-version', type : 'string', description: 'The version string reported in `sway --version`.')
+option('swaylock-version', type : 'string', description: 'The version string reported in `swaylock --version`.')
 option(
 	'pam',
 	type: 'combo',

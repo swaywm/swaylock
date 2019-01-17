@@ -47,7 +47,7 @@ git = find_program('git', required: false)
 scdoc = find_program('scdoc', required: false)
 wayland_scanner = find_program('wayland-scanner')
 
-version = get_option('sway-version')
+version = get_option('swaylock-version')
 if version != ''
 	version = '"@0@"'.format(version)
 else
@@ -59,7 +59,7 @@ else
 	git_branch = run_command([git.path(), 'rev-parse', '--abbrev-ref', 'HEAD']).stdout().strip()
 	version = '"@0@ (" __DATE__ ", branch \'@1@\')"'.format(git_commit_hash, git_branch)
 endif
-add_project_arguments('-DSWAY_VERSION=@0@'.format(version), language: 'c')
+add_project_arguments('-DSWAYLOCK_VERSION=@0@'.format(version), language: 'c')
 
 wl_protocol_dir = wayland_protos.get_pkgconfig_variable('pkgdatadir')
 
