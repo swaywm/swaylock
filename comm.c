@@ -6,7 +6,7 @@
 #include "log.h"
 #include "swaylock.h"
 
-static int comm[2][2];
+static int comm[2][2] = {{-1, -1}, {-1, -1}};
 
 ssize_t read_comm_request(char **buf_ptr) {
 	size_t size;
@@ -69,28 +69,41 @@ bool spawn_comm_child(void) {
 	return true;
 }
 
-bool attempt_password(struct swaylock_password *pw) {
+bool write_comm_request(struct swaylock_password *pw) {
 	bool result = false;
+
 	size_t len = pw->len + 1;
 	size_t offs = 0;
 	if (write(comm[0][1], &len, sizeof(len)) < 0) {
 		swaylock_log_errno(LOG_ERROR, "Failed to request pw check");
-		goto ret;
+		goto out;
 	}
+
 	do {
 		ssize_t amt = write(comm[0][1], &pw->buffer[offs], len - offs);
 		if (amt < 0) {
 			swaylock_log_errno(LOG_ERROR, "Failed to write pw buffer");
-			goto ret;
+			goto out;
 		}
 		offs += amt;
 	} while (offs < len);
-	if (read(comm[1][0], &result, sizeof(result)) != sizeof(result)) {
-		swaylock_log_errno(LOG_ERROR, "Failed to read pw result");
-		goto ret;
-	}
-	swaylock_log(LOG_DEBUG, "pw result: %d", result);
-ret:
+
+	result = true;
+
+out:
 	clear_password_buffer(pw);
 	return result;
+}
+
+bool read_comm_reply(void) {
+	bool result = false;
+	if (read(comm[1][0], &result, sizeof(result)) != sizeof(result)) {
+		swaylock_log_errno(LOG_ERROR, "Failed to read pw result");
+		result = false;
+	}
+	return result;
+}
+
+int get_comm_reply_fd(void) {
+	return comm[1][0];
 }
