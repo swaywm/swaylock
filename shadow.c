@@ -21,7 +21,7 @@ static void clear_buffer(void *buf, size_t bytes) {
 	}
 }
 
-void run_child(void) {
+static void run_child(void) {
 	/* This code runs as root */
 	struct passwd *pwent = getpwuid(getuid());
 	if (!pwent) {
@@ -44,6 +44,9 @@ void run_child(void) {
 		exit(EXIT_FAILURE);
 	}
 	if (setuid(getuid()) != 0) {
+		exit(EXIT_FAILURE);
+	}
+	if (setuid(0) != -1) {
 		exit(EXIT_FAILURE);
 	}
 
@@ -126,6 +129,11 @@ void initialize_pw_backend(void) {
 	if (setuid(getuid()) != 0) {
 		swaylock_log_errno(LOG_ERROR, "Unable to drop root");
 		exit(EXIT_FAILURE);
+	}
+	if (setuid(0) != -1) {
+		swaylock_log_errno(LOG_ERROR, "Unable to drop root (we shouldn't be "
+			"able to restore it after setuid)");
+		return false;
 	}
 }
 
