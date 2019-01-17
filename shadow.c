@@ -133,7 +133,7 @@ void initialize_pw_backend(void) {
 	if (setuid(0) != -1) {
 		swaylock_log_errno(LOG_ERROR, "Unable to drop root (we shouldn't be "
 			"able to restore it after setuid)");
-		return false;
+		exit(EXIT_FAILURE);
 	}
 }
 
