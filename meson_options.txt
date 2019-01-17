@@ -1,4 +1,11 @@
 option('sway-version', type : 'string', description: 'The version string reported in `sway --version`.')
+option(
+	'pam',
+	type: 'combo',
+	choices: ['auto', 'enabled', 'disabled'],
+	value: 'auto',
+	description: 'Use PAM instead of shadow.',
+)
 option('zsh-completions', type: 'boolean', value: true, description: 'Install zsh shell completions.')
 option('bash-completions', type: 'boolean', value: true, description: 'Install bash shell completions.')
 option('fish-completions', type: 'boolean', value: true, description: 'Install fish shell completions.')

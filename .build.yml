@@ -18,4 +18,7 @@ tasks:
   - build: |
       cd swaylock
       ninja -C build
-
+  - build-no-pam: |
+      cd swaylock
+      meson configure build -Dpam=disabled
+      ninja -C build
