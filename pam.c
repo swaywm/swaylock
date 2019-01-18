@@ -12,6 +12,11 @@
 static char *pw_buf = NULL;
 
 void initialize_pw_backend(void) {
+	if (getuid() != geteuid() || getgid() != getegid()) {
+		swaylock_log(LOG_ERROR,
+			"swaylock has suid but doesn't require it with PAM backend");
+		exit(EXIT_FAILURE);
+	}
 	if (!spawn_comm_child()) {
 		exit(EXIT_FAILURE);
 	}
