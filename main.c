@@ -936,10 +936,11 @@ static int load_config(char *path, struct swaylock_state *state,
 		}
 
 		swaylock_log(LOG_DEBUG, "Config Line #%d: %s", line_number, line);
-		char flag[nread + 3];
+		char *flag = malloc(nread + 3);
 		sprintf(flag, "--%s", line);
 		char *argv[] = {"swaylock", flag};
 		result = parse_options(2, argv, state, line_mode, NULL);
+		free(flag);
 		if (result != 0) {
 			break;
 		}
