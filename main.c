@@ -970,7 +970,7 @@ static void comm_in(int fd, short mask, void *data) {
 
 int main(int argc, char **argv) {
 	swaylock_log_init(LOG_ERROR);
-	initialize_pw_backend();
+	initialize_pw_backend(argc, argv);
 
 	enum line_mode line_mode = LM_LINE;
 	state.args = (struct swaylock_args){
