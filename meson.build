@@ -132,7 +132,6 @@ sources = [
 	'log.c',
 	'loop.c',
 	'main.c',
-	'pango.c',
 	'password.c',
 	'pool-buffer.c',
 	'render.c',
