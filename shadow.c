@@ -12,6 +12,32 @@
 #include "log.h"
 #include "swaylock.h"
 
+void initialize_pw_backend(int argc, char **argv) {
+	if (geteuid() != 0) {
+		swaylock_log(LOG_ERROR,
+				"swaylock needs to be setuid to read /etc/shadow");
+		exit(EXIT_FAILURE);
+	}
+
+	if (!spawn_comm_child()) {
+		exit(EXIT_FAILURE);
+	}
+
+	if (setgid(getgid()) != 0) {
+		swaylock_log_errno(LOG_ERROR, "Unable to drop root");
+		exit(EXIT_FAILURE);
+	}
+	if (setuid(getuid()) != 0) {
+		swaylock_log_errno(LOG_ERROR, "Unable to drop root");
+		exit(EXIT_FAILURE);
+	}
+	if (setuid(0) != -1) {
+		swaylock_log_errno(LOG_ERROR, "Unable to drop root (we shouldn't be "
+			"able to restore it after setuid)");
+		exit(EXIT_FAILURE);
+	}
+}
+
 void run_pw_backend_child(void) {
 	/* This code runs as root */
 	struct passwd *pwent = getpwuid(getuid());
@@ -72,30 +98,4 @@ void run_pw_backend_child(void) {
 
 	clear_buffer(encpw, strlen(encpw));
 	exit(EXIT_SUCCESS);
-}
-
-void initialize_pw_backend(void) {
-	if (geteuid() != 0) {
-		swaylock_log(LOG_ERROR,
-				"swaylock needs to be setuid to read /etc/shadow");
-		exit(EXIT_FAILURE);
-	}
-
-	if (!spawn_comm_child()) {
-		exit(EXIT_FAILURE);
-	}
-
-	if (setgid(getgid()) != 0) {
-		swaylock_log_errno(LOG_ERROR, "Unable to drop root");
-		exit(EXIT_FAILURE);
-	}
-	if (setuid(getuid()) != 0) {
-		swaylock_log_errno(LOG_ERROR, "Unable to drop root");
-		exit(EXIT_FAILURE);
-	}
-	if (setuid(0) != -1) {
-		swaylock_log_errno(LOG_ERROR, "Unable to drop root (we shouldn't be "
-			"able to restore it after setuid)");
-		exit(EXIT_FAILURE);
-	}
 }

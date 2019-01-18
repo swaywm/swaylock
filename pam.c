@@ -11,7 +11,13 @@
 
 static char *pw_buf = NULL;
 
-void initialize_pw_backend(void) {
+void initialize_pw_backend(int argc, char **argv) {
+	if (getuid() != geteuid() || getgid() != getegid()) {
+		swaylock_log(LOG_ERROR,
+			"swaylock is setuid, but was compiled with the PAM"
+			" backend. Run 'chmod a-s %s' to fix. Aborting.", argv[0]);
+		exit(EXIT_FAILURE);
+	}
 	if (!spawn_comm_child()) {
 		exit(EXIT_FAILURE);
 	}
