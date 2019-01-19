@@ -882,18 +882,9 @@ static char *get_config_path(void) {
 		SYSCONFDIR "/swaylock/config",
 	};
 
-	if (!getenv("XDG_CONFIG_HOME")) {
-		char *home = getenv("HOME");
-		char *config_home = malloc(strlen(home) + strlen("/.config") + 1);
-		if (!config_home) {
-			swaylock_log(LOG_ERROR, "Unable to allocate $HOME/.config");
-		} else {
-			strcpy(config_home, home);
-			strcat(config_home, "/.config");
-			setenv("XDG_CONFIG_HOME", config_home, 1);
-			swaylock_log(LOG_DEBUG, "Set XDG_CONFIG_HOME to %s", config_home);
-			free(config_home);
-		}
+	char *config_home = getenv("XDG_CONFIG_HOME");
+	if (!config_home || config_home[0] == '\0') {
+		config_paths[1] = "$HOME/.config/swaylock/config";
 	}
 
 	wordexp_t p;
