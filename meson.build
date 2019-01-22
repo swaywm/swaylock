@@ -2,6 +2,7 @@ project(
 	'swaylock',
 	'c',
 	license: 'MIT',
+	meson_version: '>=0.48.0',
 	default_options: [
 		'c_std=c11',
 		'warning_level=2',
@@ -39,9 +40,9 @@ xkbcommon      = dependency('xkbcommon')
 cairo          = dependency('cairo')
 pango          = dependency('pango')
 pangocairo     = dependency('pangocairo')
-gdk_pixbuf     = dependency('gdk-pixbuf-2.0', required: false)
-libpam         = cc.find_library('pam', required: get_option('pam') == 'enabled')
-crypt          = cc.find_library('crypt', required: false)
+gdk_pixbuf     = dependency('gdk-pixbuf-2.0', required: get_option('gdk-pixbuf'))
+libpam         = cc.find_library('pam', required: get_option('pam'))
+crypt          = cc.find_library('crypt', required: not libpam.found())
 math           = cc.find_library('m')
 
 git = find_program('git', required: false)
@@ -139,16 +140,14 @@ sources = [
 	'unicode.c',
 ]
 
-if libpam.found() and get_option('pam') != 'disabled'
+if libpam.found()
 	sources += ['pam.c']
 	dependencies += [libpam]
 else
 	warning('The swaylock binary must be setuid when compiled without libpam')
 	warning('You must do this manually post-install: chmod a+s /path/to/swaylock')
 	sources += ['shadow.c']
-	if crypt.found()
-		dependencies += [crypt]
-	endif
+	dependencies += [crypt]
 endif
 
 swaylock_inc = include_directories('include')
