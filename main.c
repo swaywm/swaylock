@@ -658,7 +658,6 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		case 'c':
 			if (state) {
 				state->args.colors.background = parse_color(optarg);
-				state->args.mode = BACKGROUND_MODE_SOLID_COLOR;
 			}
 			break;
 		case 'd':
