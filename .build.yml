@@ -1,7 +1,6 @@
 image: alpine/edge
 packages:
   - meson
-  - pango-dev
   - cairo-dev
   - wayland-dev
   - wayland-protocols

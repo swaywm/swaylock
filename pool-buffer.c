@@ -2,7 +2,6 @@
 #include <assert.h>
 #include <cairo/cairo.h>
 #include <fcntl.h>
-#include <pango/pangocairo.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -93,7 +92,6 @@ static struct pool_buffer *create_buffer(struct wl_shm *shm,
 	buf->surface = cairo_image_surface_create_for_data(data,
 			CAIRO_FORMAT_ARGB32, width, height, stride);
 	buf->cairo = cairo_create(buf->surface);
-	buf->pango = pango_cairo_create_context(buf->cairo);
 
 	wl_buffer_add_listener(buf->buffer, &buffer_listener, buf);
 	return buf;
@@ -108,9 +106,6 @@ void destroy_buffer(struct pool_buffer *buffer) {
 	}
 	if (buffer->surface) {
 		cairo_surface_destroy(buffer->surface);
-	}
-	if (buffer->pango) {
-		g_object_unref(buffer->pango);
 	}
 	if (buffer->data) {
 		munmap(buffer->data, buffer->size);
