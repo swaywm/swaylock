@@ -1,6 +1,7 @@
 #define _XOPEN_SOURCE // for crypt
 #include <pwd.h>
 #include <shadow.h>
+#include <stdlib.h>
 #include <stdbool.h>
 #include <sys/types.h>
 #include <unistd.h>
