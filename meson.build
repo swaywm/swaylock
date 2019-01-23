@@ -38,8 +38,6 @@ wayland_client = dependency('wayland-client')
 wayland_protos = dependency('wayland-protocols', version: '>=1.14')
 xkbcommon      = dependency('xkbcommon')
 cairo          = dependency('cairo')
-pango          = dependency('pango')
-pangocairo     = dependency('pangocairo')
 gdk_pixbuf     = dependency('gdk-pixbuf-2.0', required: get_option('gdk-pixbuf'))
 libpam         = cc.find_library('pam', required: get_option('pam'))
 crypt          = cc.find_library('crypt', required: not libpam.found())
@@ -120,8 +118,6 @@ dependencies = [
 	client_protos,
 	gdk_pixbuf,
 	math,
-	pango,
-	pangocairo,
 	xkbcommon,
 	wayland_client,
 ]

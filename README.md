@@ -34,7 +34,6 @@ Install dependencies:
 * wayland
 * wayland-protocols \*
 * libxkbcommon
-* pango
 * cairo
 * gdk-pixbuf2 \*\*
 * pam (optional)
