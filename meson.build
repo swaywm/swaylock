@@ -44,7 +44,7 @@ crypt          = cc.find_library('crypt', required: not libpam.found())
 math           = cc.find_library('m')
 
 git = find_program('git', required: false)
-scdoc = find_program('scdoc', required: false)
+scdoc = find_program('scdoc', required: get_option('man-pages'))
 wayland_scanner = find_program('wayland-scanner')
 
 version = get_option('swaylock-version')
