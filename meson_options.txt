@@ -1,6 +1,7 @@
 option('swaylock-version', type : 'string', description: 'The version string reported in `swaylock --version`')
 option('pam', type: 'feature', value: 'auto', description: 'Use PAM instead of shadow')
 option('gdk-pixbuf', type: 'feature', value: 'auto', description: 'Enable support for more image formats')
+option('man-pages', type: 'feature', value: 'auto', description: 'Generate and install man pages')
 option('zsh-completions', type: 'boolean', value: true, description: 'Install zsh shell completions')
 option('bash-completions', type: 'boolean', value: true, description: 'Install bash shell completions')
 option('fish-completions', type: 'boolean', value: true, description: 'Install fish shell completions')
