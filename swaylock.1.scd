@@ -55,15 +55,16 @@ Locks your Wayland session.
 	Show the current Caps Lock state also on the indicator.
 
 *-s, --scaling*
-	Scaling mode for images: _stretch_, _fill_, _fit_, _center_, or _tile_.
+	Scaling mode for images: _stretch_, _fill_, _fit_, _center_, or _tile_. Use
+	the additional mode _solid\_color_ to display only the background color, even
+	if a background image is specified.
 
 *-t, --tiling*
 	Same as --scaling=tile.
 
 *-c, --color* <rrggbb[aa]>
 	Turn the screen into the given color. If -i is used, this sets the
-	background of the image to the given color. Defaults to white (FFFFFF), or
-	transparent (00000000) if an image is in use.
+	background of the image to the given color. Defaults to white (FFFFFF).
 
 *--bs-hl-color* <rrggbb[aa]>
 	Sets the color of backspace highlight segments.

@@ -59,10 +59,10 @@ void render_frame(struct swaylock_surface *surface) {
 
 	cairo_save(cairo);
 	cairo_set_operator(cairo, CAIRO_OPERATOR_SOURCE);
-	if (state->args.mode == BACKGROUND_MODE_SOLID_COLOR || !surface->image) {
-		cairo_set_source_u32(cairo, state->args.colors.background);
-		cairo_paint(cairo);
-	} else {
+	cairo_set_source_u32(cairo, state->args.colors.background);
+	cairo_paint(cairo);
+	if (surface->image && state->args.mode != BACKGROUND_MODE_SOLID_COLOR) {
+		cairo_set_operator(cairo, CAIRO_OPERATOR_OVER);
 		render_background_image(cairo, surface->image,
 				state->args.mode, buffer_width, buffer_height);
 	}
