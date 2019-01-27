@@ -92,8 +92,12 @@ void run_pw_backend_child(void) {
 			exit(EXIT_FAILURE);
 		}
 
+		// We don't want to keep it in memory longer than necessary,
+		// so clear *before* sleeping.
 		clear_buffer(buf, size);
 		free(buf);
+
+		sleep(2);
 	}
 
 	clear_buffer(encpw, strlen(encpw));
