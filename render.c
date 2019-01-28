@@ -113,12 +113,14 @@ void render_frame(struct swaylock_surface *surface) {
 
 		if (text) {
 			cairo_text_extents_t extents;
+			cairo_font_extents_t fe;
 			double x, y;
 			cairo_text_extents(cairo, text, &extents);
+			cairo_font_extents(cairo, &fe);
 			x = (buffer_width / 2) -
 				(extents.width / 2 + extents.x_bearing);
-			y = (buffer_height / 2) -
-				(extents.height / 2 + extents.y_bearing);
+			y = (buffer_height / 2) +
+				(fe.height / 2 - fe.descent);
 
 			cairo_move_to(cairo, x, y);
 			cairo_show_text(cairo, text);
