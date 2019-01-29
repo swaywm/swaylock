@@ -86,6 +86,7 @@ void render_frame(struct swaylock_surface *surface) {
 
 		// Draw a message
 		char *text = NULL;
+		char attempts[4]; // like i3lock: count no more than 999
 		set_color_for_state(cairo, state, &state->args.colors.text);
 		cairo_select_font_face(cairo, state->args.font,
 				CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
@@ -103,8 +104,17 @@ void render_frame(struct swaylock_surface *surface) {
 		case AUTH_STATE_INPUT:
 		case AUTH_STATE_INPUT_NOP:
 		case AUTH_STATE_BACKSPACE:
+			// Caps Lock has higher priority
 			if (state->xkb.caps_lock && state->args.show_caps_lock_text) {
 				text = "Caps Lock";
+			} else if (state->args.show_failed_attempts &&
+					state->failed_attempts > 0) {
+				if (state->failed_attempts > 999) {
+					text = "999+";
+				} else {
+					snprintf(attempts, sizeof(attempts), "%d", state->failed_attempts);
+					text = attempts;
+				}
 			}
 			break;
 		default:
