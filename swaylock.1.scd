@@ -54,6 +54,9 @@ Locks your Wayland session.
 *-l, --indicator-caps-lock*
 	Show the current Caps Lock state also on the indicator.
 
+*-F, --show-failed-attempts*
+	Show the number of failed authentication attempts on the indicator.
+
 *-s, --scaling*
 	Scaling mode for images: _stretch_, _fill_, _fit_, _center_, or _tile_. Use
 	the additional mode _solid\_color_ to display only the background color, even

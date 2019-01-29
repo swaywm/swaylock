@@ -508,6 +508,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"scaling", required_argument, NULL, 's'},
 		{"tiling", no_argument, NULL, 't'},
 		{"no-unlock-indicator", no_argument, NULL, 'u'},
+		{"show-failed-attempts", no_argument, NULL, 'F'},
 		{"version", no_argument, NULL, 'v'},
 		{"bs-hl-color", required_argument, NULL, LO_BS_HL_COLOR},
 		{"caps-lock-bs-hl-color", required_argument, NULL, LO_CAPS_LOCK_BS_HL_COLOR},
@@ -567,6 +568,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Same as --scaling=tile.\n"
 		"  -u, --no-unlock-indicator        "
 			"Disable the unlock indicator.\n"
+		"  -F, --show-failed-attempts       "
+			"Show current count of failed authentication attempts.\n"
 		"  -v, --version                    "
 			"Show the version number and quit.\n"
 		"  --bs-hl-color <color>            "
@@ -644,7 +647,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 	optind = 1;
 	while (1) {
 		int opt_idx = 0;
-		c = getopt_long(argc, argv, "c:defhi:Llnrs:tuvC:", long_options,
+		c = getopt_long(argc, argv, "c:deFfhi:Llnrs:tuvC:", long_options,
 				&opt_idx);
 		if (c == -1) {
 			break;
@@ -714,6 +717,11 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		case 'u':
 			if (state) {
 				state->args.show_indicator = false;
+			}
+			break;
+		case 'F':
+			if (state) {
+				state->args.show_failed_attempts = true;
 			}
 			break;
 		case 'v':
@@ -961,6 +969,7 @@ static void comm_in(int fd, short mask, void *data) {
 	} else {
 		state.auth_state = AUTH_STATE_INVALID;
 		schedule_indicator_clear(&state);
+		++state.failed_attempts;
 		damage_state(&state);
 	}
 }
@@ -970,6 +979,7 @@ int main(int argc, char **argv) {
 	initialize_pw_backend(argc, argv);
 
 	enum line_mode line_mode = LM_LINE;
+	state.failed_attempts = 0;
 	state.args = (struct swaylock_args){
 		.mode = BACKGROUND_MODE_FILL,
 		.font = strdup("sans-serif"),
@@ -978,7 +988,8 @@ int main(int argc, char **argv) {
 		.ignore_empty = false,
 		.show_indicator = true,
 		.show_caps_lock_indicator = false,
-		.show_caps_lock_text = true
+		.show_caps_lock_text = true,
+		.show_failed_attempts = false
 	};
 	wl_list_init(&state.images);
 	set_default_colors(&state.args.colors);

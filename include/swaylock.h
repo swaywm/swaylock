@@ -50,6 +50,7 @@ struct swaylock_args {
 	bool show_indicator;
 	bool show_caps_lock_text;
 	bool show_caps_lock_indicator;
+	bool show_failed_attempts;
 	bool daemonize;
 };
 
@@ -73,6 +74,7 @@ struct swaylock_state {
 	struct swaylock_password password;
 	struct swaylock_xkb xkb;
 	enum auth_state auth_state;
+	int failed_attempts;
 	bool run_display;
 	struct zxdg_output_manager_v1 *zxdg_output_manager;
 };
