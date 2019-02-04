@@ -57,6 +57,9 @@ struct swaylock_args {
 	bool hide_keyboard_layout;
 	bool show_failed_attempts;
 	bool daemonize;
+#ifdef ENABLE_READYFD
+	int readyfd;
+#endif /* ENABLE_READYFD */
 };
 
 struct swaylock_password {

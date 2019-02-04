@@ -57,6 +57,30 @@ int lenient_strcmp(char *a, char *b) {
 	}
 }
 
+#ifdef ENABLE_READYFD
+static int getenv_fd(const char *const var) {
+	char *env = getenv(var);
+
+	if (!env || env[0] == '\0') {
+		return -1;
+	}
+
+	if (unsetenv(var) != 0) {
+		return -1;
+	}
+
+	errno = 0;
+	char *endptr;
+	int fd = (int)strtol(env, &endptr, 10);
+
+	if (errno != 0 || endptr[0] != '\0') {
+		return -1;
+	}
+
+	return fd;
+}
+#endif /* ENABLE_READYFD */
+
 static void daemonize(void) {
 	int fds[2];
 	if (pipe(fds) != 0) {
@@ -520,6 +544,9 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_LINE_CAPS_LOCK_COLOR,
 		LO_LINE_VER_COLOR,
 		LO_LINE_WRONG_COLOR,
+#ifdef ENABLE_READYFD
+		LO_READYFD,
+#endif /* ENABLE_READYFD */
 		LO_RING_COLOR,
 		LO_RING_CLEAR_COLOR,
 		LO_RING_CAPS_LOCK_COLOR,
@@ -573,6 +600,9 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"line-caps-lock-color", required_argument, NULL, LO_LINE_CAPS_LOCK_COLOR},
 		{"line-ver-color", required_argument, NULL, LO_LINE_VER_COLOR},
 		{"line-wrong-color", required_argument, NULL, LO_LINE_WRONG_COLOR},
+#ifdef ENABLE_READYFD
+		{"readyfd", no_argument, NULL, LO_READYFD},
+#endif /* ENABLE_READYFD */
 		{"ring-color", required_argument, NULL, LO_RING_COLOR},
 		{"ring-clear-color", required_argument, NULL, LO_RING_CLEAR_COLOR},
 		{"ring-caps-lock-color", required_argument, NULL, LO_RING_CAPS_LOCK_COLOR},
@@ -673,6 +703,10 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Use the inside color for the line between the inside and ring.\n"
 		"  -r, --line-uses-ring             "
 			"Use the ring color for the line between the inside and ring.\n"
+#ifdef ENABLE_READYFD
+		"  --readyfd                        "
+		        "Write to the file descriptor in $READY_FD after locking.\n"
+#endif /* ENABLE_READYFD */
 		"  --ring-color <color>             "
 			"Sets the color of the ring of the indicator.\n"
 		"  --ring-clear-color <color>       "
@@ -895,6 +929,18 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 				state->args.colors.line.wrong = parse_color(optarg);
 			}
 			break;
+#ifdef ENABLE_READYFD
+		case LO_READYFD:
+			if (state) {
+				state->args.readyfd = getenv_fd("READY_FD");
+				if (state->args.readyfd >= 0) {
+					break;
+				}
+				swaylock_log(LOG_ERROR, "Could not get READY_FD from environment");
+				exit(EXIT_FAILURE);
+			}
+			break;
+#endif /* ENABLE_READYFD */
 		case LO_RING_COLOR:
 			if (state) {
 				state->args.colors.ring.input = parse_color(optarg);
@@ -1168,6 +1214,17 @@ int main(int argc, char **argv) {
 	wl_list_for_each(surface, &state.surfaces, link) {
 		create_layer_surface(surface);
 	}
+
+#ifdef ENABLE_READYFD
+	if (state.args.readyfd != -1) {
+		wl_display_roundtrip(state.display);
+		if (dprintf(state.args.readyfd, "\n") < 0) {
+			swaylock_log(LOG_ERROR, "Failed to write to READY_FD");
+			return EXIT_FAILURE;
+		}
+		close(state.args.readyfd);
+	}
+#endif /* ENABLE_READYFD */
 
 	if (state.args.daemonize) {
 		wl_display_roundtrip(state.display);

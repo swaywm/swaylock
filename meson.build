@@ -35,6 +35,10 @@ if is_freebsd
 	add_project_arguments('-D_C11_SOURCE', language: 'c')
 endif
 
+if get_option('readyfd')
+	add_project_arguments('-DENABLE_READYFD', language: 'c')
+endif
+
 wayland_client = dependency('wayland-client')
 wayland_protos = dependency('wayland-protocols', version: '>=1.14')
 xkbcommon      = dependency('xkbcommon')
