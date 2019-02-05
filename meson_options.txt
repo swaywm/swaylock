@@ -1,4 +1,3 @@
-option('swaylock-version', type : 'string', description: 'The version string reported in `swaylock --version`')
 option('pam', type: 'feature', value: 'auto', description: 'Use PAM instead of shadow')
 option('gdk-pixbuf', type: 'feature', value: 'auto', description: 'Enable support for more image formats')
 option('man-pages', type: 'feature', value: 'auto', description: 'Generate and install man pages')
