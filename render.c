@@ -86,6 +86,7 @@ void render_frame(struct swaylock_surface *surface) {
 
 		// Draw a message
 		char *text = NULL;
+		const char *layout_text = NULL;
 		char attempts[4]; // like i3lock: count no more than 999
 		set_color_for_state(cairo, state, &state->args.colors.text);
 		cairo_select_font_face(cairo, state->args.font,
@@ -115,6 +116,20 @@ void render_frame(struct swaylock_surface *surface) {
 					snprintf(attempts, sizeof(attempts), "%d", state->failed_attempts);
 					text = attempts;
 				}
+			}
+
+			xkb_layout_index_t num_layout = xkb_keymap_num_layouts(state->xkb.keymap);
+			if (state->args.show_keyboard_layout || num_layout > 1) {
+				xkb_layout_index_t curr_layout = 0;
+
+				// advance to the first active layout (if any)
+				while (curr_layout < num_layout &&
+					xkb_state_layout_index_is_active(state->xkb.state,
+						curr_layout, XKB_STATE_LAYOUT_EFFECTIVE) != 1) {
+					++curr_layout;
+				}
+				// will handle invalid index if none are active
+				layout_text = xkb_keymap_layout_get_name(state->xkb.keymap, curr_layout);
 			}
 			break;
 		default:
@@ -185,6 +200,39 @@ void render_frame(struct swaylock_surface *surface) {
 		cairo_arc(cairo, buffer_width / 2, buffer_height / 2,
 				arc_radius + arc_thickness / 2, 0, 2 * M_PI);
 		cairo_stroke(cairo);
+
+		// display layout text seperately
+		if (layout_text) {
+			cairo_text_extents_t extents;
+			cairo_font_extents_t fe;
+			double x, y;
+			double box_padding = 4.0 * surface->scale;
+			cairo_text_extents(cairo, layout_text, &extents);
+			cairo_font_extents(cairo, &fe);
+			// upper left coordinates for box
+			x = (buffer_width / 2) - (extents.width / 2) - box_padding;
+			y = (buffer_height / 2) + arc_radius + arc_thickness/2 +
+				box_padding; // use box_padding also as gap to indicator
+
+			// background box
+			cairo_rectangle(cairo, x, y,
+				extents.width + 2.0 * box_padding,
+				fe.height + 2.0 * box_padding);
+			cairo_set_source_u32(cairo, state->args.colors.layout_background);
+			cairo_fill_preserve(cairo);
+			// border
+			cairo_set_source_u32(cairo, state->args.colors.layout_border);
+			cairo_stroke(cairo);
+			cairo_new_sub_path(cairo);
+
+			// take font extents and padding into account
+			cairo_move_to(cairo,
+				x - extents.x_bearing + box_padding,
+				y + (fe.height - fe.descent) + box_padding);
+			cairo_set_source_u32(cairo, state->args.colors.layout_text);
+			cairo_show_text(cairo, layout_text);
+			cairo_new_sub_path(cairo);
+		}
 	}
 
 	wl_surface_set_buffer_scale(surface->surface, surface->scale);

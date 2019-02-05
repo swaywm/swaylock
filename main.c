@@ -423,6 +423,9 @@ static void set_default_colors(struct swaylock_colors *colors) {
 	colors->caps_lock_bs_highlight = 0xDB3300FF;
 	colors->caps_lock_key_highlight = 0x33DB00FF;
 	colors->separator = 0x000000FF;
+	colors->layout_background = 0x000000C0;
+	colors->layout_border = 0x00000000;
+	colors->layout_text = 0xFFFFFFFF;
 	colors->inside = (struct swaylock_colorset){
 		.input = 0x000000C0,
 		.cleared = 0xE5A445C0,
@@ -474,6 +477,9 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_INSIDE_VER_COLOR,
 		LO_INSIDE_WRONG_COLOR,
 		LO_KEY_HL_COLOR,
+		LO_LAYOUT_TXT_COLOR,
+		LO_LAYOUT_BG_COLOR,
+		LO_LAYOUT_BORDER_COLOR,
 		LO_LINE_COLOR,
 		LO_LINE_CLEAR_COLOR,
 		LO_LINE_CAPS_LOCK_COLOR,
@@ -508,6 +514,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"scaling", required_argument, NULL, 's'},
 		{"tiling", no_argument, NULL, 't'},
 		{"no-unlock-indicator", no_argument, NULL, 'u'},
+		{"show-keyboard-layout", no_argument, NULL, 'k'},
 		{"show-failed-attempts", no_argument, NULL, 'F'},
 		{"version", no_argument, NULL, 'v'},
 		{"bs-hl-color", required_argument, NULL, LO_BS_HL_COLOR},
@@ -522,6 +529,9 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"inside-ver-color", required_argument, NULL, LO_INSIDE_VER_COLOR},
 		{"inside-wrong-color", required_argument, NULL, LO_INSIDE_WRONG_COLOR},
 		{"key-hl-color", required_argument, NULL, LO_KEY_HL_COLOR},
+		{"layout-bg-color", required_argument, NULL, LO_LAYOUT_BG_COLOR},
+		{"layout-border-color", required_argument, NULL, LO_LAYOUT_BORDER_COLOR},
+		{"layout-text-color", required_argument, NULL, LO_LAYOUT_TXT_COLOR},
 		{"line-color", required_argument, NULL, LO_LINE_COLOR},
 		{"line-clear-color", required_argument, NULL, LO_LINE_CLEAR_COLOR},
 		{"line-caps-lock-color", required_argument, NULL, LO_LINE_CAPS_LOCK_COLOR},
@@ -552,12 +562,16 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Enable debugging output.\n"
 		"  -e, --ignore-empty-password      "
 			"When an empty password is provided, do not validate it.\n"
+		"  -F, --show-failed-attempts       "
+			"Show current count of failed authentication attempts.\n"
 		"  -f, --daemonize                  "
 			"Detach from the controlling terminal after locking.\n"
 		"  -h, --help                       "
 			"Show help message and quit.\n"
 		"  -i, --image [[<output>]:]<path>  "
 			"Display the given image.\n"
+		"  -k, --show-keyboard-layout       "
+			"Display the current xkb layout while typing.\n"
 		"  -L, --disable-caps-lock-text     "
 			"Disable the Caps Lock text.\n"
 		"  -l, --indicator-caps-lock        "
@@ -568,8 +582,6 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Same as --scaling=tile.\n"
 		"  -u, --no-unlock-indicator        "
 			"Disable the unlock indicator.\n"
-		"  -F, --show-failed-attempts       "
-			"Show current count of failed authentication attempts.\n"
 		"  -v, --version                    "
 			"Show the version number and quit.\n"
 		"  --bs-hl-color <color>            "
@@ -599,6 +611,12 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Sets the color of the inside of the indicator when invalid.\n"
 		"  --key-hl-color <color>           "
 			"Sets the color of the key press highlight segments.\n"
+		"  --layout-bg-color <color>        "
+			"Sets the background color of the box containing the layout text.\n"
+		"  --layout-border-color <color>    "
+			"Sets the color of the border of the box containing the layout text.\n"
+		"  --layout-text-color <color>      "
+			"Sets the color of the layout text.\n"
 		"  --line-color <color>             "
 			"Sets the color of the line between the inside and ring.\n"
 		"  --line-clear-color <color>       "
@@ -647,7 +665,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 	optind = 1;
 	while (1) {
 		int opt_idx = 0;
-		c = getopt_long(argc, argv, "c:deFfhi:Llnrs:tuvC:", long_options,
+		c = getopt_long(argc, argv, "c:deFfhi:kLlnrs:tuvC:", long_options,
 				&opt_idx);
 		if (c == -1) {
 			break;
@@ -671,6 +689,11 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 				state->args.ignore_empty = true;
 			}
 			break;
+		case 'F':
+			if (state) {
+				state->args.show_failed_attempts = true;
+			}
+			break;
 		case 'f':
 			if (state) {
 				state->args.daemonize = true;
@@ -679,6 +702,11 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		case 'i':
 			if (state) {
 				load_image(optarg, state);
+			}
+			break;
+		case 'k':
+			if (state) {
+				state->args.show_keyboard_layout = true;
 			}
 			break;
 		case 'L':
@@ -717,11 +745,6 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		case 'u':
 			if (state) {
 				state->args.show_indicator = false;
-			}
-			break;
-		case 'F':
-			if (state) {
-				state->args.show_failed_attempts = true;
 			}
 			break;
 		case 'v':
@@ -787,6 +810,21 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		case LO_KEY_HL_COLOR:
 			if (state) {
 				state->args.colors.key_highlight = parse_color(optarg);
+			}
+			break;
+		case LO_LAYOUT_BG_COLOR:
+			if (state) {
+				state->args.colors.layout_background = parse_color(optarg);
+			}
+			break;
+		case LO_LAYOUT_BORDER_COLOR:
+			if (state) {
+				state->args.colors.layout_border = parse_color(optarg);
+			}
+			break;
+		case LO_LAYOUT_TXT_COLOR:
+			if (state) {
+				state->args.colors.layout_text = parse_color(optarg);
 			}
 			break;
 		case LO_LINE_COLOR:
@@ -989,6 +1027,7 @@ int main(int argc, char **argv) {
 		.show_indicator = true,
 		.show_caps_lock_indicator = false,
 		.show_caps_lock_text = true,
+		.show_keyboard_layout = false,
 		.show_failed_attempts = false
 	};
 	wl_list_init(&state.images);

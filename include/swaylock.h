@@ -34,6 +34,9 @@ struct swaylock_colors {
 	uint32_t caps_lock_bs_highlight;
 	uint32_t caps_lock_key_highlight;
 	uint32_t separator;
+	uint32_t layout_background;
+	uint32_t layout_border;
+	uint32_t layout_text;
 	struct swaylock_colorset inside;
 	struct swaylock_colorset line;
 	struct swaylock_colorset ring;
@@ -50,6 +53,7 @@ struct swaylock_args {
 	bool show_indicator;
 	bool show_caps_lock_text;
 	bool show_caps_lock_indicator;
+	bool show_keyboard_layout;
 	bool show_failed_attempts;
 	bool daemonize;
 };
