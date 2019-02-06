@@ -27,6 +27,9 @@ Locks your Wayland session.
 *-e, --ignore-empty-password*
 	When an empty password is provided by the user, do not validate it.
 
+*-F, --show-failed-attempts*
+	Show the number of failed authentication attempts on the indicator.
+
 *-f, --daemonize*
 	Detach from the controlling terminal after locking.
 
@@ -48,14 +51,15 @@ Locks your Wayland session.
 	a background color. If the path potentially contains a ':', prefix it with another
 	':' to prevent interpreting part of it as <output>.
 
+*-k, --show-keyboard-layout*
+	Force displaying the current xkb layout while typing, even if only one layout
+	is configured.
+
 *-L, --disable-caps-lock-text*
 	Disable the Caps Lock Text.
 
 *-l, --indicator-caps-lock*
 	Show the current Caps Lock state also on the indicator.
-
-*-F, --show-failed-attempts*
-	Show the number of failed authentication attempts on the indicator.
 
 *-s, --scaling*
 	Scaling mode for images: _stretch_, _fill_, _fit_, _center_, or _tile_. Use
@@ -106,6 +110,15 @@ Locks your Wayland session.
 
 *--key-hl-color* <rrggbb[aa]>
 	Sets the color of key press highlight segments.
+
+*--layout-bg-color* <rrggbb[aa]>
+	Sets the background color of the box containing the layout text.
+
+*--layout-border-color* <rrggbb[aa]>
+	Sets the color of the border of the box containing the layout text.
+
+*--layout-text-color* <rrggbb[aa]>
+	Sets the color of the layout text.
 
 *--line-color* <rrggbb[aa]>
 	Sets the color of the lines that separate the inside and outside of the
