@@ -17,6 +17,7 @@ enum auth_state {
 	AUTH_STATE_BACKSPACE,
 	AUTH_STATE_VALIDATING,
 	AUTH_STATE_INVALID,
+	AUTH_STATE_PREAUTH,
 };
 
 struct swaylock_colorset {

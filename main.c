@@ -1082,6 +1082,11 @@ static void display_in(int fd, short mask, void *data) {
 	}
 }
 
+static void require_authentication(void *data) {
+	struct swaylock_state *state = data;
+	state->auth_state = AUTH_STATE_INVALID;
+}
+
 static void comm_in(int fd, short mask, void *data) {
 	if (read_comm_reply()) {
 		// Authentication succeeded
@@ -1101,6 +1106,7 @@ int main(int argc, char **argv) {
 
 	enum line_mode line_mode = LM_LINE;
 	state.failed_attempts = 0;
+	state.auth_state = AUTH_STATE_PREAUTH;
 	state.args = (struct swaylock_args){
 		.mode = BACKGROUND_MODE_FILL,
 		.font = strdup("sans-serif"),
@@ -1225,6 +1231,8 @@ int main(int argc, char **argv) {
 			display_in, NULL);
 
 	loop_add_fd(state.eventloop, get_comm_reply_fd(), POLLIN, comm_in, NULL);
+
+	loop_add_timer(state.eventloop, 3000, require_authentication, &state);
 
 	state.run_display = true;
 	while (state.run_display) {
