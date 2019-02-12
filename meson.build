@@ -120,26 +120,26 @@ dependencies = [
 ]
 
 sources = [
-	'background-image.c',
-	'cairo.c',
-	'comm.c',
-	'log.c',
-	'loop.c',
-	'main.c',
-	'password.c',
-	'pool-buffer.c',
-	'render.c',
-	'seat.c',
-	'unicode.c',
+	'src/background-image.c',
+	'src/cairo.c',
+	'src/comm.c',
+	'src/log.c',
+	'src/loop.c',
+	'src/main.c',
+	'src/password.c',
+	'src/pool-buffer.c',
+	'src/render.c',
+	'src/seat.c',
+	'src/unicode.c',
 ]
 
 if libpam.found()
-	sources += ['pam.c']
+	sources += ['src/pam.c']
 	dependencies += [libpam]
 else
 	warning('The swaylock binary must be setuid when compiled without libpam')
 	warning('You must do this manually post-install: chmod a+s /path/to/swaylock')
-	sources += ['shadow.c']
+	sources += ['src/shadow.c']
 	dependencies += [crypt]
 endif
 
