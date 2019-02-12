@@ -79,7 +79,7 @@ Locks your Wayland session.
 *--caps-lock-bs-hl-color* <rrggbb[aa]>
 	Sets the color of backspace highlight segments when Caps Lock is active.
 
-*--caps-lock-bs-hl-color* <rrggbb[aa]>
+*--caps-lock-key-hl-color* <rrggbb[aa]>
 	Sets the color of the key press highlight segments when Caps Lock is active.
 
 *--font* <font>
