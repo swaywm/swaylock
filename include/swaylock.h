@@ -64,6 +64,7 @@ struct swaylock_args {
 	bool show_failed_attempts;
 	bool daemonize;
 	bool indicator_idle_visible;
+	uint32_t password_grace_period;
 };
 
 struct swaylock_password {

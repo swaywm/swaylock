@@ -27,6 +27,27 @@
 #include "wlr-layer-shell-unstable-v1-client-protocol.h"
 #include "xdg-output-unstable-v1-client-protocol.h"
 
+// returns a positive integer in milliseconds
+static uint32_t parse_seconds(const char *seconds) {
+	char *endptr;
+	errno = 0;
+	float val = strtof(seconds, &endptr);
+	if (errno != 0) {
+		swaylock_log(LOG_DEBUG, "Invalid number for seconds %s, defaulting to 0", seconds);
+		return 0;
+	}
+	if (endptr == seconds) {
+		swaylock_log(LOG_DEBUG, "No digits were found in %s, defaulting to 0", seconds);
+		return 0;
+	}
+	if (val < 0) {
+		swaylock_log(LOG_DEBUG, "Negative seconds nor allowed for %s, defaulting to 0", seconds);
+		return 0;
+	}
+
+	return (uint32_t)floor(val * 1000);
+}
+
 static uint32_t parse_color(const char *color) {
 	if (color[0] == '#') {
 		++color;
@@ -553,6 +574,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"line-uses-ring", no_argument, NULL, 'r'},
 		{"scaling", required_argument, NULL, 's'},
 		{"tiling", no_argument, NULL, 't'},
+		{"grace", required_argument, NULL, 'g'},
 		{"no-unlock-indicator", no_argument, NULL, 'u'},
 		{"show-keyboard-layout", no_argument, NULL, 'k'},
 		{"hide-keyboard-layout", no_argument, NULL, 'K'},
@@ -611,6 +633,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Show current count of failed authentication attempts.\n"
 		"  -f, --daemonize                  "
 			"Detach from the controlling terminal after locking.\n"
+		"  -g, --grace <seconds>            "
+			"Password grace period. Don't require the password for the first N seconds.\n"
 		"  -h, --help                       "
 			"Show help message and quit.\n"
 		"  -i, --image [[<output>]:]<path>  "
@@ -720,7 +744,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 	optind = 1;
 	while (1) {
 		int opt_idx = 0;
-		c = getopt_long(argc, argv, "c:deFfhi:kKLlnrs:tuvC:", long_options,
+		c = getopt_long(argc, argv, "c:deFfg:hi:kKLlnrs:tuvC:", long_options,
 				&opt_idx);
 		if (c == -1) {
 			break;
@@ -752,6 +776,11 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		case 'f':
 			if (state) {
 				state->args.daemonize = true;
+			}
+			break;
+		case 'g':
+			if (state) {
+				state->args.password_grace_period = parse_seconds(optarg);
 			}
 			break;
 		case 'i':
@@ -1106,7 +1135,6 @@ int main(int argc, char **argv) {
 
 	enum line_mode line_mode = LM_LINE;
 	state.failed_attempts = 0;
-	state.auth_state = AUTH_STATE_PREAUTH;
 	state.args = (struct swaylock_args){
 		.mode = BACKGROUND_MODE_FILL,
 		.font = strdup("sans-serif"),
@@ -1124,7 +1152,8 @@ int main(int argc, char **argv) {
 		.show_keyboard_layout = false,
 		.hide_keyboard_layout = false,
 		.show_failed_attempts = false,
-		.indicator_idle_visible = false
+		.indicator_idle_visible = false,
+		.password_grace_period = 0
 	};
 	wl_list_init(&state.images);
 	set_default_colors(&state.args.colors);
@@ -1162,6 +1191,10 @@ int main(int argc, char **argv) {
 		state.args.colors.line = state.args.colors.inside;
 	} else if (line_mode == LM_RING) {
 		state.args.colors.line = state.args.colors.ring;
+	}
+
+	if (state.args.password_grace_period > 0) {
+		state.auth_state = AUTH_STATE_PREAUTH;
 	}
 
 #ifdef __linux__
@@ -1232,7 +1265,9 @@ int main(int argc, char **argv) {
 
 	loop_add_fd(state.eventloop, get_comm_reply_fd(), POLLIN, comm_in, NULL);
 
-	loop_add_timer(state.eventloop, 3000, require_authentication, &state);
+	if (state.args.password_grace_period > 0) {
+		loop_add_timer(state.eventloop, state.args.password_grace_period, require_authentication, &state);
+	}
 
 	state.run_display = true;
 	while (state.run_display) {
