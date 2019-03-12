@@ -69,6 +69,7 @@ struct swaylock_state {
 	struct loop_timer *clear_password_timer;  // clears the password buffer
 	struct wl_display *display;
 	struct wl_compositor *compositor;
+	struct wl_subcompositor *subcompositor;
 	struct zwlr_layer_shell_v1 *layer_shell;
 	struct zwlr_input_inhibit_manager_v1 *input_inhibit_manager;
 	struct wl_shm *shm;
@@ -90,8 +91,11 @@ struct swaylock_surface {
 	uint32_t output_global_name;
 	struct zxdg_output_v1 *xdg_output;
 	struct wl_surface *surface;
+	struct wl_surface *child; // surface made into subsurface
+	struct wl_subsurface *subsurface;
 	struct zwlr_layer_surface_v1 *layer_surface;
 	struct pool_buffer buffers[2];
+	struct pool_buffer indicator_buffers[2];
 	struct pool_buffer *current_buffer;
 	bool frame_pending, dirty;
 	uint32_t width, height;
@@ -111,6 +115,7 @@ struct swaylock_image {
 
 void swaylock_handle_key(struct swaylock_state *state,
 		xkb_keysym_t keysym, uint32_t codepoint);
+void render_frame_background(struct swaylock_surface *surface);
 void render_frame(struct swaylock_surface *surface);
 void render_frames(struct swaylock_state *state);
 void damage_surface(struct swaylock_surface *surface);

@@ -126,6 +126,12 @@ static void create_layer_surface(struct swaylock_surface *surface) {
 	surface->surface = wl_compositor_create_surface(state->compositor);
 	assert(surface->surface);
 
+	surface->child = wl_compositor_create_surface(state->compositor);
+	assert(surface->child);
+	surface->subsurface = wl_subcompositor_get_subsurface(state->subcompositor, surface->child, surface->surface);
+	assert(surface->subsurface);
+	wl_subsurface_set_sync(surface->subsurface);
+
 	surface->layer_surface = zwlr_layer_shell_v1_get_layer_surface(
 			state->layer_shell, surface->surface, surface->output,
 			ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY, "lockscreen");
@@ -163,6 +169,7 @@ static void layer_surface_configure(void *data,
 	surface->width = width;
 	surface->height = height;
 	zwlr_layer_surface_v1_ack_configure(layer_surface, serial);
+	render_frame_background(surface);
 	render_frame(surface);
 }
 
@@ -297,6 +304,9 @@ static void handle_global(void *data, struct wl_registry *registry,
 	if (strcmp(interface, wl_compositor_interface.name) == 0) {
 		state->compositor = wl_registry_bind(registry, name,
 				&wl_compositor_interface, 3);
+	} else if (strcmp(interface, wl_subcompositor_interface.name) == 0) {
+		state->subcompositor = wl_registry_bind(registry, name,
+				&wl_subcompositor_interface, 1);
 	} else if (strcmp(interface, wl_shm_interface.name) == 0) {
 		state->shm = wl_registry_bind(registry, name,
 				&wl_shm_interface, 1);
