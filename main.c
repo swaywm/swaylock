@@ -1108,12 +1108,6 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	if (wl_list_empty(&state.surfaces)) {
-		free(state.args.font);
-		swaylock_log(LOG_ERROR, "Exiting - no outputs to show on.");
-		return 0;
-	}
-
 	zwlr_input_inhibit_manager_v1_get_inhibitor(state.input_inhibit_manager);
 	if (wl_display_roundtrip(state.display) == -1) {
 		free(state.args.font);
