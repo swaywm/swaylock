@@ -374,6 +374,23 @@ static cairo_surface_t *select_image(struct swaylock_state *state,
 	return default_image;
 }
 
+static char *join_args(char **argv, int argc) {
+	assert(argc > 0);
+	int len = 0, i;
+	for (i = 0; i < argc; ++i) {
+		len += strlen(argv[i]) + 1;
+	}
+	char *res = malloc(len);
+	len = 0;
+	for (i = 0; i < argc; ++i) {
+		strcpy(res + len, argv[i]);
+		len += strlen(argv[i]);
+		res[len++] = ' ';
+	}
+	res[len - 1] = '\0';
+	return res;
+}
+
 static void load_image(char *arg, struct swaylock_state *state) {
 	// [[<output>]:]<path>
 	struct swaylock_image *image = calloc(1, sizeof(struct swaylock_image));
@@ -407,11 +424,19 @@ static void load_image(char *arg, struct swaylock_state *state) {
 		}
 	}
 
-	// Bash doesn't replace the ~ with $HOME if the output name is supplied
+	// The shell will not expand ~ to the value of $HOME when an output name is
+	// given. Also, any image paths given in the config file need to have shell
+	// expansions performed
 	wordexp_t p;
+	while (strstr(image->path, "  ")) {
+		image->path = realloc(image->path, strlen(image->path) + 2);
+		char *ptr = strstr(image->path, "  ") + 1;
+		memmove(ptr + 1, ptr, strlen(ptr) + 1);
+		*ptr = '\\';
+	}
 	if (wordexp(image->path, &p, 0) == 0) {
 		free(image->path);
-		image->path = strdup(p.we_wordv[0]);
+		image->path = join_args(p.we_wordv, p.we_wordc);
 		wordfree(&p);
 	}
 
