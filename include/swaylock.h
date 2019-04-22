@@ -54,6 +54,7 @@ struct swaylock_args {
 	bool show_caps_lock_text;
 	bool show_caps_lock_indicator;
 	bool show_keyboard_layout;
+	bool hide_keyboard_layout;
 	bool show_failed_attempts;
 	bool daemonize;
 };

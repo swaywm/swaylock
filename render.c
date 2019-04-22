@@ -156,7 +156,8 @@ void render_frame(struct swaylock_surface *surface) {
 			}
 
 			xkb_layout_index_t num_layout = xkb_keymap_num_layouts(state->xkb.keymap);
-			if (state->args.show_keyboard_layout || num_layout > 1) {
+			if (!state->args.hide_keyboard_layout && 
+					(state->args.show_keyboard_layout || num_layout > 1)) {
 				xkb_layout_index_t curr_layout = 0;
 
 				// advance to the first active layout (if any)
