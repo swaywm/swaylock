@@ -550,6 +550,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"tiling", no_argument, NULL, 't'},
 		{"no-unlock-indicator", no_argument, NULL, 'u'},
 		{"show-keyboard-layout", no_argument, NULL, 'k'},
+		{"hide-keyboard-layout", no_argument, NULL, 'K'},
 		{"show-failed-attempts", no_argument, NULL, 'F'},
 		{"version", no_argument, NULL, 'v'},
 		{"bs-hl-color", required_argument, NULL, LO_BS_HL_COLOR},
@@ -607,6 +608,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Display the given image.\n"
 		"  -k, --show-keyboard-layout       "
 			"Display the current xkb layout while typing.\n"
+		"  -K, --hide-keyboard-layout       "
+			"Hide the current xkb layout while typing.\n"
 		"  -L, --disable-caps-lock-text     "
 			"Disable the Caps Lock text.\n"
 		"  -l, --indicator-caps-lock        "
@@ -700,7 +703,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 	optind = 1;
 	while (1) {
 		int opt_idx = 0;
-		c = getopt_long(argc, argv, "c:deFfhi:kLlnrs:tuvC:", long_options,
+		c = getopt_long(argc, argv, "c:deFfhi:kKLlnrs:tuvC:", long_options,
 				&opt_idx);
 		if (c == -1) {
 			break;
@@ -742,6 +745,11 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		case 'k':
 			if (state) {
 				state->args.show_keyboard_layout = true;
+			}
+			break;
+		case 'K':
+			if (state) {
+				state->args.hide_keyboard_layout = true;
 			}
 			break;
 		case 'L':
@@ -1063,6 +1071,7 @@ int main(int argc, char **argv) {
 		.show_caps_lock_indicator = false,
 		.show_caps_lock_text = true,
 		.show_keyboard_layout = false,
+		.hide_keyboard_layout = false,
 		.show_failed_attempts = false
 	};
 	wl_list_init(&state.images);

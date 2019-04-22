@@ -55,6 +55,10 @@ Locks your Wayland session.
 	Force displaying the current xkb layout while typing, even if only one layout
 	is configured.
 
+*-K, --hide-keyboard-layout*
+	Force hiding the current xkb layout while typing, even if more than one layout
+	is configured or the show-keyboard-layout option is set.
+
 *-L, --disable-caps-lock-text*
 	Disable the Caps Lock Text.
 
