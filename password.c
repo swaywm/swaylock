@@ -137,6 +137,7 @@ void swaylock_handle_key(struct swaylock_state *state,
 		schedule_indicator_clear(state);
 		schedule_password_clear(state);
 		break;
+	case XKB_KEY_m: /* fallthrough */
 	case XKB_KEY_d:
 		if (state->xkb.control) {
 			submit_password(state);
