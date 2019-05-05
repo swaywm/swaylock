@@ -128,7 +128,11 @@ void render_frame(struct swaylock_surface *surface) {
 		set_color_for_state(cairo, state, &state->args.colors.text);
 		cairo_select_font_face(cairo, state->args.font,
 				CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
-		cairo_set_font_size(cairo, arc_radius / 3.0f);
+		if (state->args.font_size > 0) {
+		  cairo_set_font_size(cairo, state->args.font_size);
+		} else {
+		  cairo_set_font_size(cairo, arc_radius / 3.0f);
+		}
 		switch (state->auth_state) {
 		case AUTH_STATE_VALIDATING:
 			text = "verifying";
