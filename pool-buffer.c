@@ -1,4 +1,4 @@
-#define _POSIX_C_SOURCE 200809
+#define _POSIX_C_SOURCE 200809L
 #include <assert.h>
 #include <cairo/cairo.h>
 #include <fcntl.h>
