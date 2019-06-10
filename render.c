@@ -73,16 +73,15 @@ void render_frame(struct swaylock_surface *surface) {
 
 	int arc_radius = state->args.radius * surface->scale;
 	int arc_thickness = state->args.thickness * surface->scale;
-	int buffer_diameter = (arc_radius + arc_thickness) * 2;
-	int buffer_height = buffer_diameter * 2;
+	int buffer_diameter = (arc_radius + arc_thickness) * 8;
 
 	int indicator_radius = state->args.radius + state->args.thickness;
-	int subsurf_xpos = surface->width / 2 - indicator_radius;
-	int subsurf_ypos = surface->height / 2 - indicator_radius;
+	int subsurf_xpos = surface->width / 2 - indicator_radius * 4;
+	int subsurf_ypos = surface->height / 2 - indicator_radius * 4;
 	wl_subsurface_set_position(surface->subsurface, subsurf_xpos, subsurf_ypos);
 
 	surface->current_buffer = get_next_buffer(state->shm,
-			surface->indicator_buffers, buffer_diameter, buffer_height);
+			surface->indicator_buffers, buffer_diameter, buffer_diameter);
 	if (surface->current_buffer == NULL) {
 		return;
 	}
@@ -265,7 +264,6 @@ void render_frame(struct swaylock_surface *surface) {
 			// border
 			cairo_set_source_u32(cairo, state->args.colors.layout_border);
 			cairo_stroke(cairo);
-			cairo_new_sub_path(cairo);
 
 			// take font extents and padding into account
 			cairo_move_to(cairo,
