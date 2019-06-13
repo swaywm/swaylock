@@ -129,9 +129,9 @@ void render_frame(struct swaylock_surface *surface) {
 		cairo_select_font_face(cairo, state->args.font,
 				CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
 		if (state->args.font_size > 0) {
-		  cairo_set_font_size(cairo, state->args.font_size);
+			cairo_set_font_size(cairo, state->args.font_size);
 		} else {
-		  cairo_set_font_size(cairo, arc_radius / 3.0f);
+			cairo_set_font_size(cairo, arc_radius / 3.0f);
 		}
 		switch (state->auth_state) {
 		case AUTH_STATE_VALIDATING:
@@ -160,7 +160,7 @@ void render_frame(struct swaylock_surface *surface) {
 			}
 
 			xkb_layout_index_t num_layout = xkb_keymap_num_layouts(state->xkb.keymap);
-			if (!state->args.hide_keyboard_layout && 
+			if (!state->args.hide_keyboard_layout &&
 					(state->args.show_keyboard_layout || num_layout > 1)) {
 				xkb_layout_index_t curr_layout = 0;
 
@@ -265,7 +265,6 @@ void render_frame(struct swaylock_surface *surface) {
 			// border
 			cairo_set_source_u32(cairo, state->args.colors.layout_border);
 			cairo_stroke(cairo);
-			cairo_new_sub_path(cairo);
 
 			// take font extents and padding into account
 			cairo_move_to(cairo,

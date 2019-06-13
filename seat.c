@@ -22,7 +22,8 @@ static void keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard,
 		exit(1);
 	}
 	struct xkb_keymap *keymap = xkb_keymap_new_from_string(
-			state->xkb.context, map_shm, XKB_KEYMAP_FORMAT_TEXT_V1, 0);
+			state->xkb.context, map_shm, XKB_KEYMAP_FORMAT_TEXT_V1,
+			XKB_KEYMAP_COMPILE_NO_FLAGS);
 	munmap(map_shm, size);
 	close(fd);
 	assert(keymap);
@@ -72,7 +73,6 @@ static void keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard,
 	state->xkb.control = xkb_state_mod_name_is_active(state->xkb.state,
 		XKB_MOD_NAME_CTRL,
 		XKB_STATE_MODS_DEPRESSED | XKB_STATE_MODS_LATCHED);
-
 }
 
 static void keyboard_repeat_info(void *data, struct wl_keyboard *wl_keyboard,
