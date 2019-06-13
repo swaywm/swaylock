@@ -101,6 +101,7 @@ struct swaylock_surface {
 	struct pool_buffer *current_buffer;
 	bool frame_pending, dirty;
 	uint32_t width, height;
+	uint32_t indicator_width, indicator_height;
 	int32_t scale;
 	enum wl_output_subpixel subpixel;
 	char *output_name;
