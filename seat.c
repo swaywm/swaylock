@@ -62,6 +62,11 @@ static void keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard,
 		uint32_t serial, uint32_t mods_depressed, uint32_t mods_latched,
 		uint32_t mods_locked, uint32_t group) {
 	struct swaylock_state *state = data;
+	int layout_same = xkb_state_layout_index_is_active(state->xkb.state,
+		group, XKB_STATE_LAYOUT_EFFECTIVE);
+	if (!layout_same) {
+		damage_state(state);
+	}
 	xkb_state_update_mask(state->xkb.state,
 		mods_depressed, mods_latched, mods_locked, 0, 0, group);
 	int caps_lock = xkb_state_mod_name_is_active(state->xkb.state,
