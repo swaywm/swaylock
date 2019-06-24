@@ -25,6 +25,7 @@
 #include "swaylock.h"
 #include "wlr-input-inhibitor-unstable-v1-client-protocol.h"
 #include "wlr-layer-shell-unstable-v1-client-protocol.h"
+#include "wlr-screencopy-unstable-v1-client-protocol.h"
 #include "xdg-output-unstable-v1-client-protocol.h"
 
 static uint32_t parse_color(const char *color) {
@@ -265,6 +266,128 @@ struct wl_output_listener _wl_output_listener = {
 	.scale = handle_wl_output_scale,
 };
 
+static struct wl_buffer *create_shm_buffer(struct wl_shm *shm, enum wl_shm_format fmt,
+		int width, int height, int stride, void **data_out) {
+	int size = stride * height;
+
+	const char shm_name[] = "/swaylock-shm";
+	int fd = shm_open(shm_name, O_RDWR | O_CREAT | O_EXCL, 0);
+	if (fd < 0) {
+		fprintf(stderr, "shm_open failed\n");
+		return NULL;
+	}
+	shm_unlink(shm_name);
+
+	int ret;
+	while ((ret = ftruncate(fd, size)) == EINTR) {
+		// No-op
+	}
+	if (ret < 0) {
+		close(fd);
+		fprintf(stderr, "ftruncate failed\n");
+		return NULL;
+	}
+
+	void *data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	if (data == MAP_FAILED) {
+		fprintf(stderr, "mmap failed: %m\n");
+		close(fd);
+		return NULL;
+	}
+
+	struct wl_shm_pool *pool = wl_shm_create_pool(shm, fd, size);
+	close(fd);
+	struct wl_buffer *buffer = wl_shm_pool_create_buffer(pool, 0, width, height,
+		stride, fmt);
+	wl_shm_pool_destroy(pool);
+
+	*data_out = data;
+	return buffer;
+}
+
+static void handle_screencopy_frame_buffer(void *data,
+		struct zwlr_screencopy_frame_v1 *frame, uint32_t format, uint32_t width,
+		uint32_t height, uint32_t stride) {
+	struct swaylock_surface *surface = data;
+
+	struct swaylock_image *image = calloc(1, sizeof(struct swaylock_image));
+	image->path = NULL;
+	image->output_name = surface->output_name;
+
+	struct swaylock_image *iter_image, *temp;
+	wl_list_for_each_safe(iter_image, temp, &surface->state->images, link) {
+		if (lenient_strcmp(iter_image->output_name, image->output_name) == 0) {
+			swaylock_log(LOG_DEBUG,
+					"Replacing image defined for output %s with screenshot",
+					image->output_name);
+			wl_list_remove(&iter_image->link);
+			free(iter_image->cairo_surface);
+			free(iter_image->output_name);
+			free(iter_image->path);
+			free(iter_image);
+			break;
+		}
+	}
+
+	void *bufdata;
+	struct wl_buffer *buf = create_shm_buffer(surface->state->shm, format, width, height, stride, &bufdata);
+	if (buf == NULL) {
+		free(image);
+		return;
+	}
+
+	surface->screencopy.format = format;
+	surface->screencopy.width = width;
+	surface->screencopy.height = height;
+	surface->screencopy.stride = stride;
+
+	surface->screencopy.image = image;
+	surface->screencopy.data = bufdata;
+
+	zwlr_screencopy_frame_v1_copy(frame, buf);
+
+	wl_list_insert(&surface->state->images, &image->link);
+	swaylock_log(LOG_DEBUG, "Loaded screenshot for output %s", surface->output_name);
+}
+
+static void handle_screencopy_frame_flags(void *data,
+		struct zwlr_screencopy_frame_v1 *frame, uint32_t flags) {
+	// Who cares
+}
+
+static void handle_screencopy_frame_ready(void *data,
+		struct zwlr_screencopy_frame_v1 *frame, uint32_t tv_sec_hi,
+		uint32_t tv_sec_lo, uint32_t tv_nsec) {
+	struct swaylock_surface *surface = data;
+	struct swaylock_image *image = surface->screencopy.image;
+
+	image->cairo_surface = load_background_from_buffer(
+			surface->screencopy.data,
+			surface->screencopy.format,
+			surface->screencopy.width,
+			surface->screencopy.height,
+			surface->screencopy.stride);
+
+	if (!image->cairo_surface) {
+		free(image);
+		exit(1);
+	}
+
+	surface->state->n_screenshots_done += 1;
+}
+
+static void handle_screencopy_frame_failed(void *data,
+		struct zwlr_screencopy_frame_v1 *frame) {
+	fprintf(stderr, "Screencopy failed!\n");
+}
+
+static const struct zwlr_screencopy_frame_v1_listener screencopy_frame_listener = {
+	.buffer = handle_screencopy_frame_buffer,
+	.flags = handle_screencopy_frame_flags,
+	.ready = handle_screencopy_frame_ready,
+	.failed = handle_screencopy_frame_failed,
+};
+
 static void handle_xdg_output_logical_size(void *data, struct zxdg_output_v1 *output,
 		int width, int height) {
 	// Who cares
@@ -302,6 +425,8 @@ struct zxdg_output_v1_listener _xdg_output_listener = {
 
 static void handle_global(void *data, struct wl_registry *registry,
 		uint32_t name, const char *interface, uint32_t version) {
+	fprintf(stderr, "handle_global %s\n", interface);
+
 	struct swaylock_state *state = data;
 	if (strcmp(interface, wl_compositor_interface.name) == 0) {
 		state->compositor = wl_registry_bind(registry, name,
@@ -342,6 +467,9 @@ static void handle_global(void *data, struct wl_registry *registry,
 			create_layer_surface(surface);
 			wl_display_roundtrip(state->display);
 		}
+	} else if (strcmp(interface, zwlr_screencopy_manager_v1_interface.name) == 0) {
+		state->screencopy_manager = wl_registry_bind(registry, name,
+				&zwlr_screencopy_manager_v1_interface, 1);
 	}
 }
 
@@ -544,6 +672,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"daemonize", no_argument, NULL, 'f'},
 		{"help", no_argument, NULL, 'h'},
 		{"image", required_argument, NULL, 'i'},
+		{"screenshots", no_argument, NULL, 'S'},
 		{"disable-caps-lock-text", no_argument, NULL, 'L'},
 		{"indicator-caps-lock", no_argument, NULL, 'l'},
 		{"line-uses-inside", no_argument, NULL, 'n'},
@@ -610,6 +739,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Show help message and quit.\n"
 		"  -i, --image [[<output>]:]<path>  "
 			"Display the given image.\n"
+		"  -S, --screenshots                "
+			"Use a screenshots as the background image.\n"
 		"  -k, --show-keyboard-layout       "
 			"Display the current xkb layout while typing.\n"
 		"  -K, --hide-keyboard-layout       "
@@ -709,7 +840,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 	optind = 1;
 	while (1) {
 		int opt_idx = 0;
-		c = getopt_long(argc, argv, "c:deFfhi:kKLlnrs:tuvC:", long_options,
+		c = getopt_long(argc, argv, "c:deFfhi:SkKLlnrs:tuvC:", long_options,
 				&opt_idx);
 		if (c == -1) {
 			break;
@@ -746,6 +877,11 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		case 'i':
 			if (state) {
 				load_image(optarg, state);
+			}
+			break;
+		case 'S':
+			if (state) {
+				state->args.screenshots = true;
 			}
 			break;
 		case 'k':
@@ -1084,7 +1220,8 @@ int main(int argc, char **argv) {
 		.show_caps_lock_text = true,
 		.show_keyboard_layout = false,
 		.hide_keyboard_layout = false,
-		.show_failed_attempts = false
+		.show_failed_attempts = false,
+		.screenshots = false
 	};
 	wl_list_init(&state.images);
 	set_default_colors(&state.args.colors);
@@ -1154,14 +1291,6 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	zwlr_input_inhibit_manager_v1_get_inhibitor(state.input_inhibit_manager);
-	if (wl_display_roundtrip(state.display) == -1) {
-		free(state.args.font);
-		swaylock_log(LOG_ERROR, "Exiting - failed to inhibit input:"
-				" is another lockscreen already running?");
-		return 2;
-	}
-
 	if (state.zxdg_output_manager) {
 		struct swaylock_surface *surface;
 		wl_list_for_each(surface, &state.surfaces, link) {
@@ -1174,6 +1303,38 @@ int main(int argc, char **argv) {
 	} else {
 		swaylock_log(LOG_INFO, "Compositor does not support zxdg output "
 				"manager, images assigned to named outputs will not work");
+	}
+
+	if (state.args.screenshots) {
+		state.n_screenshots_done = 0;
+		size_t n_pending = 0;
+		struct swaylock_surface *surface;
+		wl_list_for_each(surface, &state.surfaces, link) {
+			surface->screencopy_frame = zwlr_screencopy_manager_v1_capture_output(
+					state.screencopy_manager, false, surface->output);
+			zwlr_screencopy_frame_v1_add_listener(surface->screencopy_frame,
+					&screencopy_frame_listener, surface);
+
+			++n_pending;
+		}
+
+		bool done = false;
+		while (!done && wl_display_dispatch(state.display) != -1) {
+			done = (state.n_screenshots_done == n_pending);
+		}
+
+		if (!done) {
+			fprintf(stderr, "failed to screenshoot all outputs\n");
+			return EXIT_FAILURE;
+		}
+	}
+
+	zwlr_input_inhibit_manager_v1_get_inhibitor(state.input_inhibit_manager);
+	if (wl_display_roundtrip(state.display) == -1) {
+		free(state.args.font);
+		swaylock_log(LOG_ERROR, "Exiting - failed to inhibit input:"
+				" is another lockscreen already running?");
+		return 2;
 	}
 
 	struct swaylock_surface *surface;

@@ -2,6 +2,7 @@
 #include "background-image.h"
 #include "cairo.h"
 #include "log.h"
+#include "swaylock.h"
 
 enum background_mode parse_background_mode(const char *mode) {
 	if (strcmp(mode, "stretch") == 0) {
@@ -19,6 +20,27 @@ enum background_mode parse_background_mode(const char *mode) {
 	}
 	swaylock_log(LOG_ERROR, "Unsupported background mode: %s", mode);
 	return BACKGROUND_MODE_INVALID;
+}
+
+cairo_surface_t *load_background_from_buffer(void *buf, uint32_t format,
+		uint32_t width, uint32_t height, uint32_t stride) {
+	cairo_surface_t *image = cairo_image_surface_create(
+			CAIRO_FORMAT_RGB24, width, height);
+
+	// The image from Wayland is flipped.
+	void *cdata = cairo_image_surface_get_data(image);
+	uint32_t cstride = cairo_image_surface_get_stride(image);
+	for (size_t cy = 0; cy < height; ++cy) {
+		size_t wy = height - cy - 1;
+		memcpy((char *)cdata + cstride * cy, (char *)buf + stride * wy, width * 4);
+	}
+
+	if (!image) {
+		swaylock_log(LOG_ERROR, "Failed to create background image.");
+		return NULL;
+	}
+
+	return image;
 }
 
 cairo_surface_t *load_background_image(const char *path) {

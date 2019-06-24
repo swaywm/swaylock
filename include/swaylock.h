@@ -58,6 +58,7 @@ struct swaylock_args {
 	bool hide_keyboard_layout;
 	bool show_failed_attempts;
 	bool daemonize;
+	bool screenshots;
 };
 
 struct swaylock_password {
@@ -74,6 +75,7 @@ struct swaylock_state {
 	struct wl_subcompositor *subcompositor;
 	struct zwlr_layer_shell_v1 *layer_shell;
 	struct zwlr_input_inhibit_manager_v1 *input_inhibit_manager;
+	struct zwlr_screencopy_manager_v1 *screencopy_manager;
 	struct wl_shm *shm;
 	struct wl_list surfaces;
 	struct wl_list images;
@@ -82,12 +84,20 @@ struct swaylock_state {
 	struct swaylock_xkb xkb;
 	enum auth_state auth_state;
 	int failed_attempts;
+	size_t n_screenshots_done;
 	bool run_display;
 	struct zxdg_output_manager_v1 *zxdg_output_manager;
 };
 
 struct swaylock_surface {
-	cairo_surface_t *image;
+	union {
+		cairo_surface_t *image;
+		struct {
+			uint32_t format, width, height, stride;
+			void *data;
+			struct swaylock_image *image;
+		} screencopy;
+	};
 	struct swaylock_state *state;
 	struct wl_output *output;
 	uint32_t output_global_name;
@@ -96,6 +106,7 @@ struct swaylock_surface {
 	struct wl_surface *child; // surface made into subsurface
 	struct wl_subsurface *subsurface;
 	struct zwlr_layer_surface_v1 *layer_surface;
+	struct zwlr_screencopy_frame_v1 *screencopy_frame;
 	struct pool_buffer buffers[2];
 	struct pool_buffer indicator_buffers[2];
 	struct pool_buffer *current_buffer;
