@@ -425,7 +425,6 @@ struct zxdg_output_v1_listener _xdg_output_listener = {
 
 static void handle_global(void *data, struct wl_registry *registry,
 		uint32_t name, const char *interface, uint32_t version) {
-	fprintf(stderr, "handle_global %s\n", interface);
 
 	struct swaylock_state *state = data;
 	if (strcmp(interface, wl_compositor_interface.name) == 0) {
@@ -662,6 +661,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_TEXT_CAPS_LOCK_COLOR,
 		LO_TEXT_VER_COLOR,
 		LO_TEXT_WRONG_COLOR,
+		LO_EFFECT_BLUR,
 	};
 
 	static struct option long_options[] = {
@@ -717,6 +717,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"text-caps-lock-color", required_argument, NULL, LO_TEXT_CAPS_LOCK_COLOR},
 		{"text-ver-color", required_argument, NULL, LO_TEXT_VER_COLOR},
 		{"text-wrong-color", required_argument, NULL, LO_TEXT_WRONG_COLOR},
+		{"effect-blur", required_argument, NULL, LO_EFFECT_BLUR},
 		{0, 0, 0, 0}
 	};
 
@@ -833,6 +834,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Sets the color of the text when verifying.\n"
 		"  --text-wrong-color <color>       "
 			"Sets the color of the text when invalid.\n"
+		"  --effect-blur <radius>x<times>   "
+			"Apply a blur effect to all images.\n"
 		"\n"
 		"All <color> options are of the form <rrggbb[aa]>.\n";
 
@@ -1097,6 +1100,18 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 				state->args.colors.text.wrong = parse_color(optarg);
 			}
 			break;
+		case LO_EFFECT_BLUR:
+			if (state) {
+				state->args.effects = realloc(state->args.effects,
+						sizeof(*state->args.effects) * ++state->args.effects_count);
+				struct swaylock_effect *effect = &state->args.effects[state->args.effects_count - 1];
+				effect->tag = EFFECT_BLUR;
+				if (sscanf(optarg, "%dx%d", &effect->e.blur.radius, &effect->e.blur.times) != 2) {
+					swaylock_log(LOG_ERROR, "Invalid blur arguments %s, ignoring", optarg);
+					state->args.effects_count -= 1;
+				}
+			}
+			break;
 		default:
 			fprintf(stderr, "%s", usage);
 			return 1;
@@ -1221,7 +1236,9 @@ int main(int argc, char **argv) {
 		.show_keyboard_layout = false,
 		.hide_keyboard_layout = false,
 		.show_failed_attempts = false,
-		.screenshots = false
+		.screenshots = false,
+		.effects = NULL,
+		.effects_count = 0
 	};
 	wl_list_init(&state.images);
 	set_default_colors(&state.args.colors);
@@ -1335,6 +1352,15 @@ int main(int argc, char **argv) {
 		swaylock_log(LOG_ERROR, "Exiting - failed to inhibit input:"
 				" is another lockscreen already running?");
 		return 2;
+	}
+
+	// Apply effects
+	struct swaylock_image *image;
+	if (state.args.effects_count > 0) {
+		wl_list_for_each(image, &state.images, link) {
+			image->cairo_surface = swaylock_effects_run(
+					image->cairo_surface, state.args.effects, state.args.effects_count);
+		}
 	}
 
 	struct swaylock_surface *surface;

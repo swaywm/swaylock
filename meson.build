@@ -17,6 +17,14 @@ add_project_arguments(
 		'-Wno-unused-result',
 		'-Wundef',
 		'-Wvla',
+		'-fopenmp',
+	],
+	language: 'c',
+)
+
+add_project_link_arguments(
+	[
+		'-fopenmp',
 	],
 	language: 'c',
 )
@@ -134,6 +142,7 @@ sources = [
 	'render.c',
 	'seat.c',
 	'unicode.c',
+	'effects.c',
 ]
 
 if libpam.found()

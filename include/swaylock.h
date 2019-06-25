@@ -7,6 +7,7 @@
 #include "cairo.h"
 #include "pool-buffer.h"
 #include "seat.h"
+#include "effects.h"
 #include "wlr-layer-shell-unstable-v1-client-protocol.h"
 
 enum auth_state {
@@ -59,6 +60,8 @@ struct swaylock_args {
 	bool show_failed_attempts;
 	bool daemonize;
 	bool screenshots;
+	struct swaylock_effect *effects;
+	int effects_count;
 };
 
 struct swaylock_password {
