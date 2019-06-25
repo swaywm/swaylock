@@ -1360,14 +1360,6 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	zwlr_input_inhibit_manager_v1_get_inhibitor(state.input_inhibit_manager);
-	if (wl_display_roundtrip(state.display) == -1) {
-		free(state.args.font);
-		swaylock_log(LOG_ERROR, "Exiting - failed to inhibit input:"
-				" is another lockscreen already running?");
-		return 2;
-	}
-
 	// Apply effects
 	struct swaylock_image *image;
 	if (state.args.effects_count > 0) {
@@ -1375,6 +1367,14 @@ int main(int argc, char **argv) {
 			image->cairo_surface = swaylock_effects_run(
 					image->cairo_surface, state.args.effects, state.args.effects_count);
 		}
+	}
+
+	zwlr_input_inhibit_manager_v1_get_inhibitor(state.input_inhibit_manager);
+	if (wl_display_roundtrip(state.display) == -1) {
+		free(state.args.font);
+		swaylock_log(LOG_ERROR, "Exiting - failed to inhibit input:"
+				" is another lockscreen already running?");
+		return 2;
 	}
 
 	struct swaylock_surface *surface;

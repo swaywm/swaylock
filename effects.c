@@ -1,10 +1,11 @@
-#include "effects.h"
-
 #include <omp.h>
+#include "effects.h"
+#include "log.h"
 
 static void blur_h(uint32_t *dest, uint32_t *src, int width, int height,
 		int radius) {
 	double coeff = 1.0 / (radius * 2 + 1);
+
 #pragma omp parallel for
 	for (int i = 0; i < height; ++i) {
 		int iwidth = i * width;
@@ -38,6 +39,7 @@ static void blur_h(uint32_t *dest, uint32_t *src, int width, int height,
 static void blur_v(uint32_t *dest, uint32_t *src, int width, int height,
 		int radius) {
 	double coeff = 1.0 / (radius * 2 + 1);
+
 #pragma omp parallel for
 	for (int j = 0; j < width; ++j) {
 		double r_acc = 0.0;
@@ -98,11 +100,14 @@ static void effect_scale(uint32_t *dest, uint32_t *src, int swidth, int sheight,
 	int dwidth = swidth * scale;
 	int dheight = sheight * scale;
 	double fact = 1.0 / scale;
+
 #pragma omp parallel for
 	for (int dy = 0; dy < dheight; ++dy) {
 		int sy = dy * fact;
+		if (sy >= sheight) continue;
 		for (int dx = 0; dx < dwidth; ++dx) {
 			int sx = dx * fact;
+			if (sx >= swidth) continue;
 			dest[dy * dwidth + dx] = src[sy * swidth + sx];
 		}
 	}
@@ -119,6 +124,13 @@ cairo_surface_t *swaylock_effects_run(cairo_surface_t *surface,
 					CAIRO_FORMAT_RGB24,
 					cairo_image_surface_get_width(surface),
 					cairo_image_surface_get_height(surface));
+
+			if (cairo_surface_status(surf) != CAIRO_STATUS_SUCCESS) {
+				swaylock_log(LOG_ERROR, "Failed to create surface for blur effect");
+				cairo_surface_destroy(surf);
+				break;
+			}
+
 			effect_blur(
 					(uint32_t *)cairo_image_surface_get_data(surf),
 					(uint32_t *)cairo_image_surface_get_data(surface),
@@ -136,6 +148,19 @@ cairo_surface_t *swaylock_effects_run(cairo_surface_t *surface,
 					CAIRO_FORMAT_RGB24,
 					cairo_image_surface_get_width(surface) * effect->e.scale,
 					cairo_image_surface_get_height(surface) * effect->e.scale);
+
+			fprintf(stderr, "%f: %ix%i -> %ix%i\n", effect->e.scale,
+					cairo_image_surface_get_width(surface),
+					cairo_image_surface_get_height(surface),
+					cairo_image_surface_get_width(surf),
+					cairo_image_surface_get_height(surf));
+
+			if (cairo_surface_status(surf) != CAIRO_STATUS_SUCCESS) {
+				swaylock_log(LOG_ERROR, "Failed to create surface for scale effect");
+				cairo_surface_destroy(surf);
+				break;
+			}
+
 			effect_scale(
 					(uint32_t *)cairo_image_surface_get_data(surf),
 					(uint32_t *)cairo_image_surface_get_data(surface),
