@@ -93,6 +93,21 @@ static void effect_blur(uint32_t *dest, uint32_t *src, int width, int height,
 		memcpy(origdest, dest, width * height * sizeof(*dest));
 }
 
+static void effect_scale(uint32_t *dest, uint32_t *src, int swidth, int sheight,
+		double scale) {
+	int dwidth = swidth * scale;
+	int dheight = sheight * scale;
+	double fact = 1.0 / scale;
+#pragma omp parallel for
+	for (int dy = 0; dy < dheight; ++dy) {
+		int sy = dy * fact;
+		for (int dx = 0; dx < dwidth; ++dx) {
+			int sx = dx * fact;
+			dest[dy * dwidth + dx] = src[sy * swidth + sx];
+		}
+	}
+}
+
 cairo_surface_t *swaylock_effects_run(cairo_surface_t *surface,
 		struct swaylock_effect *effects, int count) {
 
@@ -107,9 +122,26 @@ cairo_surface_t *swaylock_effects_run(cairo_surface_t *surface,
 			effect_blur(
 					(uint32_t *)cairo_image_surface_get_data(surf),
 					(uint32_t *)cairo_image_surface_get_data(surface),
-					cairo_image_surface_get_width(surf),
-					cairo_image_surface_get_height(surf),
+					cairo_image_surface_get_width(surface),
+					cairo_image_surface_get_height(surface),
 					effect->e.blur.radius, effect->e.blur.times);
+			cairo_surface_flush(surf);
+			cairo_surface_destroy(surface);
+			surface = surf;
+			break;
+		}
+
+		case EFFECT_SCALE: {
+			cairo_surface_t *surf = cairo_image_surface_create(
+					CAIRO_FORMAT_RGB24,
+					cairo_image_surface_get_width(surface) * effect->e.scale,
+					cairo_image_surface_get_height(surface) * effect->e.scale);
+			effect_scale(
+					(uint32_t *)cairo_image_surface_get_data(surf),
+					(uint32_t *)cairo_image_surface_get_data(surface),
+					cairo_image_surface_get_width(surface),
+					cairo_image_surface_get_height(surface),
+					effect->e.scale);
 			cairo_surface_flush(surf);
 			cairo_surface_destroy(surface);
 			surface = surf;

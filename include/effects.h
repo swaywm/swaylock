@@ -8,10 +8,12 @@ struct swaylock_effect {
 		struct {
 			int radius, times;
 		} blur;
+		double scale;
 	} e;
 
 	enum {
 		EFFECT_BLUR,
+		EFFECT_SCALE,
 	} tag;
 };
 

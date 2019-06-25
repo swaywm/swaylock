@@ -662,6 +662,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_TEXT_VER_COLOR,
 		LO_TEXT_WRONG_COLOR,
 		LO_EFFECT_BLUR,
+		LO_EFFECT_SCALE,
 	};
 
 	static struct option long_options[] = {
@@ -718,6 +719,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"text-ver-color", required_argument, NULL, LO_TEXT_VER_COLOR},
 		{"text-wrong-color", required_argument, NULL, LO_TEXT_WRONG_COLOR},
 		{"effect-blur", required_argument, NULL, LO_EFFECT_BLUR},
+		{"effect-scale", required_argument, NULL, LO_EFFECT_SCALE},
 		{0, 0, 0, 0}
 	};
 
@@ -1107,7 +1109,19 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 				struct swaylock_effect *effect = &state->args.effects[state->args.effects_count - 1];
 				effect->tag = EFFECT_BLUR;
 				if (sscanf(optarg, "%dx%d", &effect->e.blur.radius, &effect->e.blur.times) != 2) {
-					swaylock_log(LOG_ERROR, "Invalid blur arguments %s, ignoring", optarg);
+					swaylock_log(LOG_ERROR, "Invalid blur effect argument %s, ignoring", optarg);
+					state->args.effects_count -= 1;
+				}
+			}
+			break;
+		case LO_EFFECT_SCALE:
+			if (state) {
+				state->args.effects = realloc(state->args.effects,
+						sizeof(*state->args.effects) * ++state->args.effects_count);
+				struct swaylock_effect *effect = &state->args.effects[state->args.effects_count - 1];
+				effect->tag = EFFECT_SCALE;
+				if (sscanf(optarg, "%lf", &effect->e.scale) != 1) {
+					swaylock_log(LOG_ERROR, "Invalid scale effect argument %s, ignoring", optarg);
 					state->args.effects_count -= 1;
 				}
 			}
