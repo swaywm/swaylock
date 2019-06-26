@@ -75,6 +75,9 @@ static void blur_once(uint32_t *dest, uint32_t *src, uint32_t *scratch,
 	blur_v(dest, scratch, width, height, radius);
 }
 
+// This effect_blur function, and the associated blur_* functions,
+// are my own adaptations of code in yvbbrjdr's i3lock-fancy-rapid:
+// https://github.com/yvbbrjdr/i3lock-fancy-rapid
 static void effect_blur(uint32_t *dest, uint32_t *src, int width, int height,
 		int radius, int times) {
 	uint32_t *origdest = dest;
