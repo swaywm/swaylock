@@ -663,6 +663,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_TEXT_WRONG_COLOR,
 		LO_EFFECT_BLUR,
 		LO_EFFECT_SCALE,
+		LO_EFFECT_GREYSCALE,
 	};
 
 	static struct option long_options[] = {
@@ -720,6 +721,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"text-wrong-color", required_argument, NULL, LO_TEXT_WRONG_COLOR},
 		{"effect-blur", required_argument, NULL, LO_EFFECT_BLUR},
 		{"effect-scale", required_argument, NULL, LO_EFFECT_SCALE},
+		{"effect-greyscale", no_argument, NULL, LO_EFFECT_GREYSCALE},
 		{0, 0, 0, 0}
 	};
 
@@ -837,7 +839,11 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		"  --text-wrong-color <color>       "
 			"Sets the color of the text when invalid.\n"
 		"  --effect-blur <radius>x<times>   "
-			"Apply a blur effect to all images.\n"
+			"Blur images.\n"
+		"  --effect-scale <scale>           "
+			"Scale images.\n"
+		"  --effect-greyscale               "
+			"Make images greyscale.\n"
 		"\n"
 		"All <color> options are of the form <rrggbb[aa]>.\n";
 
@@ -1124,6 +1130,14 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 					swaylock_log(LOG_ERROR, "Invalid scale effect argument %s, ignoring", optarg);
 					state->args.effects_count -= 1;
 				}
+			}
+			break;
+		case LO_EFFECT_GREYSCALE:
+			if (state) {
+				state->args.effects = realloc(state->args.effects,
+						sizeof(*state->args.effects) * ++state->args.effects_count);
+				struct swaylock_effect *effect = &state->args.effects[state->args.effects_count - 1];
+				effect->tag = EFFECT_GREYSCALE;
 			}
 			break;
 		default:

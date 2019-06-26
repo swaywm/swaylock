@@ -14,6 +14,7 @@ struct swaylock_effect {
 	enum {
 		EFFECT_BLUR,
 		EFFECT_SCALE,
+		EFFECT_GREYSCALE,
 	} tag;
 };
 

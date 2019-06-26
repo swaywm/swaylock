@@ -113,6 +113,23 @@ static void effect_scale(uint32_t *dest, uint32_t *src, int swidth, int sheight,
 	}
 }
 
+static void effect_greyscale(uint32_t *data, int width, int height) {
+#pragma omp parallel for
+	for (int y = 0; y < height; ++y) {
+		for (int x = 0; x < width; ++x) {
+			int index = y * width + x;
+			int r = (data[index] & 0xff0000) >> 16;
+			int g = (data[index] & 0x00ff00) >> 8;
+			int b = (data[index] & 0x0000ff);
+			int luma = 0.2989 * r + 0.5870 * g + 0.1140 * b;
+			if (luma < 0) luma = 0;
+			if (luma > 255) luma = 255;
+			luma &= 0xFF;
+			data[index] = luma << 16 | luma << 8 | luma;
+		}
+	}
+}
+
 cairo_surface_t *swaylock_effects_run(cairo_surface_t *surface,
 		struct swaylock_effect *effects, int count) {
 
@@ -149,12 +166,6 @@ cairo_surface_t *swaylock_effects_run(cairo_surface_t *surface,
 					cairo_image_surface_get_width(surface) * effect->e.scale,
 					cairo_image_surface_get_height(surface) * effect->e.scale);
 
-			fprintf(stderr, "%f: %ix%i -> %ix%i\n", effect->e.scale,
-					cairo_image_surface_get_width(surface),
-					cairo_image_surface_get_height(surface),
-					cairo_image_surface_get_width(surf),
-					cairo_image_surface_get_height(surf));
-
 			if (cairo_surface_status(surf) != CAIRO_STATUS_SUCCESS) {
 				swaylock_log(LOG_ERROR, "Failed to create surface for scale effect");
 				cairo_surface_destroy(surf);
@@ -170,6 +181,15 @@ cairo_surface_t *swaylock_effects_run(cairo_surface_t *surface,
 			cairo_surface_flush(surf);
 			cairo_surface_destroy(surface);
 			surface = surf;
+			break;
+		}
+
+		case EFFECT_GREYSCALE: {
+			effect_greyscale(
+					(uint32_t *)cairo_image_surface_get_data(surface),
+					cairo_image_surface_get_width(surface),
+					cairo_image_surface_get_height(surface));
+			cairo_surface_flush(surface);
 			break;
 		} }
 	}
