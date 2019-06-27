@@ -1,30 +1,11 @@
-# swaylock
+# swaylock-effects
 
-swaylock is a screen locking utility for Wayland compositors. It is compatible
-with any Wayland compositor which implements the following Wayland protocols:
+Swaylock-effects is a fork of [swaylock](https://github.com/swaywm/swaylock)
+which adds built-in screenshots and image manipulation effects like blurring.
 
-- wlr-layer-shell
-- wlr-input-inhibitor
-- xdg-output
-- xdg-shell
-
-See the man page, `swaylock(1)`, for instructions on using swaylock.
-
-## Release Signatures
-
-Releases are signed with [B22DA89A](http://pgp.mit.edu/pks/lookup?op=vindex&search=0x52CB6609B22DA89A)
-and published [on GitHub](https://github.com/swaywm/swaylock/releases). swaylock
-releases are managed independently of sway releases.
+![Screenshot](https://raw.githubusercontent.com/mortie/swaylock-effects/master/screenshot.jpg)
 
 ## Installation
-
-### From Packages
-
-Swaylock is available in many distributions. Try installing the "swaylock"
-package for yours.
-
-If you're interested in packaging swaylock for your distribution, stop by the
-IRC channel or shoot an email to sir@cmpwn.com for advice.
 
 ### Compiling from Source
 
@@ -46,12 +27,12 @@ _\*\*optional: required for background images other than PNG_
 
 Run these commands:
 
-    meson build
-    ninja -C build
-    sudo ninja -C build install
+	meson build
+	ninja -C build
+	sudo ninja -C build install
 
 On systems without PAM, you need to suid the swaylock binary:
 
-    sudo chmod a+s /usr/local/bin/swaylock
+	sudo chmod a+s /usr/local/bin/swaylock
 
 Swaylock will drop root permissions shortly after startup.
