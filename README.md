@@ -5,6 +5,21 @@ which adds built-in screenshots and image manipulation effects like blurring.
 
 ![Screenshot](https://raw.githubusercontent.com/mortie/swaylock-effects/master/screenshot.jpg)
 
+### Example
+
+	swaylock \
+		--screenshots \
+		--clock \
+		--indicator \
+		--indicator-radius 100 \
+		--indicator-thickness 7 \
+		--effect-blur 7x5 \
+		--ring-color bb00cc \
+		--key-hl-color 880033 \
+		--line-color 00000000 \
+		--inside-color 00000088 \
+		--separator-color 00000000
+
 ## Installation
 
 ### Compiling from Source
