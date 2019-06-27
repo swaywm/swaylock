@@ -32,6 +32,28 @@ static void set_color_for_state(cairo_t *cairo, struct swaylock_state *state,
 	}
 }
 
+static void timetext(struct swaylock_surface *surface, char **tstr, char **dstr) {
+	static char dbuf[256];
+	static char tbuf[256];
+
+	time_t t = time(NULL);
+	struct tm *tm = localtime(&t);
+
+	if (surface->state->args.timestr[0]) {
+		strftime(tbuf, sizeof(tbuf), surface->state->args.timestr, tm);
+		*tstr = tbuf;
+	} else {
+		*tstr = NULL;
+	}
+
+	if (surface->state->args.datestr[0]) {
+		strftime(dbuf, sizeof(dbuf), surface->state->args.datestr, tm);
+		*dstr = dbuf;
+	} else {
+		*dstr = NULL;
+	}
+}
+
 void render_frame_background(struct swaylock_surface *surface) {
 	struct swaylock_state *state = surface->state;
 
@@ -80,9 +102,8 @@ void render_frame(struct swaylock_surface *surface) {
 	int new_width = buffer_diameter;
 	int new_height = buffer_diameter;
 
-	int subsurf_xpos = surface->width / 2 - buffer_width / 2;
-	int subsurf_ypos = surface->height / 2 -
-		(state->args.radius + state->args.thickness);
+	int subsurf_xpos = surface->width / 2 - (arc_radius + arc_thickness) / 2;
+	int subsurf_ypos = surface->height / 2 - (arc_radius + arc_thickness) / 2;
 	wl_subsurface_set_position(surface->subsurface, subsurf_xpos, subsurf_ypos);
 
 	surface->current_buffer = get_next_buffer(state->shm,
@@ -115,7 +136,8 @@ void render_frame(struct swaylock_surface *surface) {
 	float type_indicator_border_thickness =
 		TYPE_INDICATOR_BORDER_THICKNESS * surface->scale;
 
-	if (state->args.show_indicator && state->auth_state != AUTH_STATE_IDLE) {
+	if (state->args.indicator
+			|| (state->args.show_indicator && state->auth_state != AUTH_STATE_IDLE)) {
 		// Draw circle
 		cairo_set_line_width(cairo, arc_thickness);
 		cairo_arc(cairo, buffer_width / 2, buffer_diameter / 2, arc_radius,
@@ -127,6 +149,8 @@ void render_frame(struct swaylock_surface *surface) {
 
 		// Draw a message
 		char *text = NULL;
+		char *text_l1 = NULL;
+		char *text_l2 = NULL;
 		const char *layout_text = NULL;
 		char attempts[4]; // like i3lock: count no more than 999
 		set_color_for_state(cairo, state, &state->args.colors.text);
@@ -161,6 +185,8 @@ void render_frame(struct swaylock_surface *surface) {
 					snprintf(attempts, sizeof(attempts), "%d", state->failed_attempts);
 					text = attempts;
 				}
+			} else if (state->args.clock) {
+				timetext(surface, &text_l1, &text_l2);
 			}
 
 			xkb_layout_index_t num_layout = xkb_keymap_num_layouts(state->xkb.keymap);
@@ -179,8 +205,15 @@ void render_frame(struct swaylock_surface *surface) {
 			}
 			break;
 		default:
+			if (state->args.clock)
+				timetext(surface, &text_l1, &text_l2);
 			break;
 		}
+
+		if (text_l1 && !text_l2)
+			text = text_l1;
+		if (text_l2 && !text_l1)
+			text = text_l2;
 
 		if (text) {
 			cairo_text_extents_t extents;
@@ -201,14 +234,59 @@ void render_frame(struct swaylock_surface *surface) {
 			if (new_width < extents.width) {
 				new_width = extents.width;
 			}
+		} else if (text_l1 && text_l2) {
+			cairo_text_extents_t extents_l1, extents_l2;
+			cairo_font_extents_t fe_l1, fe_l2;
+			double x_l1, y_l1, x_l2, y_l2;
+
+			/* Top */
+
+			//cairo_set_font_size(cairo, arc_radius / 3.0f);
+			cairo_text_extents(cairo, text_l1, &extents_l1);
+			cairo_font_extents(cairo, &fe_l1);
+			x_l1 = (buffer_width / 2) -
+				(extents_l1.width / 2 + extents_l1.x_bearing);
+			y_l1 = (buffer_diameter / 2) +
+				(fe_l1.height / 2 - fe_l1.descent);
+
+			cairo_move_to(cairo, x_l1, y_l1);
+			cairo_show_text(cairo, text_l1);
+			cairo_close_path(cairo);
+			cairo_new_sub_path(cairo);
+
+			/* Bottom */
+
+			cairo_set_font_size(cairo, arc_radius / 6.0f);
+			cairo_text_extents(cairo, text_l2, &extents_l2);
+			cairo_font_extents(cairo, &fe_l2);
+			x_l2 = (buffer_width / 2) -
+				(extents_l2.width / 2 + extents_l2.x_bearing);
+			y_l2 = (buffer_diameter / 2) +
+				(fe_l2.height / 2 - fe_l2.descent) + arc_radius / 2.5f;
+
+			//cairo_set_font_size(cairo, arc_radius / 5.0f);
+			cairo_move_to(cairo, x_l2, y_l2);
+			cairo_show_text(cairo, text_l2);
+			cairo_close_path(cairo);
+			cairo_new_sub_path(cairo);
+
+			if (new_width < extents_l1.width)
+				new_width = extents_l1.width;
+			if (new_width < extents_l2.width)
+				new_width = extents_l2.width;
 		}
 
 		// Typing indicator: Highlight random part on keypress
 		if (state->auth_state == AUTH_STATE_INPUT
 				|| state->auth_state == AUTH_STATE_BACKSPACE) {
+
 			static double highlight_start = 0;
-			highlight_start +=
-				(rand() % (int)(M_PI * 100)) / 100.0 + M_PI * 0.5;
+			if (state->indicator_dirty) {
+				highlight_start +=
+					(rand() % (int)(M_PI * 100)) / 100.0 + M_PI * 0.5;
+				state->indicator_dirty = false;
+			}
+
 			cairo_arc(cairo, buffer_width / 2, buffer_diameter / 2,
 					arc_radius, highlight_start,
 					highlight_start + TYPE_INDICATOR_RANGE);

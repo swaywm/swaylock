@@ -664,6 +664,10 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_EFFECT_BLUR,
 		LO_EFFECT_SCALE,
 		LO_EFFECT_GREYSCALE,
+		LO_INDICATOR,
+		LO_CLOCK,
+		LO_TIMESTR,
+		LO_DATESTR,
 	};
 
 	static struct option long_options[] = {
@@ -722,6 +726,10 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"effect-blur", required_argument, NULL, LO_EFFECT_BLUR},
 		{"effect-scale", required_argument, NULL, LO_EFFECT_SCALE},
 		{"effect-greyscale", no_argument, NULL, LO_EFFECT_GREYSCALE},
+		{"indicator", no_argument, NULL, LO_INDICATOR},
+		{"clock", no_argument, NULL, LO_CLOCK},
+		{"timestr", required_argument, NULL, LO_TIMESTR},
+		{"datestr", required_argument, NULL, LO_DATESTR},
 		{0, 0, 0, 0}
 	};
 
@@ -844,6 +852,14 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Scale images.\n"
 		"  --effect-greyscale               "
 			"Make images greyscale.\n"
+		"  --indicator                      "
+			"Always show the indicator.\n"
+		"  --clock                          "
+			"Show time and date.\n"
+		"  --timestr                        "
+			"The format string for the time. Defaults to '%X'.\n"
+		"  --datestr                        "
+			"The format string for the date. Defaults to '%a, %x'.\n"
 		"\n"
 		"All <color> options are of the form <rrggbb[aa]>.\n";
 
@@ -1140,6 +1156,26 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 				effect->tag = EFFECT_GREYSCALE;
 			}
 			break;
+		case LO_INDICATOR:
+			if (state) {
+				state->args.indicator = true;
+			}
+			break;
+		case LO_CLOCK:
+			if (state) {
+				state->args.clock = true;
+			}
+			break;
+		case LO_TIMESTR:
+			if (state) {
+				state->args.timestr = optarg;
+			}
+			break;
+		case LO_DATESTR:
+			if (state) {
+				state->args.datestr = optarg;
+			}
+			break;
 		default:
 			fprintf(stderr, "%s", usage);
 			return 1;
@@ -1245,17 +1281,24 @@ static void comm_in(int fd, short mask, void *data) {
 	}
 }
 
+static void timer_render(void *data) {
+	struct swaylock_state *state = (struct swaylock_state *)data;
+	damage_state(state);
+	loop_add_timer(state->eventloop, 1000, timer_render, state);
+}
+
 int main(int argc, char **argv) {
 	swaylock_log_init(LOG_ERROR);
 	initialize_pw_backend(argc, argv);
 
 	enum line_mode line_mode = LM_LINE;
 	state.failed_attempts = 0;
+	state.indicator_dirty = false;
 	state.args = (struct swaylock_args){
 		.mode = BACKGROUND_MODE_FILL,
 		.font = strdup("sans-serif"),
 		.font_size = 0,
-		.radius = 50,
+		.radius = 75,
 		.thickness = 10,
 		.ignore_empty = false,
 		.show_indicator = true,
@@ -1266,7 +1309,11 @@ int main(int argc, char **argv) {
 		.show_failed_attempts = false,
 		.screenshots = false,
 		.effects = NULL,
-		.effects_count = 0
+		.effects_count = 0,
+		.indicator = false,
+		.clock = false,
+		.timestr = "%X",
+		.datestr = "%a, %x",
 	};
 	wl_list_init(&state.images);
 	set_default_colors(&state.args.colors);
@@ -1406,6 +1453,8 @@ int main(int argc, char **argv) {
 			display_in, NULL);
 
 	loop_add_fd(state.eventloop, get_comm_reply_fd(), POLLIN, comm_in, NULL);
+
+	loop_add_timer(state.eventloop, 1000, timer_render, &state);
 
 	state.run_display = true;
 	while (state.run_display) {

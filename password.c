@@ -111,6 +111,7 @@ void swaylock_handle_key(struct swaylock_state *state,
 		} else {
 			state->auth_state = AUTH_STATE_CLEAR;
 		}
+		state->indicator_dirty = true;
 		damage_state(state);
 		schedule_indicator_clear(state);
 		schedule_password_clear(state);
@@ -118,7 +119,7 @@ void swaylock_handle_key(struct swaylock_state *state,
 	case XKB_KEY_Escape:
 		clear_password_buffer(&state->password);
 		state->auth_state = AUTH_STATE_CLEAR;
-		damage_state(state);
+		state->indicator_dirty = true;
 		schedule_indicator_clear(state);
 		break;
 	case XKB_KEY_Caps_Lock:
@@ -158,6 +159,7 @@ void swaylock_handle_key(struct swaylock_state *state,
 		if (codepoint) {
 			append_ch(&state->password, codepoint);
 			state->auth_state = AUTH_STATE_INPUT;
+			state->indicator_dirty = true;
 			damage_state(state);
 			schedule_indicator_clear(state);
 			schedule_password_clear(state);

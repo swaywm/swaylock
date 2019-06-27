@@ -62,6 +62,10 @@ struct swaylock_args {
 	bool screenshots;
 	struct swaylock_effect *effects;
 	int effects_count;
+	bool indicator;
+	bool clock;
+	char *timestr;
+	char *datestr;
 };
 
 struct swaylock_password {
@@ -86,6 +90,8 @@ struct swaylock_state {
 	struct swaylock_password password;
 	struct swaylock_xkb xkb;
 	enum auth_state auth_state;
+	bool indicator_dirty;
+	int render_randnum;
 	int failed_attempts;
 	size_t n_screenshots_done;
 	bool run_display;
