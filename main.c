@@ -1290,6 +1290,7 @@ static void timer_render(void *data) {
 int main(int argc, char **argv) {
 	swaylock_log_init(LOG_ERROR);
 	initialize_pw_backend(argc, argv);
+	srand(time(NULL));
 
 	enum line_mode line_mode = LM_LINE;
 	state.failed_attempts = 0;
