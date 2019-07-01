@@ -2,7 +2,7 @@ swaylock(1)
 
 # NAME
 
-swaylock - Screen locker for Wayland
+swaylock-effects - Fancier screen locker for Wayland
 
 # SYNOPSIS
 
@@ -46,10 +46,25 @@ Locks your Wayland session.
 *-u, --no-unlock-indicator*
 	Disable the unlock indicator.
 
+*--indicator*
+	Always show the indicator, even when not typing.
+
+*--clock*
+	Show a clock in the indicator.
+
+*--timestr* <format>
+	The time format for the indicator clock. Defaults to '%X'.
+
+*--datestr* <format>
+	The date format for the indicator clock. Defaults to '%a, %x'.
+
 *-i, --image* [[<output>]:]<path>
 	Display the given image, optionally only on the given output. Use -c to set
 	a background color. If the path potentially contains a ':', prefix it with another
 	':' to prevent interpreting part of it as <output>.
+
+*-S, --screenshots*
+	Display a screenshot.
 
 *-k, --show-keyboard-layout*
 	Force displaying the current xkb layout while typing, even if only one layout
@@ -185,8 +200,19 @@ Locks your Wayland session.
 *--text-wrong-color* <rrggbb[aa]>
 	Sets the color of the text inside the indicator when invalid.
 
+*--effect-blur* <radius>x<times>
+	Blur displayed images.
+
+*--effect-scale* <scale>
+	Scale the image by a factor. This can be used to pixelate the image,
+	or to make other effects faster if you don't need the full resolution.
+
+*--effect-greyscale*
+	Make the displayed image greyscale.
+
 # AUTHORS
 
-Maintained by Drew DeVault <sir@cmpwn.com>, who is assisted by other open
-source contributors. For more information about swaylock development, see
-https://github.com/swaywm/swaylock.
+Maintained by Martin Dørum, forked from upstream Swaylock which is maintained
+by Drew DeVault.
+For more information about swaylock-effects development, see
+https://github.com/mortie/swaylock-effects.

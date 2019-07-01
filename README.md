@@ -35,7 +35,7 @@ The main new features compared to upstream swaylock are:
 	* `--effect-blur <radius>x<times>` blurs the image (thanks to yvbbrjdr's
 	  fast box blur algorithm in
 	  [i3lock-fancy-rapid](https://github.com/yvbbrjdr/i3lock-fancy-rapid))
-	* `--effect-scale <scale>` scales the image by a factor. This can bee used
+	* `--effect-scale <scale>` scales the image by a factor. This can be used
 	  to pixelate the image, or make other effects faster if you don't need
 	  the full resolution.
 	* `--effect-greyscale` makes the image greyscale.
