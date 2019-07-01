@@ -45,6 +45,11 @@ implement them), new feature implementations are welcome as pull requests :)
 
 ## Installation
 
+### From Packages
+
+The [swaylock-effects-git](https://aur.archlinux.org/packages/swaylock-effects-git/)
+package is available for Arch Linux.
+
 ### Compiling from Source
 
 Install dependencies:
