@@ -1168,12 +1168,14 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			break;
 		case LO_TIMESTR:
 			if (state) {
-				state->args.timestr = optarg;
+				free(state->args.timestr);
+				state->args.timestr = strdup(optarg);
 			}
 			break;
 		case LO_DATESTR:
 			if (state) {
-				state->args.datestr = optarg;
+				free(state->args.datestr);
+				state->args.datestr = strdup(optarg);
 			}
 			break;
 		default:
@@ -1313,8 +1315,8 @@ int main(int argc, char **argv) {
 		.effects_count = 0,
 		.indicator = false,
 		.clock = false,
-		.timestr = "%X",
-		.datestr = "%a, %x",
+		.timestr = strdup("%X"),
+		.datestr = strdup("%a, %x"),
 	};
 	wl_list_init(&state.images);
 	set_default_colors(&state.args.colors);
