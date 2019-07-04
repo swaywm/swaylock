@@ -1,4 +1,5 @@
 #include <omp.h>
+#include <stdlib.h>
 #include "effects.h"
 #include "log.h"
 

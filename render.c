@@ -1,5 +1,6 @@
 #include <math.h>
 #include <stdlib.h>
+#include <time.h>
 #include <wayland-client.h>
 #include "cairo.h"
 #include "background-image.h"
