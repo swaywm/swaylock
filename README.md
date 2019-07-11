@@ -5,7 +5,7 @@ which adds built-in screenshots and image manipulation effects like blurring.
 It's inspired by [i3lock-color](https://github.com/PandorasFox/i3lock-color),
 although the feature sets aren't perfectly overlapping.
 
-![Screenshot](https://raw.githubusercontent.com/mortie/swaylock-effects/master/screenshot.jpg)
+![Screenshot](https://raw.githubusercontent.com/mortie/swaylock-effects/master/screenshot.png)
 
 ## Example Command
 
