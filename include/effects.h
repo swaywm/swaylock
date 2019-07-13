@@ -9,12 +9,17 @@ struct swaylock_effect {
 			int radius, times;
 		} blur;
 		double scale;
+		struct {
+			double base;
+			double factor;
+		} vignette;
 	} e;
 
 	enum {
 		EFFECT_BLUR,
 		EFFECT_SCALE,
 		EFFECT_GREYSCALE,
+		EFFECT_VIGNETTE,
 	} tag;
 };
 
