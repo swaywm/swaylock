@@ -210,6 +210,15 @@ Locks your Wayland session.
 *--effect-greyscale*
 	Make the displayed image greyscale.
 
+*--effect-vignette <base>:<factor>*
+	Apply a vignette effect to images.
+	Base and factor should be numbers between 0 and 1.
+
+*--effect-custom <path>*
+	Load a custom effect from a shared object. The .so must export a++
+*void swaylock_effect(uint32\_t \*data, int width, int height)*++
+or an *uint32\_t swaylock_pixel(uint32\_t pix, int x, int y, int width, int height)*.
+
 # AUTHORS
 
 Maintained by Martin Dørum, forked from upstream Swaylock which is maintained

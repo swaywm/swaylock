@@ -39,6 +39,8 @@ The main new features compared to upstream swaylock are:
 	  to pixelate the image, or make other effects faster if you don't need
 	  the full resolution.
 	* `--effect-greyscale` makes the image greyscale.
+	* `--effect-vignette <base>:<factor>` applies a vignette effect.
+	* `--effect-custom <path>` loads a custom effect from a shared object.
 
 New feature ideas are welcome as issues (though I may never get around to
 implement them), new feature implementations are welcome as pull requests :)
