@@ -664,6 +664,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_EFFECT_BLUR,
 		LO_EFFECT_SCALE,
 		LO_EFFECT_GREYSCALE,
+		LO_EFFECT_VIGNETTE,
 		LO_INDICATOR,
 		LO_CLOCK,
 		LO_TIMESTR,
@@ -726,6 +727,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"effect-blur", required_argument, NULL, LO_EFFECT_BLUR},
 		{"effect-scale", required_argument, NULL, LO_EFFECT_SCALE},
 		{"effect-greyscale", no_argument, NULL, LO_EFFECT_GREYSCALE},
+		{"effect-vignette", required_argument, NULL, LO_EFFECT_VIGNETTE},
 		{"indicator", no_argument, NULL, LO_INDICATOR},
 		{"clock", no_argument, NULL, LO_CLOCK},
 		{"timestr", required_argument, NULL, LO_TIMESTR},
@@ -860,6 +862,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Scale images.\n"
 		"  --effect-greyscale               "
 			"Make images greyscale.\n"
+		"  --effect-vignette <base>:<factor>           "
+			"Apply a vignette effect to images. base and factor should be numbers between 0 and 1\n"
 		"\n"
 		"All <color> options are of the form <rrggbb[aa]>.\n";
 
@@ -1154,6 +1158,18 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 						sizeof(*state->args.effects) * ++state->args.effects_count);
 				struct swaylock_effect *effect = &state->args.effects[state->args.effects_count - 1];
 				effect->tag = EFFECT_GREYSCALE;
+			}
+			break;
+		case LO_EFFECT_VIGNETTE:
+			if (state) {
+				state->args.effects = realloc(state->args.effects,
+						sizeof(*state->args.effects) * ++state->args.effects_count);
+				struct swaylock_effect *effect = &state->args.effects[state->args.effects_count - 1];
+				effect->tag = EFFECT_VIGNETTE;
+				if (sscanf(optarg, "%lf:%lf", &effect->e.vignette.base, &effect->e.vignette.factor) != 2) {
+					swaylock_log(LOG_ERROR, "Invalid factor effect argument %s, ignoring", optarg);
+					state->args.effects_count -= 1;
+				}
 			}
 			break;
 		case LO_INDICATOR:

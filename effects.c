@@ -134,6 +134,33 @@ static void effect_greyscale(uint32_t *data, int width, int height) {
 	}
 }
 
+static void effect_vignette(uint32_t *data, int width, int height,
+		double base, double factor) {
+	base = fmin(1, fmax(0, base));
+	factor = fmin(1 - base, fmax(0, factor));
+#pragma omp parallel for
+	for (int y = 0; y < height; ++y) {
+		for (int x = 0; x < width; ++x) {
+
+			double xf = (x * 1.0) / width;
+			double yf = (y * 1.0) / height;
+			double vignette_factor = base + factor
+				* 16 * xf * yf * (1.0 - xf) * (1.0 - yf);
+
+			int index = y * width + x;
+			int r = (data[index] & 0xff0000) >> 16;
+			int g = (data[index] & 0x00ff00) >> 8;
+			int b = (data[index] & 0x0000ff);
+
+			r = (int)(r * vignette_factor) & 0xFF;
+			g = (int)(g * vignette_factor) & 0xFF;
+			b = (int)(b * vignette_factor) & 0xFF;
+
+			data[index] = r << 16 | g << 8 | b;
+		}
+	}
+}
+
 cairo_surface_t *swaylock_effects_run(cairo_surface_t *surface,
 		struct swaylock_effect *effects, int count) {
 
@@ -193,6 +220,17 @@ cairo_surface_t *swaylock_effects_run(cairo_surface_t *surface,
 					(uint32_t *)cairo_image_surface_get_data(surface),
 					cairo_image_surface_get_width(surface),
 					cairo_image_surface_get_height(surface));
+			cairo_surface_flush(surface);
+			break;
+		}
+
+		case EFFECT_VIGNETTE: {
+			effect_vignette(
+					(uint32_t *)cairo_image_surface_get_data(surface),
+					cairo_image_surface_get_width(surface),
+					cairo_image_surface_get_height(surface),
+					effect->e.vignette.base,
+					effect->e.vignette.factor);
 			cairo_surface_flush(surface);
 			break;
 		} }
