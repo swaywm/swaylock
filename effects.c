@@ -1,7 +1,17 @@
+#define _POSIX_C_SOURCE 200809
 #include <omp.h>
 #include <stdlib.h>
+#include <stdbool.h>
+#include <dlfcn.h>
+#include <string.h>
+#include <errno.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <spawn.h>
 #include "effects.h"
 #include "log.h"
+
+extern char **environ;
 
 static void blur_h(uint32_t *dest, uint32_t *src, int width, int height,
 		int radius) {
@@ -161,6 +171,41 @@ static void effect_vignette(uint32_t *data, int width, int height,
 	}
 }
 
+static void effect_custom(uint32_t *data, int width, int height,
+		char *path) {
+	void *dl = dlopen(path, RTLD_LAZY);
+	if (dl == NULL) {
+		swaylock_log(LOG_ERROR, "Custom effect: %s", dlerror());
+		return;
+	}
+
+	void (*effect_func)(uint32_t *data, int width, int height) =
+		dlsym(dl, "swaylock_effect");
+	if (effect_func != NULL) {
+		effect_func(data, width, height);
+		dlclose(dl);
+		return;
+	}
+
+	uint32_t (*pixel_func)(uint32_t pix, int x, int y, int width, int height) =
+		dlsym(dl, "swaylock_pixel");
+	if (pixel_func != NULL) {
+#pragma omp parallel for
+		for (int y = 0; y < height; ++y) {
+			for (int x = 0; x < width; ++x) {
+				data[y * width + x] =
+					pixel_func(data[y * width + x], x, y, width, height);
+			}
+		}
+
+		dlclose(dl);
+		return;
+	}
+
+	swaylock_log(LOG_ERROR, "Custom effect: %s", dlerror());
+}
+
+
 cairo_surface_t *swaylock_effects_run(cairo_surface_t *surface,
 		struct swaylock_effect *effects, int count) {
 
@@ -231,6 +276,16 @@ cairo_surface_t *swaylock_effects_run(cairo_surface_t *surface,
 					cairo_image_surface_get_height(surface),
 					effect->e.vignette.base,
 					effect->e.vignette.factor);
+			cairo_surface_flush(surface);
+			break;
+		}
+
+		case EFFECT_CUSTOM: {
+			effect_custom(
+					(uint32_t *)cairo_image_surface_get_data(surface),
+					cairo_image_surface_get_width(surface),
+					cairo_image_surface_get_height(surface),
+					effect->e.custom);
 			cairo_surface_flush(surface);
 			break;
 		} }

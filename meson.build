@@ -55,6 +55,7 @@ libpam         = cc.find_library('pam', required: get_option('pam'))
 crypt          = cc.find_library('crypt', required: not libpam.found())
 math           = cc.find_library('m')
 rt             = cc.find_library('rt')
+dl             = cc.find_library('dl')
 
 git = find_program('git', required: false)
 scdoc = find_program('scdoc', required: get_option('man-pages'))
@@ -129,6 +130,7 @@ dependencies = [
 	gdk_pixbuf,
 	math,
 	rt,
+	dl,
 	xkbcommon,
 	wayland_client,
 ]

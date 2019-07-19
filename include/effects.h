@@ -13,6 +13,7 @@ struct swaylock_effect {
 			double base;
 			double factor;
 		} vignette;
+		char *custom;
 	} e;
 
 	enum {
@@ -20,6 +21,7 @@ struct swaylock_effect {
 		EFFECT_SCALE,
 		EFFECT_GREYSCALE,
 		EFFECT_VIGNETTE,
+		EFFECT_CUSTOM,
 	} tag;
 };
 
