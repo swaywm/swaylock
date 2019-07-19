@@ -81,9 +81,9 @@ void render_frame(struct swaylock_surface *surface) {
 	int new_height = buffer_diameter;
 
 	int subsurf_xpos = surface->width / 2 -
-		(state->args.radius + state->args.thickness) + 2 / surface->scale;
+		buffer_width / (2 * surface->scale) + 2 / surface->scale;
 	int subsurf_ypos = surface->height / 2 -
-		(state->args.radius + state->args.thickness) + 2 / surface->scale;
+		(state->args.radius + state->args.thickness);
 	wl_subsurface_set_position(surface->subsurface, subsurf_xpos, subsurf_ypos);
 
 	surface->current_buffer = get_next_buffer(state->shm,
