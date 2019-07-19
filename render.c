@@ -155,15 +155,17 @@ void render_frame(struct swaylock_surface *surface) {
 		char *text_l1 = NULL;
 		char *text_l2 = NULL;
 		const char *layout_text = NULL;
+		double font_size;
 		char attempts[4]; // like i3lock: count no more than 999
 		set_color_for_state(cairo, state, &state->args.colors.text);
 		cairo_select_font_face(cairo, state->args.font,
 				CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
 		if (state->args.font_size > 0) {
-			cairo_set_font_size(cairo, state->args.font_size);
+			font_size = state->args.font_size;
 		} else {
-			cairo_set_font_size(cairo, arc_radius / 3.0f);
+			font_size = arc_radius / 3.0f;
 		}
+		cairo_set_font_size(cairo, font_size);
 		switch (state->auth_state) {
 		case AUTH_STATE_VALIDATING:
 			text = "verifying";
@@ -244,7 +246,6 @@ void render_frame(struct swaylock_surface *surface) {
 
 			/* Top */
 
-			//cairo_set_font_size(cairo, arc_radius / 3.0f);
 			cairo_text_extents(cairo, text_l1, &extents_l1);
 			cairo_font_extents(cairo, &fe_l1);
 			x_l1 = (buffer_width / 2) -
@@ -267,7 +268,6 @@ void render_frame(struct swaylock_surface *surface) {
 			y_l2 = (buffer_diameter / 2) +
 				(fe_l2.height / 2 - fe_l2.descent) + arc_radius / 3.5f;
 
-			//cairo_set_font_size(cairo, arc_radius / 5.0f);
 			cairo_move_to(cairo, x_l2, y_l2);
 			cairo_show_text(cairo, text_l2);
 			cairo_close_path(cairo);
@@ -277,6 +277,9 @@ void render_frame(struct swaylock_surface *surface) {
 				new_width = extents_l1.width;
 			if (new_width < extents_l2.width)
 				new_width = extents_l2.width;
+
+
+			cairo_set_font_size(cairo, font_size);
 		}
 
 		// Typing indicator: Highlight random part on keypress
