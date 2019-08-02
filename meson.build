@@ -19,7 +19,6 @@ add_project_arguments(
 		'-Wvla',
 		'-fopenmp',
 		'-O3',
-		'-flto',
 	],
 	language: 'c',
 )
@@ -27,7 +26,6 @@ add_project_arguments(
 add_project_link_arguments(
 	[
 		'-fopenmp',
-		'-flto',
 	],
 	language: 'c',
 )
