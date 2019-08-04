@@ -58,6 +58,7 @@ struct swaylock_args {
 	bool hide_keyboard_layout;
 	bool show_failed_attempts;
 	bool daemonize;
+	bool indicator_idle_visible;
 };
 
 struct swaylock_password {
