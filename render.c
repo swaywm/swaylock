@@ -116,7 +116,8 @@ void render_frame(struct swaylock_surface *surface) {
 	float type_indicator_border_thickness =
 		TYPE_INDICATOR_BORDER_THICKNESS * surface->scale;
 
-	if (state->args.show_indicator && state->auth_state != AUTH_STATE_IDLE) {
+	if (state->args.show_indicator && (state->auth_state != AUTH_STATE_IDLE ||
+			state->args.indicator_idle_visible)) {
 		// Draw circle
 		cairo_set_line_width(cairo, arc_thickness);
 		cairo_arc(cairo, buffer_width / 2, buffer_diameter / 2, arc_radius,

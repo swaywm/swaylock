@@ -15,6 +15,7 @@ complete -c swaylock -s t -l tiling --description "Same as --scaling=tile."
 complete -c swaylock -s c -l color --description "Turn the screen into the given color. If -i is used, this sets the background of the image into the given color. Defaults to white (ffffff), or transparent (00000000) if an image is in use."
 complete -c swaylock -l bs-hl-color --description 'Sets the color of backspace highlight segments.'
 complete -c swaylock -l font --description 'Sets the font of the text inside the indicator.'
+complete -c swaylock -l indicator-idle-visible --description 'Sets the indicator to show even if idle.'
 complete -c swaylock -l indicator-radius --description 'Sets the radius of the indicator to radius pixels. Default: 50'
 complete -c swaylock -l indicator-thickness --description 'Sets the thickness of the indicator to thickness pixels. Default: 10'
 complete -c swaylock -l inside-color --description 'Sets the color of the inside of the indicator when typing or idle.'

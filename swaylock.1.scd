@@ -89,6 +89,9 @@ Locks your Wayland session.
 *--font* <font>
 	Sets the font of the text inside the indicator.
 
+*--indicator-idle-visible*
+	Sets the indicator to show even if idle.
+
 *--indicator-radius* <radius>
 	Sets the radius of the indicator to _radius_ pixels. The default value is
 	50.

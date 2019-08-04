@@ -507,6 +507,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_CAPS_LOCK_KEY_HL_COLOR,
 		LO_FONT,
 		LO_FONT_SIZE,
+		LO_IND_IDLE_VISIBLE,
 		LO_IND_RADIUS,
 		LO_IND_THICKNESS,
 		LO_INSIDE_COLOR,
@@ -561,6 +562,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"caps-lock-key-hl-color", required_argument, NULL, LO_CAPS_LOCK_KEY_HL_COLOR},
 		{"font", required_argument, NULL, LO_FONT},
 		{"font-size", required_argument, NULL, LO_FONT_SIZE},
+		{"indicator-idle-visible", no_argument, NULL, LO_IND_IDLE_VISIBLE},
 		{"indicator-radius", required_argument, NULL, LO_IND_RADIUS},
 		{"indicator-thickness", required_argument, NULL, LO_IND_THICKNESS},
 		{"inside-color", required_argument, NULL, LO_INSIDE_COLOR},
@@ -638,6 +640,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Sets the font of the text.\n"
 		"  --font-size <size>               "
 			"Sets a fixed font size for the indicator text.\n"
+		"  --indicator-idle-visible         "
+			"Sets the indicator to show even if idle.\n"
 		"  --indicator-radius <radius>      "
 			"Sets the indicator radius.\n"
 		"  --indicator-thickness <thick>    "
@@ -824,6 +828,11 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		case LO_FONT_SIZE:
 			if (state) {
 				state->args.font_size = atoi(optarg);
+			}
+			break;
+		case LO_IND_IDLE_VISIBLE:
+			if (state) {
+				state->args.indicator_idle_visible = true;
 			}
 			break;
 		case LO_IND_RADIUS:
@@ -1085,7 +1094,8 @@ int main(int argc, char **argv) {
 		.show_caps_lock_text = true,
 		.show_keyboard_layout = false,
 		.hide_keyboard_layout = false,
-		.show_failed_attempts = false
+		.show_failed_attempts = false,
+		.indicator_idle_visible = false
 	};
 	wl_list_init(&state.images);
 	set_default_colors(&state.args.colors);
