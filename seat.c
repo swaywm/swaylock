@@ -82,7 +82,7 @@ static void keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard,
 	xkb_state_update_mask(state->xkb.state,
 		mods_depressed, mods_latched, mods_locked, 0, 0, group);
 	int caps_lock = xkb_state_mod_name_is_active(state->xkb.state,
-		XKB_MOD_NAME_CAPS, XKB_STATE_MODS_LOCKED);
+		XKB_MOD_NAME_CAPS, XKB_STATE_MODS_EFFECTIVE);
 	if (state->xkb.caps_lock_set) {
 		if (caps_lock != state->xkb.caps_lock) {
 			state->xkb.caps_lock = caps_lock;
