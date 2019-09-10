@@ -58,21 +58,40 @@ static void keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
 	}
 }
 
+static void keyboard_modifiers_damage_state(struct swaylock_state *state) {
+	state->auth_state = AUTH_STATE_INPUT_NOP;
+	damage_state(state);
+	schedule_indicator_clear(state);
+	schedule_password_clear(state);
+}
+
 static void keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard,
 		uint32_t serial, uint32_t mods_depressed, uint32_t mods_latched,
 		uint32_t mods_locked, uint32_t group) {
 	struct swaylock_state *state = data;
-	if (group != state->xkb.layout) {
+	if (state->xkb.layout_set) {
+		if (group != state->xkb.layout) {
+			state->xkb.layout = group;
+			keyboard_modifiers_damage_state(state);
+		}
+	} else {
+		// Do not display anything on initial layout change
 		state->xkb.layout = group;
-		damage_state(state);
+		state->xkb.layout_set = true;
 	}
 	xkb_state_update_mask(state->xkb.state,
 		mods_depressed, mods_latched, mods_locked, 0, 0, group);
 	int caps_lock = xkb_state_mod_name_is_active(state->xkb.state,
 		XKB_MOD_NAME_CAPS, XKB_STATE_MODS_LOCKED);
-	if (caps_lock != state->xkb.caps_lock) {
+	if (state->xkb.caps_lock_set) {
+		if (caps_lock != state->xkb.caps_lock) {
+			state->xkb.caps_lock = caps_lock;
+			keyboard_modifiers_damage_state(state);
+		}
+	} else {
+		// Do not display anything on initial Caps Lock change
 		state->xkb.caps_lock = caps_lock;
-		damage_state(state);
+		state->xkb.caps_lock_set = true;
 	}
 	state->xkb.control = xkb_state_mod_name_is_active(state->xkb.state,
 		XKB_MOD_NAME_CTRL,

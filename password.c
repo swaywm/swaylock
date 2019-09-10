@@ -69,7 +69,7 @@ static void clear_password(void *data) {
 	schedule_indicator_clear(state);
 }
 
-static void schedule_password_clear(struct swaylock_state *state) {
+void schedule_password_clear(struct swaylock_state *state) {
 	if (state->clear_password_timer) {
 		loop_remove_timer(state->eventloop, state->clear_password_timer);
 	}
