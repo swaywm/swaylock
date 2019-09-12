@@ -548,7 +548,6 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"disable-caps-lock-text", no_argument, NULL, 'L'},
 		{"indicator-caps-lock", no_argument, NULL, 'l'},
 		{"line-uses-inside", no_argument, NULL, 'n'},
-		{"socket", required_argument, NULL, 'p'},
 		{"line-uses-ring", no_argument, NULL, 'r'},
 		{"scaling", required_argument, NULL, 's'},
 		{"tiling", no_argument, NULL, 't'},
@@ -611,7 +610,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		"  -h, --help                       "
 			"Show help message and quit.\n"
 		"  -i, --image [[<output>]:]<path>  "
-			"Display the given image.\n"
+			"Display the given image, optionally only on the given output.\n"
 		"  -k, --show-keyboard-layout       "
 			"Display the current xkb layout while typing.\n"
 		"  -K, --hide-keyboard-layout       "
@@ -621,7 +620,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		"  -l, --indicator-caps-lock        "
 			"Show the current Caps Lock state also on the indicator.\n"
 		"  -s, --scaling <mode>             "
-			"Scaling mode: stretch, fill, fit, center, tile.\n"
+			"Image scaling mode: stretch, fill, fit, center, tile, solid_color.\n"
 		"  -t, --tiling                     "
 			"Same as --scaling=tile.\n"
 		"  -u, --no-unlock-indicator        "

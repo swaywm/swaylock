@@ -6,25 +6,78 @@ _swaylock()
   _get_comp_words_by_ref -n : cur prev
 
   short=(
-    -h
+    -C
     -c
+    -d
+    -e
+    -f
+    -F
+    -h
+    -i
+    -k
+    -K
+    -L
+    -l
+    -n
+    -r
     -s
     -t
-    -v
-    -i
     -u
-    -f
+    -v
   )
 
   long=(
-    --help
+    --bs-hl-color
+    --caps-lock-bs-hl-color
+    --caps-lock-key-hl-color
     --color
+    --config
+    --daemonize
+    --debug
+    --disable-caps-lock-text
+    --font
+    --font-size
+    --help
+    --hide-keyboard-layout
+    --ignore-empty-password
+    --image
+    --indicator-caps-lock
+    --indicator-idle-visible
+    --indicator-radius
+    --indicator-thickness
+    --inside-caps-lock-color
+    --inside-clear-color
+    --inside-color
+    --inside-ver-color
+    --inside-wrong-color
+    --key-hl-color
+    --layout-bg-color
+    --layout-border-color
+    --layout-text-color
+    --line-caps-lock-color
+    --line-clear-color
+    --line-color
+    --line-uses-inside
+    --line-uses-ring
+    --line-ver-color
+    --line-wrong-color
+    --no-unlock-indicator
+    --ring-caps-lock-color
+    --ring-clear-color
+    --ring-color
+    --ring-ver-color
+    --ring-wrong-color
     --scaling
+    --separator-color
+    --show-failed-attempts
+    --show-keyboard-layout
+    --text-caps-lock-color
+    --text-clear-color
+    --text-color
+    --text-ver-color
+    --text-wrong-color
     --tiling
     --version
-    --image
-    --no-unlock-indicator
-    --daemonize
   )
 
   scaling=(
@@ -33,6 +86,7 @@ _swaylock()
     'fit'
     'center'
     'tile'
+    'solid_color'
   )
 
   case $prev in
