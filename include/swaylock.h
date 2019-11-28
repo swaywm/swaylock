@@ -50,6 +50,10 @@ struct swaylock_args {
 	uint32_t font_size;
 	uint32_t radius;
 	uint32_t thickness;
+	uint32_t indicator_x_position;
+	uint32_t indicator_y_position;
+	bool override_indicator_x_position;
+	bool override_indicator_y_position;
 	bool ignore_empty;
 	bool show_indicator;
 	bool show_caps_lock_text;
