@@ -152,10 +152,19 @@ executable('swaylock',
 	install: true
 )
 
-install_data(
-	'pam/swaylock',
-	install_dir: sysconfdir + '/pam.d/'
-)
+if is_freebsd
+	install_data(
+		'pam/swaylock.freebsd',
+		install_dir: sysconfdir + '/pam.d/',
+		rename: 'swaylock'
+	)
+else
+	install_data(
+		'pam/swaylock.linux',
+		install_dir: sysconfdir + '/pam.d/',
+		rename: 'swaylock'
+	)
+endif
 
 if scdoc.found()
 	sh = find_program('sh')
