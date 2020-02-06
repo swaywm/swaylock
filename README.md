@@ -5,6 +5,10 @@ which adds built-in screenshots and image manipulation effects like blurring.
 It's inspired by [i3lock-color](https://github.com/PandorasFox/i3lock-color),
 although the feature sets aren't perfectly overlapping.
 
+Versioning is based on upstream versioning; `v1.6-0` is the first release based
+on upstream's `v1.6`, `v1.6-1` would be the next release based on
+upstream's `v1.6`, etc.
+
 ![Screenshot](https://raw.githubusercontent.com/mortie/swaylock-effects/master/screenshot.png)
 
 ## Example Command
@@ -49,8 +53,9 @@ implement them), new feature implementations are welcome as pull requests :)
 
 ### From Packages
 
-The [swaylock-effects-git](https://aur.archlinux.org/packages/swaylock-effects-git/)
-package is available for Arch Linux.
+* Arch Linux (AUR): [swaylock-effects-git](https://aur.archlinux.org/packages/swaylock-effects-git/)
+* Fedora (Copr): [swaylock-effects](https://copr.fedorainfracloud.org/coprs/eddsalkield/swaylock-effects/)
+  (thanks to Edd Salkield)
 
 ### Compiling from Source
 
