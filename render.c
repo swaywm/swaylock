@@ -103,10 +103,33 @@ void render_frame(struct swaylock_surface *surface) {
 	int new_width = buffer_diameter;
 	int new_height = buffer_diameter;
 
+/*<<<<<<< HEAD
 	int subsurf_xpos = surface->width / 2 -
 		buffer_width / (2 * surface->scale) + 2 / surface->scale;
 	int subsurf_ypos = surface->height / 2 -
  		(state->args.radius + state->args.thickness);
+=======*/
+	int subsurf_xpos;
+	int subsurf_ypos;
+
+	// Center the indicator unless overridden by the user
+	if (state->args.override_indicator_x_position) {
+		subsurf_xpos = state->args.indicator_x_position -
+			buffer_width / (2 * surface->scale) + 2 / surface->scale;
+	} else {
+		subsurf_xpos = surface->width / 2 -
+			buffer_width / (2 * surface->scale) + 2 / surface->scale;
+	}
+
+	if (state->args.override_indicator_y_position) {
+		subsurf_ypos = state->args.indicator_y_position -
+			(state->args.radius + state->args.thickness);
+	} else {
+		subsurf_ypos = surface->height / 2 -
+			(state->args.radius + state->args.thickness);
+	}
+
+/*>>>>>>> 5da2b1d86134fcfe565ecbc22ced4d3e90c86bf2*/
 	wl_subsurface_set_position(surface->subsurface, subsurf_xpos, subsurf_ypos);
 
 	surface->current_buffer = get_next_buffer(state->shm,
@@ -139,8 +162,16 @@ void render_frame(struct swaylock_surface *surface) {
 	float type_indicator_border_thickness =
 		TYPE_INDICATOR_BORDER_THICKNESS * surface->scale;
 
-	if (state->args.indicator
-			|| (state->args.show_indicator && state->auth_state != AUTH_STATE_IDLE)) {
+	// This is a bit messy.
+	// After the fork, upstream added their own --indicator-idle-visible option,
+	// but it works slightly differently from swaylock-effects' --indicator
+	// option. To maintain compatibility with upstream swaylock scripts as well
+	// as with old swaylock-effects scripts, I will keep both flags.
+	bool upstream_show_indicator =
+		state->args.show_indicator && (state->auth_state != AUTH_STATE_IDLE ||
+			state->args.indicator_idle_visible);
+
+	if (state->args.indicator || upstream_show_indicator) {
 		// Draw circle
 		cairo_set_line_width(cairo, arc_thickness);
 		cairo_arc(cairo, buffer_width / 2, buffer_diameter / 2, arc_radius,
