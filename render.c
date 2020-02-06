@@ -103,12 +103,6 @@ void render_frame(struct swaylock_surface *surface) {
 	int new_width = buffer_diameter;
 	int new_height = buffer_diameter;
 
-/*<<<<<<< HEAD
-	int subsurf_xpos = surface->width / 2 -
-		buffer_width / (2 * surface->scale) + 2 / surface->scale;
-	int subsurf_ypos = surface->height / 2 -
- 		(state->args.radius + state->args.thickness);
-=======*/
 	int subsurf_xpos;
 	int subsurf_ypos;
 
@@ -129,7 +123,6 @@ void render_frame(struct swaylock_surface *surface) {
 			(state->args.radius + state->args.thickness);
 	}
 
-/*>>>>>>> 5da2b1d86134fcfe565ecbc22ced4d3e90c86bf2*/
 	wl_subsurface_set_position(surface->subsurface, subsurf_xpos, subsurf_ypos);
 
 	surface->current_buffer = get_next_buffer(state->shm,
