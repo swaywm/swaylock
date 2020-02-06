@@ -140,6 +140,7 @@ void swaylock_handle_key(struct swaylock_state *state,
 		break;
 	case XKB_KEY_m: /* fallthrough */
 	case XKB_KEY_d:
+	case XKB_KEY_j:
 		if (state->xkb.control) {
 			submit_password(state);
 			break;

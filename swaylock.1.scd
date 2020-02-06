@@ -25,10 +25,10 @@ Locks your Wayland session.
 	Enable debugging output.
 
 *-e, --ignore-empty-password*
-	When an empty password is provided by the user, do not validate it.
+	When an empty password is provided, do not validate it.
 
 *-F, --show-failed-attempts*
-	Show the number of failed authentication attempts on the indicator.
+	Show current count of failed authentication attempts.
 
 *-f, --daemonize*
 	Detach from the controlling terminal after locking.
@@ -67,30 +67,30 @@ Locks your Wayland session.
 	Display a screenshot.
 
 *-k, --show-keyboard-layout*
-	Force displaying the current xkb layout while typing, even if only one layout
-	is configured.
+	Display the current xkb layout while typing.
 
 *-K, --hide-keyboard-layout*
 	Force hiding the current xkb layout while typing, even if more than one layout
 	is configured or the show-keyboard-layout option is set.
 
 *-L, --disable-caps-lock-text*
-	Disable the Caps Lock Text.
+	Disable the Caps Lock text.
 
 *-l, --indicator-caps-lock*
 	Show the current Caps Lock state also on the indicator.
 
 *-s, --scaling*
-	Scaling mode for images: _stretch_, _fill_, _fit_, _center_, or _tile_. Use
-	the additional mode _solid\_color_ to display only the background color, even
+	Image scaling mode: _stretch_, _fill_, _fit_, _center_, _tile_,
+	_solid\_color_. Use _solid\_color_ to display only the background color, even
 	if a background image is specified.
 
 *-t, --tiling*
 	Same as --scaling=tile.
 
 *-c, --color* <rrggbb[aa]>
-	Turn the screen into the given color. If -i is used, this sets the
-	background of the image to the given color. Defaults to white (FFFFFF).
+	Turn the screen into the given color instead of white. If -i is used, this
+	sets the background of the image to the given color. Defaults to white
+	(FFFFFF).
 
 *--bs-hl-color* <rrggbb[aa]>
 	Sets the color of backspace highlight segments.
@@ -102,18 +102,22 @@ Locks your Wayland session.
 	Sets the color of the key press highlight segments when Caps Lock is active.
 
 *--font* <font>
-	Sets the font of the text inside the indicator.
+	Sets the font of the text.
+
+*--font-size* <size>
+	Sets a fixed font size for the indicator text.
+
+*--indicator-idle-visible*
+	Sets the indicator to show even if idle.
 
 *--indicator-radius* <radius>
-	Sets the radius of the indicator to _radius_ pixels. The default value is
-	50.
+	Sets the indicator radius. The default value is 50.
 
 *--indicator-thickness* <thickness>
-	Sets the thickness of the indicator to _thickness_ pixels. The default value
-	is 10.
+	Sets the indicator thickness. The default value is 10.
 
 *--inside-color* <rrggbb[aa]>
-	Sets the color of the inside of the indicator when typing or idle.
+	Sets the color of the inside of the indicator.
 
 *--inside-clear-color* <rrggbb[aa]>
 	Sets the color of the inside of the indicator when cleared.
@@ -128,7 +132,7 @@ Locks your Wayland session.
 	Sets the color of the inside of the indicator when invalid.
 
 *--key-hl-color* <rrggbb[aa]>
-	Sets the color of key press highlight segments.
+	Sets the color of the key press highlight segments.
 
 *--layout-bg-color* <rrggbb[aa]>
 	Sets the background color of the box containing the layout text.
@@ -140,65 +144,59 @@ Locks your Wayland session.
 	Sets the color of the layout text.
 
 *--line-color* <rrggbb[aa]>
-	Sets the color of the lines that separate the inside and outside of the
-	indicator when typing or idle.
+	Sets the color of the line between the inside and ring.
 
 *--line-clear-color* <rrggbb[aa]>
-	Sets the color of the lines that separate the inside and outside of the
-	indicator when cleared.
+	Sets the color of the line between the inside and ring when cleared.
 
 *--line-caps-lock-color* <rrggbb[aa]>
-	Sets the color of the line between the inside and ring when Caps Lock
-	is active.
+	Sets the color of the line between the inside and ring when Caps Lock is
+	active.
 
 *--line-ver-color* <rrggbb[aa]>
-	Sets the color of the lines that separate the inside and outside of the
-	indicator when verifying.
+	Sets the color of the line between the inside and ring when verifying.
 
 *--line-wrong-color* <rrggbb[aa]>
-	Sets the color of the lines that separate the inside and outside of the
-	indicator when invalid.
+	Sets the color of the line between the inside and ring when invalid.
 
 *-n, --line-uses-inside*
-	Use the color of the inside of the indicator for the line separating the
-	inside and outside of the indicator.
+	Use the inside color for the line between the inside and ring.
 
 *-r, --line-uses-ring*
-	Use the outer ring's color for the line separating the inside and outside of
-	the indicator.
+	Use the ring color for the line between the inside and ring.
 
 *--ring-color* <rrggbb[aa]>
-	Sets the color of the outside of the indicator when typing or idle.
+	Sets the color of the ring of the indicator when typing or idle.
 
 *--ring-clear-color* <rrggbb[aa]>
-	Sets the color of the outside of the indicator when cleared.
+	Sets the color of the ring of the indicator when cleared.
 
 *--ring-caps-lock-color* <rrggbb[aa]>
 	Sets the color of the ring of the indicator when Caps Lock is active.
 
 *--ring-ver-color* <rrggbb[aa]>
-	Sets the color of the outside of the indicator when verifying.
+	Sets the color of the ring of the indicator when verifying.
 
 *--ring-wrong-color* <rrggbb[aa]>
-	Sets the color of the outside of the indicator when invalid.
+	Sets the color of the ring of the indicator when invalid.
 
 *--separator-color* <rrggbb[aa]>
 	Sets the color of the lines that separate highlight segments.
 
 *--text-color* <rrggbb[aa]>
-	Sets the color of the text inside the indicator when typing or idle.
+	Sets the color of the text.
 
 *--text-clear-color* <rrggbb[aa]>
-	Sets the color of the text inside the indicator when cleared.
+	Sets the color of the text when cleared.
 
 *--text-caps-lock-color* <rrggbb[aa]>
 	Sets the color of the text when Caps Lock is active.
 
 *--text-ver-color* <rrggbb[aa]>
-	Sets the color of the text inside the indicator when verifying.
+	Sets the color of the text when verifying.
 
 *--text-wrong-color* <rrggbb[aa]>
-	Sets the color of the text inside the indicator when invalid.
+	Sets the color of the text when invalid.
 
 *--effect-blur* <radius>x<times>
 	Blur displayed images.

@@ -634,7 +634,10 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_CAPS_LOCK_KEY_HL_COLOR,
 		LO_FONT,
 		LO_FONT_SIZE,
+		LO_IND_IDLE_VISIBLE,
 		LO_IND_RADIUS,
+		LO_IND_X_POSITION,
+		LO_IND_Y_POSITION,
 		LO_IND_THICKNESS,
 		LO_INSIDE_COLOR,
 		LO_INSIDE_CLEAR_COLOR,
@@ -684,7 +687,6 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"disable-caps-lock-text", no_argument, NULL, 'L'},
 		{"indicator-caps-lock", no_argument, NULL, 'l'},
 		{"line-uses-inside", no_argument, NULL, 'n'},
-		{"socket", required_argument, NULL, 'p'},
 		{"line-uses-ring", no_argument, NULL, 'r'},
 		{"scaling", required_argument, NULL, 's'},
 		{"tiling", no_argument, NULL, 't'},
@@ -698,8 +700,11 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"caps-lock-key-hl-color", required_argument, NULL, LO_CAPS_LOCK_KEY_HL_COLOR},
 		{"font", required_argument, NULL, LO_FONT},
 		{"font-size", required_argument, NULL, LO_FONT_SIZE},
+		{"indicator-idle-visible", no_argument, NULL, LO_IND_IDLE_VISIBLE},
 		{"indicator-radius", required_argument, NULL, LO_IND_RADIUS},
 		{"indicator-thickness", required_argument, NULL, LO_IND_THICKNESS},
+		{"indicator-x-position", required_argument, NULL, LO_IND_X_POSITION},
+		{"indicator-y-position", required_argument, NULL, LO_IND_Y_POSITION},
 		{"inside-color", required_argument, NULL, LO_INSIDE_COLOR},
 		{"inside-clear-color", required_argument, NULL, LO_INSIDE_CLEAR_COLOR},
 		{"inside-caps-lock-color", required_argument, NULL, LO_INSIDE_CAPS_LOCK_COLOR},
@@ -755,7 +760,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		"  -h, --help                       "
 			"Show help message and quit.\n"
 		"  -i, --image [[<output>]:]<path>  "
-			"Display the given image.\n"
+			"Display the given image, optionally only on the given output.\n"
 		"  -S, --screenshots                "
 			"Use a screenshots as the background image.\n"
 		"  -k, --show-keyboard-layout       "
@@ -767,7 +772,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		"  -l, --indicator-caps-lock        "
 			"Show the current Caps Lock state also on the indicator.\n"
 		"  -s, --scaling <mode>             "
-			"Scaling mode: stretch, fill, fit, center, tile.\n"
+			"Image scaling mode: stretch, fill, fit, center, tile, solid_color.\n"
 		"  -t, --tiling                     "
 			"Same as --scaling=tile.\n"
 		"  -u, --no-unlock-indicator        "
@@ -794,10 +799,16 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Sets the font of the text.\n"
 		"  --font-size <size>               "
 			"Sets a fixed font size for the indicator text.\n"
+		"  --indicator-idle-visible         "
+			"Sets the indicator to show even if idle.\n"
 		"  --indicator-radius <radius>      "
 			"Sets the indicator radius.\n"
 		"  --indicator-thickness <thick>    "
 			"Sets the indicator thickness.\n"
+		"  --indicator-x-position <x>       "
+			"Sets the horizontal position of the indicator.\n"
+		"  --indicator-y-position <y>       "
+			"Sets the vertical position of the indicator.\n"
 		"  --inside-color <color>           "
 			"Sets the color of the inside of the indicator.\n"
 		"  --inside-clear-color <color>     "
@@ -997,6 +1008,11 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 				state->args.font_size = atoi(optarg);
 			}
 			break;
+		case LO_IND_IDLE_VISIBLE:
+			if (state) {
+				state->args.indicator_idle_visible = true;
+			}
+			break;
 		case LO_IND_RADIUS:
 			if (state) {
 				state->args.radius = strtol(optarg, NULL, 0);
@@ -1005,6 +1021,18 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		case LO_IND_THICKNESS:
 			if (state) {
 				state->args.thickness = strtol(optarg, NULL, 0);
+			}
+			break;
+		case LO_IND_X_POSITION:
+			if (state) {
+				state->args.override_indicator_x_position = true;
+				state->args.indicator_x_position = atoi(optarg);
+			}
+			break;
+		case LO_IND_Y_POSITION:
+			if (state) {
+				state->args.override_indicator_y_position = true;
+				state->args.indicator_y_position = atoi(optarg);
 			}
 			break;
 		case LO_INSIDE_COLOR:
@@ -1332,6 +1360,10 @@ int main(int argc, char **argv) {
 		.font_size = 0,
 		.radius = 75,
 		.thickness = 10,
+		.indicator_x_position = 0,
+		.indicator_y_position = 0,
+		.override_indicator_x_position = false,
+		.override_indicator_y_position = false,
 		.ignore_empty = false,
 		.show_indicator = true,
 		.show_caps_lock_indicator = false,
@@ -1339,6 +1371,8 @@ int main(int argc, char **argv) {
 		.show_keyboard_layout = false,
 		.hide_keyboard_layout = false,
 		.show_failed_attempts = false,
+		.indicator_idle_visible = false,
+
 		.screenshots = false,
 		.effects = NULL,
 		.effects_count = 0,
