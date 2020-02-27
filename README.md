@@ -24,7 +24,8 @@ upstream's `v1.6`, etc.
 		--key-hl-color 880033 \
 		--line-color 00000000 \
 		--inside-color 00000088 \
-		--separator-color 00000000
+		--separator-color 00000000 \
+		--effect-vignette 0.5:0.5
 
 ## New Features
 
@@ -43,7 +44,7 @@ The main new features compared to upstream swaylock are:
 	  to pixelate the image, or make other effects faster if you don't need
 	  the full resolution.
 	* `--effect-greyscale` makes the image greyscale.
-	* `--effect-vignette <base>:<factor>` applies a vignette effect.
+	* `--effect-vignette <base>:<factor>` applies a vignette effect (range is 0-1).
 	* `--effect-custom <path>` loads a custom effect from a shared object.
 
 New feature ideas are welcome as issues (though I may never get around to
