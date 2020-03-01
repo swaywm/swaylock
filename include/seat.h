@@ -5,6 +5,7 @@
 struct swaylock_xkb {
 	bool caps_lock;
 	bool control;
+	bool super;
 	struct xkb_state *state;
 	struct xkb_context *context;
 	struct xkb_keymap *keymap;

@@ -78,6 +78,9 @@ static void keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard,
 	state->xkb.control = xkb_state_mod_name_is_active(state->xkb.state,
 		XKB_MOD_NAME_CTRL,
 		XKB_STATE_MODS_DEPRESSED | XKB_STATE_MODS_LATCHED);
+	state->xkb.super = xkb_state_mod_name_is_active(state->xkb.state,
+		XKB_MOD_NAME_LOGO,
+		XKB_STATE_MODS_DEPRESSED | XKB_STATE_MODS_LATCHED);
 }
 
 static void keyboard_repeat_info(void *data, struct wl_keyboard *wl_keyboard,

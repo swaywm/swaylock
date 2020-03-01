@@ -42,6 +42,7 @@ cairo          = dependency('cairo')
 gdk_pixbuf     = dependency('gdk-pixbuf-2.0', required: get_option('gdk-pixbuf'))
 bash_comp      = dependency('bash-completion', required: false)
 fish_comp      = dependency('fish', required: false)
+logind         = dependency('lib' + get_option('logind-provider'), required: get_option('logind'))
 libpam         = cc.find_library('pam', required: get_option('pam'))
 crypt          = cc.find_library('crypt', required: not libpam.found())
 math           = cc.find_library('m')
@@ -109,6 +110,12 @@ client_protos = declare_dependency(
 
 conf_data = configuration_data()
 conf_data.set10('HAVE_GDK_PIXBUF', gdk_pixbuf.found())
+conf_data.set10('HAVE_SYSTEMD', false)
+conf_data.set10('HAVE_ELOGIND', false)
+
+if logind.found()
+	conf_data.set10('HAVE_' + get_option('logind-provider').to_upper(), true)
+endif
 
 subdir('include')
 
@@ -143,6 +150,10 @@ else
 	warning('You must do this manually post-install: chmod a+s /path/to/swaylock')
 	sources += ['shadow.c']
 	dependencies += [crypt]
+endif
+
+if logind.found()
+	dependencies += [logind]
 endif
 
 swaylock_inc = include_directories('include')

@@ -12,6 +12,14 @@
 #include "swaylock.h"
 #include "unicode.h"
 
+#if HAVE_SYSTEMD
+#include <systemd/sd-bus.h>
+#include <systemd/sd-login.h>
+#elif HAVE_ELOGIND
+#include <elogind/sd-bus.h>
+#include <elogind/sd-login.h>
+#endif
+
 void clear_buffer(char *buf, size_t size) {
 	// Use volatile keyword so so compiler can't optimize this out.
 	volatile char *buffer = buf;
@@ -92,6 +100,36 @@ static void submit_password(struct swaylock_state *state) {
 	damage_state(state);
 }
 
+#if HAVE_SYSTEMD || HAVE_ELOGIND
+
+static struct sd_bus *bus = NULL;
+
+void connect_to_bus(void) {
+	int ret = sd_bus_default_system(&bus);
+	if (ret < 0) {
+		errno = -ret;
+		swaylock_log_errno(LOG_ERROR, "Failed to open D-Bus connection");
+		return;
+	}
+}
+
+static void suspend(void) {
+	sd_bus_message *msg = NULL;
+	sd_bus_error error = SD_BUS_ERROR_NULL;
+	int ret = sd_bus_call_method(bus, "org.freedesktop.login1",
+			"/org/freedesktop/login1",
+			"org.freedesktop.login1.Manager", "Suspend",
+			&error, &msg, "b", true);
+	if (ret < 0) {
+		swaylock_log(LOG_ERROR, "Failed to suspend: %s", error.message);
+	}
+
+	sd_bus_error_free(&error);
+	sd_bus_message_unref(msg);
+}
+
+#endif
+
 void swaylock_handle_key(struct swaylock_state *state,
 		xkb_keysym_t keysym, uint32_t codepoint) {
 	// Ignore input events if validating
@@ -105,6 +143,16 @@ void swaylock_handle_key(struct swaylock_state *state,
 		submit_password(state);
 		break;
 	case XKB_KEY_Delete:
+#if HAVE_SYSTEMD || HAVE_ELOGIND
+		if (state->xkb.super) {
+			clear_password_buffer(&state->password);
+			state->auth_state = AUTH_STATE_IDLE;
+			damage_state(state);
+			suspend();
+			break;
+		}
+#endif
+		// fallthrough
 	case XKB_KEY_BackSpace:
 		if (backspace(&state->password)) {
 			state->auth_state = AUTH_STATE_BACKSPACE;

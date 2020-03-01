@@ -27,6 +27,10 @@
 #include "wlr-layer-shell-unstable-v1-client-protocol.h"
 #include "xdg-output-unstable-v1-client-protocol.h"
 
+#if HAVE_SYSTEMD || HAVE_ELOGIND
+#include "password.h"
+#endif
+
 static uint32_t parse_color(const char *color) {
 	if (color[0] == '#') {
 		++color;
@@ -1225,6 +1229,10 @@ int main(int argc, char **argv) {
 			display_in, NULL);
 
 	loop_add_fd(state.eventloop, get_comm_reply_fd(), POLLIN, comm_in, NULL);
+
+#if HAVE_SYSTEMD || HAVE_ELOGIND
+	connect_to_bus();
+#endif
 
 	state.run_display = true;
 	while (state.run_display) {

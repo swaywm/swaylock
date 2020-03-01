@@ -4,3 +4,5 @@ option('man-pages', type: 'feature', value: 'auto', description: 'Generate and i
 option('zsh-completions', type: 'boolean', value: true, description: 'Install zsh shell completions')
 option('bash-completions', type: 'boolean', value: true, description: 'Install bash shell completions')
 option('fish-completions', type: 'boolean', value: true, description: 'Install fish shell completions')
+option('logind', type: 'feature', value: 'auto', description: 'Enable support for logind')
+option('logind-provider', type: 'combo', choices: ['systemd', 'elogind'], value: 'systemd', description: 'Provider of logind support library')
