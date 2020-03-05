@@ -101,6 +101,12 @@ Locks your Wayland session.
 *--indicator-thickness* <thickness>
 	Sets the indicator thickness. The default value is 10.
 
+*--indicator-x-position* <x>
+	Sets the horizontal position of the indicator.
+
+*--indicator-y-position* <y>
+	Sets the vertical position of the indicator.
+
 *--inside-color* <rrggbb[aa]>
 	Sets the color of the inside of the indicator.
 
