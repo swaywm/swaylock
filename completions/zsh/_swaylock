@@ -22,6 +22,8 @@ _arguments -s \
 	'(--indicator-idle-visible)'--indicator-idle-visible'[Sets the indicator to show even if idle]' \
 	'(--indicator-radius)'--indicator-radius'[Sets the indicator radius]:radius:' \
 	'(--indicator-thickness)'--indicator-thickness'[Sets the indicator thickness]:thickness:' \
+	'(--indicator-x-position)'--indicator-x-position'[Sets the horizontal position of the indicator]' \
+	'(--indicator-y-position)'--indicator-y-position'[Sets the vertical position of the indicator]' \
 	'(--inside-caps-lock-color)'--inside-caps-lock-color'[Sets the color of the inside of the indicator when Caps Lock is active]:color:' \
 	'(--inside-clear-color)'--inside-clear-color'[Sets the color of the inside of the indicator when cleared]:color:' \
 	'(--inside-color)'--inside-color'[Sets the color of the inside of the indicator]:color:' \
