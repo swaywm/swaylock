@@ -5,10 +5,6 @@ which adds built-in screenshots and image manipulation effects like blurring.
 It's inspired by [i3lock-color](https://github.com/PandorasFox/i3lock-color),
 although the feature sets aren't perfectly overlapping.
 
-Versioning is based on upstream versioning; `v1.6-0` is the first release based
-on upstream's `v1.6`, `v1.6-1` would be the next release based on
-upstream's `v1.6`, etc.
-
 ![Screenshot](https://raw.githubusercontent.com/mortie/swaylock-effects/master/screenshot.png)
 
 ## Example Command
