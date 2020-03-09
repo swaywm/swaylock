@@ -13,6 +13,82 @@
 
 extern char **environ;
 
+static int screen_size_to_pix(struct swaylock_effect_screen_pos size, int screensize) {
+	int actual = size.pos;
+	if (size.is_percent)
+		actual = (size.pos / 100.0) * screensize;
+	return actual;
+}
+
+static int screen_pos_to_pix(struct swaylock_effect_screen_pos pos, int screensize) {
+	int actual = pos.pos;
+	if (pos.is_percent)
+		actual = (pos.pos / 100.0) * screensize;
+	if (actual < 0)
+		actual = screensize + actual;
+	return actual;
+}
+
+static void screen_pos_pair_to_pix(
+		struct swaylock_effect_screen_pos posx,
+		struct swaylock_effect_screen_pos posy,
+		int objwidth, int objheight,
+		int screenwidth, int screenheight, int gravity,
+		int *outx, int *outy) {
+	int x = screen_pos_to_pix(posx, screenwidth);
+	int y = screen_pos_to_pix(posy, screenheight);
+
+	// Adjust X
+	switch (gravity) {
+	case EFFECT_COMPOSE_GRAV_CENTER:
+		x -= objwidth / 2;
+		break;
+	case EFFECT_COMPOSE_GRAV_NW:
+	case EFFECT_COMPOSE_GRAV_SW:
+	case EFFECT_COMPOSE_GRAV_W:
+		break;
+	case EFFECT_COMPOSE_GRAV_NE:
+	case EFFECT_COMPOSE_GRAV_SE:
+	case EFFECT_COMPOSE_GRAV_E:
+		x -= objwidth;
+		break;
+	}
+
+	// Adjust Y
+	switch (gravity) {
+	case EFFECT_COMPOSE_GRAV_CENTER:
+		y -= objheight / 2;
+		break;
+	case EFFECT_COMPOSE_GRAV_NW:
+	case EFFECT_COMPOSE_GRAV_NE:
+	case EFFECT_COMPOSE_GRAV_N:
+		break;
+	case EFFECT_COMPOSE_GRAV_SW:
+	case EFFECT_COMPOSE_GRAV_SE:
+	case EFFECT_COMPOSE_GRAV_S:
+		y -= objheight;
+		break;
+	}
+
+	*outx = x;
+	*outy = y;
+}
+
+static uint32_t blend_pixels(float alpha, uint32_t srcpix, uint32_t destpix) {
+	uint8_t srcr = (srcpix & 0x00ff0000) >> 16;
+	uint8_t destr = (destpix & 0x00ff0000) >> 16;
+	uint8_t srcg = (srcpix & 0x0000ff00) >> 8;
+	uint8_t destg = (destpix & 0x0000ff00) >> 8;
+	uint8_t srcb = (srcpix & 0x000000ff) >> 0;
+	uint8_t destb = (destpix & 0x000000ff) >> 0;
+
+	return (uint32_t)0 |
+		(uint32_t)255 << 24 |
+		(uint32_t)(srcr + destr * (1 - alpha)) << 16 |
+		(uint32_t)(srcg + destg * (1 - alpha)) << 8 |
+		(uint32_t)(srcb + destb * (1 - alpha)) << 0;
+}
+
 static void blur_h(uint32_t *dest, uint32_t *src, int width, int height,
 		int radius) {
 	double coeff = 1.0 / (radius * 2 + 1);
@@ -171,6 +247,74 @@ static void effect_vignette(uint32_t *data, int width, int height,
 	}
 }
 
+static void effect_compose(uint32_t *data, int width, int height,
+		struct swaylock_effect_screen_pos posx,
+		struct swaylock_effect_screen_pos posy,
+		struct swaylock_effect_screen_pos posw,
+		struct swaylock_effect_screen_pos posh,
+		int gravity, char *imgpath) {
+#if !HAVE_GDK_PIXBUF
+	swaylock_log(LOG_ERROR, "Compose effect: Compiled without gdk_pixbuf support.\n");
+	return;
+#else
+	int imgw = screen_size_to_pix(posw, width);
+	int imgh = screen_size_to_pix(posh, height);
+	bool preserve_aspect = imgw < 0 || imgh < 0;
+
+	GError *err = NULL;
+	GdkPixbuf *pixbuf = gdk_pixbuf_new_from_file_at_scale(
+			imgpath, imgw, imgh, preserve_aspect, &err);
+	if (!pixbuf) {
+		swaylock_log(LOG_ERROR, "Compose effect: Failed to load image file '%s' (%s).",
+				imgpath, err->message);
+		g_error_free(err);
+		return;
+	}
+
+	cairo_surface_t *image = gdk_cairo_image_surface_create_from_pixbuf(pixbuf);
+	g_object_unref(pixbuf);
+
+	int bufw = cairo_image_surface_get_width(image);
+	int bufh = cairo_image_surface_get_height(image);
+	uint32_t *bufdata = (uint32_t *)cairo_image_surface_get_data(image);
+	int bufstride = cairo_image_surface_get_stride(image) / 4;
+	bool bufalpha = cairo_image_surface_get_format(image) == CAIRO_FORMAT_ARGB32;
+
+	int imgx, imgy;
+	screen_pos_pair_to_pix(
+			posx, posy, bufw, bufh,
+			width, height, gravity,
+			&imgx, &imgy);
+
+#pragma omp parallel for
+	for (int offy = 0; offy < bufh; ++offy) {
+		if (offy + imgy < 0 || offy + imgy > height)
+			continue;
+
+		for (int offx = 0; offx < bufw; ++offx) {
+			if (offx + imgx < 0 || offx + imgx > width)
+				continue;
+
+			size_t idx = (size_t)(offy + imgy) * width + (offx + imgx);
+			size_t bufidx = (size_t)offy * bufstride + (offx);
+
+			if (!bufalpha) {
+				data[idx] = bufdata[bufidx];
+			} else {
+				uint8_t alpha = (bufdata[bufidx] & 0xff000000) >> 24;
+				if (alpha == 255) {
+					data[idx] = bufdata[bufidx];
+				} else if (alpha != 0) {
+					data[idx] = blend_pixels(alpha / 255.0, bufdata[bufidx], data[idx]);
+				}
+			}
+		}
+	}
+
+	cairo_surface_destroy(image);
+#endif
+}
+
 static void effect_custom(uint32_t *data, int width, int height,
 		char *path) {
 	void *dl = dlopen(path, RTLD_LAZY);
@@ -276,6 +420,18 @@ cairo_surface_t *swaylock_effects_run(cairo_surface_t *surface,
 					cairo_image_surface_get_height(surface),
 					effect->e.vignette.base,
 					effect->e.vignette.factor);
+			cairo_surface_flush(surface);
+			break;
+		}
+
+		case EFFECT_COMPOSE: {
+			effect_compose(
+					(uint32_t *)cairo_image_surface_get_data(surface),
+					cairo_image_surface_get_width(surface),
+					cairo_image_surface_get_height(surface),
+					effect->e.compose.x, effect->e.compose.y,
+					effect->e.compose.w, effect->e.compose.h,
+					effect->e.compose.gravity, effect->e.compose.imgpath);
 			cairo_surface_flush(surface);
 			break;
 		}

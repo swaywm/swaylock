@@ -46,6 +46,118 @@ static uint32_t parse_color(const char *color) {
 	return res;
 }
 
+static const char *parse_screen_pos(const char *str, struct swaylock_effect_screen_pos *pos) {
+	char *eptr;
+	float res = strtof(str, &eptr);
+	if (eptr == str)
+		return NULL;
+
+	pos->pos = res;
+	if (eptr[0] == '%') {
+		pos->is_percent = true;
+		return eptr + 1;
+	} else {
+		pos->is_percent = false;
+		return eptr;
+	}
+}
+
+static const char *parse_screen_pos_pair(const char *str, char delim,
+		struct swaylock_effect_screen_pos *pos1,
+		struct swaylock_effect_screen_pos *pos2) {
+	struct swaylock_effect_screen_pos tpos1, tpos2;
+	str = parse_screen_pos(str, &tpos1);
+	if (str == NULL || str[0] != delim)
+		return NULL;
+
+	str = parse_screen_pos(str + 1, &tpos2);
+	if (str == NULL)
+		return NULL;
+
+	pos1->pos = tpos1.pos;
+	pos1->is_percent = tpos1.is_percent;
+	pos2->pos = tpos2.pos;
+	pos2->is_percent = tpos2.is_percent;
+	return str;
+}
+
+static const char *parse_constant(const char *str1, const char *str2) {
+	size_t len = strlen(str2); 
+	if (strncmp(str1, str2, len) == 0) {
+		return str1 + len;
+	} else {
+		return NULL;
+	}
+}
+
+static int parse_gravity_from_xy(float x, float y) {
+	if (x >= 0 && y >= 0)
+		return EFFECT_COMPOSE_GRAV_NW;
+	else if (x >= 0 && y < 0)
+		return EFFECT_COMPOSE_GRAV_SW;
+	else if (x < 0 && y >= 0)
+		return EFFECT_COMPOSE_GRAV_NE;
+	else
+		return EFFECT_COMPOSE_GRAV_SE;
+}
+
+static void parse_effect_compose(const char *str, struct swaylock_effect *effect) {
+	effect->e.compose.x = effect->e.compose.y = (struct swaylock_effect_screen_pos) { 50, 1 }; // 50%
+	effect->e.compose.w = effect->e.compose.h = (struct swaylock_effect_screen_pos) { -1, 0 }; // -1
+	effect->e.compose.gravity = EFFECT_COMPOSE_GRAV_CENTER;
+	effect->e.compose.imgpath = NULL;
+
+	// Parse position if they exist
+	const char *s = parse_screen_pos_pair(str, ',', &effect->e.compose.x, &effect->e.compose.y);
+	if (s == NULL) {
+		s = str;
+	} else {
+		// If we're given an x/y position, determine gravity automatically
+		// from whether x and y is positive or not
+		effect->e.compose.gravity = parse_gravity_from_xy(
+				effect->e.compose.x.pos, effect->e.compose.y.pos);
+		s += 1;
+		str = s;
+	}
+
+	// Parse dimensions if they exist
+	s = parse_screen_pos_pair(str, 'x', &effect->e.compose.w, &effect->e.compose.h);
+	if (s == NULL) {
+		s = str;
+	} else {
+		s += 1;
+		str = s;
+	}
+
+	// Parse gravity if it exists
+	if ((s = parse_constant(str, "center;")) != NULL)
+		effect->e.compose.gravity = EFFECT_COMPOSE_GRAV_CENTER;
+	else if ((s = parse_constant(str, "northwest;")) != NULL)
+		effect->e.compose.gravity = EFFECT_COMPOSE_GRAV_NW;
+	else if ((s = parse_constant(str, "northeast;")) != NULL)
+		effect->e.compose.gravity = EFFECT_COMPOSE_GRAV_NE;
+	else if ((s = parse_constant(str, "southwest;")) != NULL)
+		effect->e.compose.gravity = EFFECT_COMPOSE_GRAV_SW;
+	else if ((s = parse_constant(str, "southeast;")) != NULL)
+		effect->e.compose.gravity = EFFECT_COMPOSE_GRAV_SE;
+	else if ((s = parse_constant(str, "north;")) != NULL)
+		effect->e.compose.gravity = EFFECT_COMPOSE_GRAV_N;
+	else if ((s = parse_constant(str, "south;")) != NULL)
+		effect->e.compose.gravity = EFFECT_COMPOSE_GRAV_S;
+	else if ((s = parse_constant(str, "east;")) != NULL)
+		effect->e.compose.gravity = EFFECT_COMPOSE_GRAV_E;
+	else if ((s = parse_constant(str, "west;")) != NULL)
+		effect->e.compose.gravity = EFFECT_COMPOSE_GRAV_W;
+	if (s == NULL) {
+		s = str;
+	} else {
+		str = s;
+	}
+
+	// The rest is the file name
+	effect->e.compose.imgpath = strdup(str);
+}
+
 int lenient_strcmp(char *a, char *b) {
 	if (a == b) {
 		return 0;
@@ -668,6 +780,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_EFFECT_SCALE,
 		LO_EFFECT_GREYSCALE,
 		LO_EFFECT_VIGNETTE,
+		LO_EFFECT_COMPOSE,
 		LO_EFFECT_CUSTOM,
 		LO_INDICATOR,
 		LO_CLOCK,
@@ -734,6 +847,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"effect-scale", required_argument, NULL, LO_EFFECT_SCALE},
 		{"effect-greyscale", no_argument, NULL, LO_EFFECT_GREYSCALE},
 		{"effect-vignette", required_argument, NULL, LO_EFFECT_VIGNETTE},
+		{"effect-compose", required_argument, NULL, LO_EFFECT_COMPOSE},
 		{"effect-custom", required_argument, NULL, LO_EFFECT_CUSTOM},
 		{"indicator", no_argument, NULL, LO_INDICATOR},
 		{"clock", no_argument, NULL, LO_CLOCK},
@@ -1202,6 +1316,15 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 					swaylock_log(LOG_ERROR, "Invalid factor effect argument %s, ignoring", optarg);
 					state->args.effects_count -= 1;
 				}
+			}
+			break;
+		case LO_EFFECT_COMPOSE:
+			if (state) {
+				state->args.effects = realloc(state->args.effects,
+						sizeof(*state->args.effects) * ++state->args.effects_count);
+				struct swaylock_effect *effect = &state->args.effects[state->args.effects_count - 1];
+				effect->tag = EFFECT_COMPOSE;
+				parse_effect_compose(optarg, effect);
 			}
 			break;
 		case LO_EFFECT_CUSTOM:
