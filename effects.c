@@ -41,6 +41,8 @@ static void screen_pos_pair_to_pix(
 	// Adjust X
 	switch (gravity) {
 	case EFFECT_COMPOSE_GRAV_CENTER:
+	case EFFECT_COMPOSE_GRAV_N:
+	case EFFECT_COMPOSE_GRAV_S:
 		x -= objwidth / 2;
 		break;
 	case EFFECT_COMPOSE_GRAV_NW:
@@ -57,6 +59,8 @@ static void screen_pos_pair_to_pix(
 	// Adjust Y
 	switch (gravity) {
 	case EFFECT_COMPOSE_GRAV_CENTER:
+	case EFFECT_COMPOSE_GRAV_W:
+	case EFFECT_COMPOSE_GRAV_E:
 		y -= objheight / 2;
 		break;
 	case EFFECT_COMPOSE_GRAV_NW:
