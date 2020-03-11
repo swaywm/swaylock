@@ -122,7 +122,7 @@ Base and factor should be between 0 and 1.
 
 ### Compose
 
-`--effect-compose <position>;<size>;<gravity>;<path>`: Overlay another image to your lock screen.
+`--effect-compose "<position>;<size>;<gravity>;<path>"`: Overlay another image to your lock screen.
 
 * `<position>`: Optional. The position on the screen to put the image, as `<x>,<y>`.
 	* Can be a percentage (`10%,10%`), a number of pixels (`20,20`), or a mix (`30%,40`).
