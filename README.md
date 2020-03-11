@@ -16,12 +16,12 @@ although the feature sets aren't perfectly overlapping.
 		--indicator-radius 100 \
 		--indicator-thickness 7 \
 		--effect-blur 7x5 \
+		--effect-vignette 0.5:0.5
 		--ring-color bb00cc \
 		--key-hl-color 880033 \
 		--line-color 00000000 \
 		--inside-color 00000088 \
 		--separator-color 00000000 \
-		--effect-vignette 0.5:0.5
 
 ## New Features
 
@@ -41,25 +41,7 @@ The main new features compared to upstream swaylock are:
 	  the full resolution.
 	* `--effect-greyscale`: Make the image greyscale.
 	* `--effect-vignette <base>:<factor>`: Apply a vignette effect (range is 0-1).
-	* `--effect-compose <position>;<size>;<gravity>;<path>`: Put another image on the screen.
-		* `<position>`: Optional. The position on the screen to put the image, as `<x>,<y>`.
-			* Can be a percentage (`10%,10%`), a number of pixels (`20,20`), or a mix (`30%,40`).
-			* A negative number indicates that number of pixels away from the right/bottom instead of
-			  from the top/left; `-1,-1` would be the bottom right pixel.
-			* Default: `50%,50%`.
-		* `<size>`: Optional. The size of the image on the screen, as `<w>x<h>`.
-			* Can be a percentage (`10%x10%`), a number of pixels (`20x20`), or a mix (`30%x40`).
-			* If the width is `-1`, the width is figured out based on the height and aspect ratio.
-			* If the height is `-1`, the height is figured out based on the width and aspect ratio.
-			* Default: The size of the image file.
-		* `<gravity>`: Optional. Determine which point of the image is placed at `<position>`.
-			* Possible values: `center`, `north`, `south`, `west`, `east`,
-			  `northwest`, `northeast`, southwest`, `southeast`.
-			* With a `<gravity>` of `northwest`, `<position>` gives the location of the top/left
-			  corner of the image; with `southeast`, `<position>` controls the bottom/right corner,
-			  `center` controls the middle of the image, etc.
-			* Default: `center` if no `<position>` is given; otherwise, intelligently decide a gravity
-			  based on position (`10,10` -> northwest, `-10,10` -> northeast, etc).
+	* `--effect-compose <position>;<size>;<gravity>;<path>`: Overlay another image.
 	* `--effect-custom <path>`: Load a custom effect from a shared object.
 
 New feature ideas are welcome as issues (though I may never get around to
@@ -103,3 +85,72 @@ On systems without PAM, you need to suid the swaylock binary:
 	sudo chmod a+s /usr/local/bin/swaylock
 
 Swaylock will drop root permissions shortly after startup.
+
+## Effects
+
+
+### Blur
+
+`--effect-blur <radius>x<times>`: Blur the image.
+
+`<radius>` is a number specifying how big
+the blur is, `<times>` is a number which specifies essentially how high quality the blur is
+(i.e how closely the effect will resemble a true gaussian blur).
+
+### Scale
+
+`--effect-scale <scale>`: Scale the image by a factor.
+
+This effect scales the internal buffer (with nearest-neighbour interpolation). This has
+a few uses:
+
+* Use two scale effects for a pixelation effect: `--effect-scale 0.1 --effect-scale 10`
+* Use `--effect-scale` in combination with `--scaling` to create a zoom effect:
+  `--efect-scale 1.1 --scaling center`
+* Speed up other effects by making the resolution smaller: with
+  `--effect-scale 0.5 --effect-blur 7x5 --effect-scale 2`, swaylock-effect needs to blur
+  only 1/4 as many pixels.
+
+### Greyscale
+
+`--effect-greyscale`: Make the displayed image greyscale.
+
+### Vignette
+
+`--effect-vignette <base>:<factor>`: Apply a vignette effect.
+Base and factor should be between 0 and 1.
+
+### Compose
+
+`--effect-compose <position>;<size>;<gravity>;<path>`: Overlay another image to your lock screen.
+
+* `<position>`: Optional. The position on the screen to put the image, as `<x>,<y>`.
+	* Can be a percentage (`10%,10%`), a number of pixels (`20,20`), or a mix (`30%,40`).
+	* A negative number indicates that number of pixels away from the right/bottom instead of
+	  from the top/left; `-1,-1` would be the bottom right pixel.
+	* Default: `50%,50%`.
+* `<size>`: Optional. The size of the image on the screen, as `<w>x<h>`.
+	* Can be a percentage (`10%x10%`), a number of pixels (`20x20`), or a mix (`30%x40`).
+	* If the width is `-1`, the width is figured out based on the height and aspect ratio.
+	* If the height is `-1`, the height is figured out based on the width and aspect ratio.
+	* Default: The size of the image file.
+* `<gravity>`: Optional. Determine which point of the image is placed at `<position>`.
+	* Possible values: `center`, `north`, `south`, `west`, `east`,
+	  `northwest`, `northeast`, southwest`, `southeast`.
+	* With a `<gravity>` of `northwest`, `<position>` gives the location of the top/left
+	  corner of the image; with `southeast`, `<position>` controls the bottom/right corner,
+	  `center` controls the middle of the image, etc.
+	* Default: `center` if no `<position>` is given; otherwise, intelligently decide a gravity
+	  based on position (`10,10` -> northwest, `-10,10` -> northeast, etc).
+* `<path>`: The path to an image file.
+
+This command requires swaylock-effects to be compiled with gdk-pixbuf2.
+It supports all image formats gdk-pixbuf2 supports; on my system, that's
+png, jpeg, gif, svg, bmp, ico, tiff, wmf, ani, icns, pnm, qtif, tga, xbm and xpm.
+
+### Custom
+
+`--effect-custom <path>`: Load a custom effect from a shared object.
+
+The .so must export a function `void swaylock_effect(uint32_t *data, int width, int height)`
+or a function `uint32_t swaylock_pixel(uint32_t pix, int x, int y, int width, int height)`.
