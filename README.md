@@ -33,15 +33,34 @@ The main new features compared to upstream swaylock are:
 	* Use `--timestr` and `--datestr` to set the date/time formats
 	  (using strftime-style formatting)
 * Various effects which can be applied to the background image
-	* `--effect-blur <radius>x<times>` blurs the image (thanks to yvbbrjdr's
+	* `--effect-blur <radius>x<times>`: Blur the image (thanks to yvbbrjdr's
 	  fast box blur algorithm in
 	  [i3lock-fancy-rapid](https://github.com/yvbbrjdr/i3lock-fancy-rapid))
-	* `--effect-scale <scale>` scales the image by a factor. This can be used
+	* `--effect-scale <scale>`: Scale the image by a factor. This can be used
 	  to pixelate the image, or make other effects faster if you don't need
 	  the full resolution.
-	* `--effect-greyscale` makes the image greyscale.
-	* `--effect-vignette <base>:<factor>` applies a vignette effect (range is 0-1).
-	* `--effect-custom <path>` loads a custom effect from a shared object.
+	* `--effect-greyscale`: Make the image greyscale.
+	* `--effect-vignette <base>:<factor>`: Apply a vignette effect (range is 0-1).
+	* `--effect-compose <position>;<size>;<gravity>;<path>`: Put another image on the screen.
+		* `<position>`: Optional. The position on the screen to put the image, as `<x>,<y>`.
+			* Can be a percentage (`10%,10%`), a number of pixels (`20,20`), or a mix (`30%,40`).
+			* A negative number indicates that number of pixels away from the right/bottom instead of
+			  from the top/left; `-1,-1` would be the bottom right pixel.
+			* Default: `50%,50%`.
+		* `<size>`: Optional. The size of the image on the screen, as `<w>x<h>`.
+			* Can be a percentage (`10%x10%`), a number of pixels (`20x20`), or a mix (`30%x40`).
+			* If the width is `-1`, the width is figured out based on the height and aspect ratio.
+			* If the height is `-1`, the height is figured out based on the width and aspect ratio.
+			* Default: The size of the image file.
+		* `<gravity>`: Optional. Determine which point of the image is placed at `<position>`.
+			* Possible values: `center`, `north`, `south`, `west`, `east`,
+			  `northwest`, `northeast`, southwest`, `southeast`.
+			* With a `<gravity>` of `northwest`, `<position>` gives the location of the top/left
+			  corner of the image; with `southeast`, `<position>` controls the bottom/right corner,
+			  `center` controls the middle of the image, etc.
+			* Default: `center` if no `<position>` is given; otherwise, intelligently decide a gravity
+			  based on position (`10,10` -> northwest, `-10,10` -> northeast, etc).
+	* `--effect-custom <path>`: Load a custom effect from a shared object.
 
 New feature ideas are welcome as issues (though I may never get around to
 implement them), new feature implementations are welcome as pull requests :)
