@@ -896,7 +896,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		"  --clock                          "
 			"Show time and date.\n"
 		"  --timestr <format>               "
-			"The format string for the time. Defaults to '%X'.\n"
+			"The format string for the time. Defaults to '%T'.\n"
 		"  --datestr <format>               "
 			"The format string for the date. Defaults to '%a, %x'.\n"
 		"  -v, --version                    "
@@ -1501,7 +1501,7 @@ int main(int argc, char **argv) {
 		.effects_count = 0,
 		.indicator = false,
 		.clock = false,
-		.timestr = strdup("%X"),
+		.timestr = strdup("%T"),
 		.datestr = strdup("%a, %x"),
 	};
 	wl_list_init(&state.images);

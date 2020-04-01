@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
+#include <locale.h>
 #include <wayland-client.h>
 #include "cairo.h"
 #include "background-image.h"
@@ -37,6 +38,10 @@ static void timetext(struct swaylock_surface *surface, char **tstr, char **dstr)
 	static char dbuf[256];
 	static char tbuf[256];
 
+	// Use user's locale for strftime calls
+	char *prevloc = setlocale(LC_TIME, NULL);
+	setlocale(LC_TIME, "");
+
 	time_t t = time(NULL);
 	struct tm *tm = localtime(&t);
 
@@ -53,6 +58,9 @@ static void timetext(struct swaylock_surface *surface, char **tstr, char **dstr)
 	} else {
 		*dstr = NULL;
 	}
+
+	// Set it back, so we don't break stuff
+	setlocale(LC_TIME, prevloc);
 }
 
 void render_frame_background(struct swaylock_surface *surface) {

@@ -53,7 +53,7 @@ Locks your Wayland session.
 	Show a clock in the indicator.
 
 *--timestr* <format>
-	The time format for the indicator clock. Defaults to '%X'.
+	The time format for the indicator clock. Defaults to '%T'.
 
 *--datestr* <format>
 	The date format for the indicator clock. Defaults to '%a, %x'.
