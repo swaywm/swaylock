@@ -35,6 +35,13 @@ Locks your Wayland session.
 
 	Note: this is the default behavior of i3lock.
 
+*--grace* <seconds>
+	Only require a password after some grace period.
+
+	Note: Together with *--indicator*, the indicator is always shown.
+	Together with *--indicator-idle-visible*, the indicator is only shown
+	after the grace period.
+
 *-h, --help*
 	Show help message and quit.
 
@@ -47,7 +54,7 @@ Locks your Wayland session.
 	Disable the unlock indicator.
 
 *--indicator*
-	Always show the indicator, even when not typing.
+	Always show the indicator.
 
 *--clock*
 	Show a clock in the indicator.

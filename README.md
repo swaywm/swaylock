@@ -95,7 +95,6 @@ Swaylock will drop root permissions shortly after startup.
 
 ## Effects
 
-
 ### Blur
 
 `--effect-blur <radius>x<times>`: Blur the image.
