@@ -172,7 +172,8 @@ void render_frame(struct swaylock_surface *surface) {
 		state->args.show_indicator && (state->auth_state != AUTH_STATE_IDLE ||
 			state->args.indicator_idle_visible);
 
-	if (state->args.indicator || upstream_show_indicator) {
+	if (state->args.indicator ||
+			(upstream_show_indicator && state->auth_state != AUTH_STATE_GRACE)) {
 		// Draw circle
 		cairo_set_line_width(cairo, arc_thickness);
 		cairo_arc(cairo, buffer_width / 2, buffer_diameter / 2, arc_radius,

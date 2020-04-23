@@ -28,6 +28,27 @@
 #include "wlr-screencopy-unstable-v1-client-protocol.h"
 #include "xdg-output-unstable-v1-client-protocol.h"
 
+// returns a positive integer in milliseconds
+static uint32_t parse_seconds(const char *seconds) {
+	char *endptr;
+	errno = 0;
+	float val = strtof(seconds, &endptr);
+	if (errno != 0) {
+		swaylock_log(LOG_DEBUG, "Invalid number for seconds %s, defaulting to 0", seconds);
+		return 0;
+	}
+	if (endptr == seconds) {
+		swaylock_log(LOG_DEBUG, "No digits were found in %s, defaulting to 0", seconds);
+		return 0;
+	}
+	if (val < 0) {
+		swaylock_log(LOG_DEBUG, "Negative seconds not allowed for %s, defaulting to 0", seconds);
+		return 0;
+	}
+
+	return (uint32_t)floor(val * 1000);
+}
+
 static uint32_t parse_color(const char *color) {
 	if (color[0] == '#') {
 		++color;
@@ -786,6 +807,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_CLOCK,
 		LO_TIMESTR,
 		LO_DATESTR,
+		LO_GRACE,
 	};
 
 	static struct option long_options[] = {
@@ -853,6 +875,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"clock", no_argument, NULL, LO_CLOCK},
 		{"timestr", required_argument, NULL, LO_TIMESTR},
 		{"datestr", required_argument, NULL, LO_DATESTR},
+		{"grace", required_argument, NULL, LO_GRACE},
 		{0, 0, 0, 0}
 	};
 
@@ -871,6 +894,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Show current count of failed authentication attempts.\n"
 		"  -f, --daemonize                  "
 			"Detach from the controlling terminal after locking.\n"
+		"  --grace <seconds>            "
+			"Password grace period. Don't require the password for the first N seconds.\n"
 		"  -h, --help                       "
 			"Show help message and quit.\n"
 		"  -i, --image [[<output>]:]<path>  "
@@ -1358,6 +1383,11 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 				state->args.datestr = strdup(optarg);
 			}
 			break;
+		case LO_GRACE:
+			if (state) {
+				state->args.password_grace_period = parse_seconds(optarg);
+			}
+			break;
 		default:
 			fprintf(stderr, "%s", usage);
 			return 1;
@@ -1451,6 +1481,13 @@ static void display_in(int fd, short mask, void *data) {
 	}
 }
 
+static void end_grace_period(void *data) {
+	struct swaylock_state *state = data;
+	if (state->auth_state == AUTH_STATE_GRACE) {
+		state->auth_state = AUTH_STATE_IDLE;
+	}
+}
+
 static void comm_in(int fd, short mask, void *data) {
 	if (read_comm_reply()) {
 		// Authentication succeeded
@@ -1503,6 +1540,7 @@ int main(int argc, char **argv) {
 		.clock = false,
 		.timestr = strdup("%T"),
 		.datestr = strdup("%a, %x"),
+		.password_grace_period = 0,
 	};
 	wl_list_init(&state.images);
 	set_default_colors(&state.args.colors);
@@ -1540,6 +1578,10 @@ int main(int argc, char **argv) {
 		state.args.colors.line = state.args.colors.inside;
 	} else if (line_mode == LM_RING) {
 		state.args.colors.line = state.args.colors.ring;
+	}
+
+	if (state.args.password_grace_period > 0) {
+		state.auth_state = AUTH_STATE_GRACE;
 	}
 
 #ifdef __linux__
@@ -1644,6 +1686,10 @@ int main(int argc, char **argv) {
 	loop_add_fd(state.eventloop, get_comm_reply_fd(), POLLIN, comm_in, NULL);
 
 	loop_add_timer(state.eventloop, 1000, timer_render, &state);
+
+	if (state.args.password_grace_period > 0) {
+		loop_add_timer(state.eventloop, state.args.password_grace_period, end_grace_period, &state);
+	}
 
 	state.run_display = true;
 	while (state.run_display) {

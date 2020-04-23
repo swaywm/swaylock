@@ -18,6 +18,7 @@ enum auth_state {
 	AUTH_STATE_BACKSPACE,
 	AUTH_STATE_VALIDATING,
 	AUTH_STATE_INVALID,
+	AUTH_STATE_GRACE,
 };
 
 struct swaylock_colorset {
@@ -72,6 +73,7 @@ struct swaylock_args {
 	bool clock;
 	char *timestr;
 	char *datestr;
+	uint32_t password_grace_period;
 };
 
 struct swaylock_password {
