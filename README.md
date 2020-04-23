@@ -22,6 +22,7 @@ although the feature sets aren't perfectly overlapping.
 		--line-color 00000000 \
 		--inside-color 00000088 \
 		--separator-color 00000000 \
+		--grace 2
 
 ## New Features
 
@@ -32,6 +33,12 @@ The main new features compared to upstream swaylock are:
 	* Use `--indicator` to make the indicator always active
 	* Use `--timestr` and `--datestr` to set the date/time formats
 	  (using strftime-style formatting)
+* `--grace <seconds>` to set a password grace period, so that the password
+  isn't required to unlock until some number of seconds have passed.
+	* Used together with `--indicator`, the indicator is always shown,
+	  even in the grace period.
+	* Used together with `--indicator-idle-visible`, the indicator is only
+	  visible after the grace period.
 * Various effects which can be applied to the background image
 	* `--effect-blur <radius>x<times>`: Blur the image (thanks to yvbbrjdr's
 	  fast box blur algorithm in
