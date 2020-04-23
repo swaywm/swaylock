@@ -42,6 +42,10 @@ Locks your Wayland session.
 	Together with *--indicator-idle-visible*, the indicator is only shown
 	after the grace period.
 
+*--grace-no-mouse*
+	With *--grace*, only unlock as a response to a
+	key event, not in response to a mouse event.
+
 *-h, --help*
 	Show help message and quit.
 

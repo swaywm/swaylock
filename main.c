@@ -808,6 +808,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_TIMESTR,
 		LO_DATESTR,
 		LO_GRACE,
+		LO_GRACE_NO_MOUSE,
 	};
 
 	static struct option long_options[] = {
@@ -876,6 +877,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"timestr", required_argument, NULL, LO_TIMESTR},
 		{"datestr", required_argument, NULL, LO_DATESTR},
 		{"grace", required_argument, NULL, LO_GRACE},
+		{"grace-no-mouse", no_argument, NULL, LO_GRACE_NO_MOUSE},
 		{0, 0, 0, 0}
 	};
 
@@ -894,8 +896,10 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Show current count of failed authentication attempts.\n"
 		"  -f, --daemonize                  "
 			"Detach from the controlling terminal after locking.\n"
-		"  --grace <seconds>            "
+		"  --grace <seconds>                "
 			"Password grace period. Don't require the password for the first N seconds.\n"
+		"  --grace-no-mouse                 "
+			"During the grace period, only unlock on a key press, not on a mouse event.\n"
 		"  -h, --help                       "
 			"Show help message and quit.\n"
 		"  -i, --image [[<output>]:]<path>  "
@@ -1386,6 +1390,11 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		case LO_GRACE:
 			if (state) {
 				state->args.password_grace_period = parse_seconds(optarg);
+			}
+			break;
+		case LO_GRACE_NO_MOUSE:
+			if (state) {
+				state->args.password_grace_no_mouse = true;
 			}
 			break;
 		default:

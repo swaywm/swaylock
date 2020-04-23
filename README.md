@@ -39,6 +39,9 @@ The main new features compared to upstream swaylock are:
 	  even in the grace period.
 	* Used together with `--indicator-idle-visible`, the indicator is only
 	  visible after the grace period.
+	* By default, either a key press or a mouse event will unlock
+	  during the grace period. Use `--grace-no-mouse` to only unlock
+	  as a response to a key event.
 * Various effects which can be applied to the background image
 	* `--effect-blur <radius>x<times>`: Blur the image (thanks to yvbbrjdr's
 	  fast box blur algorithm in

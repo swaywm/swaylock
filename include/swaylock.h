@@ -74,6 +74,7 @@ struct swaylock_args {
 	char *timestr;
 	char *datestr;
 	uint32_t password_grace_period;
+	bool password_grace_no_mouse;
 };
 
 struct swaylock_password {
@@ -146,6 +147,7 @@ struct swaylock_image {
 
 void swaylock_handle_key(struct swaylock_state *state,
 		xkb_keysym_t keysym, uint32_t codepoint);
+void swaylock_handle_mouse(struct swaylock_state *state);
 void render_frame_background(struct swaylock_surface *surface);
 void render_frame(struct swaylock_surface *surface);
 void render_frames(struct swaylock_state *state);

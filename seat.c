@@ -107,17 +107,17 @@ static void wl_pointer_leave(void *data, struct wl_pointer *wl_pointer,
 
 static void wl_pointer_motion(void *data, struct wl_pointer *wl_pointer,
 		uint32_t time, wl_fixed_t surface_x, wl_fixed_t surface_y) {
-	// Who cares
+	swaylock_handle_mouse((struct swaylock_state *)data);
 }
 
 static void wl_pointer_button(void *data, struct wl_pointer *wl_pointer,
 		uint32_t serial, uint32_t time, uint32_t button, uint32_t state) {
-	// Who cares
+	swaylock_handle_mouse((struct swaylock_state *)data);
 }
 
 static void wl_pointer_axis(void *data, struct wl_pointer *wl_pointer,
 		uint32_t time, uint32_t axis, wl_fixed_t value) {
-	// Who cares
+	swaylock_handle_mouse((struct swaylock_state *)data);
 }
 
 static void wl_pointer_frame(void *data, struct wl_pointer *wl_pointer) {
@@ -164,7 +164,7 @@ static void seat_handle_capabilities(void *data, struct wl_seat *wl_seat,
 	}
 	if ((caps & WL_SEAT_CAPABILITY_POINTER)) {
 		seat->pointer = wl_seat_get_pointer(wl_seat);
-		wl_pointer_add_listener(seat->pointer, &pointer_listener, NULL);
+		wl_pointer_add_listener(seat->pointer, &pointer_listener, seat->state);
 	}
 	if ((caps & WL_SEAT_CAPABILITY_KEYBOARD)) {
 		seat->keyboard = wl_seat_get_keyboard(wl_seat);
