@@ -46,9 +46,9 @@ The main new features compared to upstream swaylock are:
 	* `--effect-blur <radius>x<times>`: Blur the image (thanks to yvbbrjdr's
 	  fast box blur algorithm in
 	  [i3lock-fancy-rapid](https://github.com/yvbbrjdr/i3lock-fancy-rapid))
+	* `--effect-pixelate <factor>`: Pixelate the image.
 	* `--effect-scale <scale>`: Scale the image by a factor. This can be used
-	  to pixelate the image, or make other effects faster if you don't need
-	  the full resolution.
+	  to make other effects faster if you don't need the full resolution.
 	* `--effect-greyscale`: Make the image greyscale.
 	* `--effect-vignette <base>:<factor>`: Apply a vignette effect (range is 0-1).
 	* `--effect-compose <position>;<size>;<gravity>;<path>`: Overlay another image.
@@ -106,14 +106,19 @@ Swaylock will drop root permissions shortly after startup.
 the blur is, `<times>` is a number which specifies essentially how high quality the blur is
 (i.e how closely the effect will resemble a true gaussian blur).
 
+### Pixelate
+
+`--effect-pixelate <factor>`: Pixelate the image.
+
+`<factor>` is the amount of pixelation; a value of 10 will make each 10x10 square of pixels
+the same color.
+
 ### Scale
 
 `--effect-scale <scale>`: Scale the image by a factor.
 
-This effect scales the internal buffer (with nearest-neighbour interpolation). This has
-a few uses:
+This effect scales the internal buffer. This has a few uses:
 
-* Use two scale effects for a pixelation effect: `--effect-scale 0.1 --effect-scale 10`
 * Use `--effect-scale` in combination with `--scaling` to create a zoom effect:
   `--efect-scale 1.1 --scaling center`
 * Speed up other effects by making the resolution smaller: with

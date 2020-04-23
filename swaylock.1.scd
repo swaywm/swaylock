@@ -212,9 +212,12 @@ Locks your Wayland session.
 *--effect-blur* <radius>x<times>
 	Blur displayed images.
 
+*--effect-pixelate* <factor>
+	Pixelate displayed images.
+
 *--effect-scale* <scale>
-	Scale the image by a factor. This can be used to pixelate the image,
-	or to make other effects faster if you don't need the full resolution.
+	Scale the image by a factor. This can be used to
+	make other effects faster if you don't need the full resolution.
 
 *--effect-greyscale*
 	Make the displayed image greyscale.

@@ -798,6 +798,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_TEXT_VER_COLOR,
 		LO_TEXT_WRONG_COLOR,
 		LO_EFFECT_BLUR,
+		LO_EFFECT_PIXELATE,
 		LO_EFFECT_SCALE,
 		LO_EFFECT_GREYSCALE,
 		LO_EFFECT_VIGNETTE,
@@ -867,6 +868,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"text-ver-color", required_argument, NULL, LO_TEXT_VER_COLOR},
 		{"text-wrong-color", required_argument, NULL, LO_TEXT_WRONG_COLOR},
 		{"effect-blur", required_argument, NULL, LO_EFFECT_BLUR},
+		{"effect-pixelate", required_argument, NULL, LO_EFFECT_PIXELATE},
 		{"effect-scale", required_argument, NULL, LO_EFFECT_SCALE},
 		{"effect-greyscale", no_argument, NULL, LO_EFFECT_GREYSCALE},
 		{"effect-vignette", required_argument, NULL, LO_EFFECT_VIGNETTE},
@@ -1014,6 +1016,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Sets the color of the text when invalid.\n"
 		"  --effect-blur <radius>x<times>   "
 			"Blur images.\n"
+		"  --effect-pixelate <factor>       "
+			"Pixelate images.\n"
 		"  --effect-scale <scale>           "
 			"Scale images.\n"
 		"  --effect-greyscale               "
@@ -1313,6 +1317,15 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 					swaylock_log(LOG_ERROR, "Invalid blur effect argument %s, ignoring", optarg);
 					state->args.effects_count -= 1;
 				}
+			}
+			break;
+		case LO_EFFECT_PIXELATE:
+			if (state) {
+				state->args.effects = realloc(state->args.effects,
+						sizeof(*state->args.effects) * ++state->args.effects_count);
+				struct swaylock_effect *effect = &state->args.effects[state->args.effects_count - 1];
+				effect->tag = EFFECT_PIXELATE;
+				effect->e.pixelate.factor = atoi(optarg);
 			}
 			break;
 		case LO_EFFECT_SCALE:

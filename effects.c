@@ -11,6 +11,12 @@
 #include "effects.h"
 #include "log.h"
 
+// glib might or might not have already defined MIN,
+// depending on whether we have pixbuf or not...
+#ifndef MIN
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif
+
 extern char **environ;
 
 static int screen_size_to_pix(struct swaylock_effect_screen_pos size, int screensize) {
@@ -187,6 +193,42 @@ static void effect_blur(uint32_t *dest, uint32_t *src, int width, int height,
 	// if the last buffer we used was src, copy that over to dest.
 	if (dest != origdest)
 		memcpy(origdest, dest, width * height * sizeof(*dest));
+}
+
+static void effect_pixelate(uint32_t *data, int width, int height, int factor) {
+#pragma omp parallel for
+	for (int y = 0; y < height / factor + 1; ++y) {
+		for (int x = 0; x < width / factor + 1; ++x) {
+			int total_r = 0, total_g = 0, total_b = 0;
+
+			int xstart = x * factor;
+			int ystart = y * factor;
+			int xlim = MIN(xstart + factor, width);
+			int ylim = MIN(ystart + factor, height);
+
+			// Average
+			for (int ry = ystart; ry < ylim; ++ry) {
+				for (int rx = xstart; rx < xlim; ++rx) {
+					int index = ry * width + rx;
+					total_r += (data[index] & 0xff0000) >> 16;
+					total_g += (data[index] & 0x00ff00) >> 8;
+					total_b += (data[index] & 0x0000ff);
+				}
+			}
+
+			int r = total_r / (factor * factor);
+			int g = total_g / (factor * factor);
+			int b = total_b / (factor * factor);
+
+			// Fill pixels
+			for (int ry = ystart; ry < ylim; ++ry) {
+				for (int rx = xstart; rx < xlim; ++rx) {
+					int index = ry * width + rx;
+					data[index] = r << 16 | g << 8 | b;
+				}
+			}
+		}
+	}
 }
 
 static void effect_scale(uint32_t *dest, uint32_t *src, int swidth, int sheight,
@@ -381,6 +423,16 @@ cairo_surface_t *swaylock_effects_run(cairo_surface_t *surface,
 			cairo_surface_flush(surf);
 			cairo_surface_destroy(surface);
 			surface = surf;
+			break;
+		}
+
+		case EFFECT_PIXELATE: {
+			effect_pixelate(
+					(uint32_t *)cairo_image_surface_get_data(surface),
+					cairo_image_surface_get_width(surface),
+					cairo_image_surface_get_height(surface),
+					effect->e.pixelate.factor);
+			cairo_surface_flush(surface);
 			break;
 		}
 
