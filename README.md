@@ -22,7 +22,8 @@ although the feature sets aren't perfectly overlapping.
 		--line-color 00000000 \
 		--inside-color 00000088 \
 		--separator-color 00000000 \
-		--grace 2
+		--grace 2 \
+		--fade-in 0.2
 
 ## New Features
 
@@ -42,6 +43,7 @@ The main new features compared to upstream swaylock are:
 	* By default, either a key press or a mouse event will unlock
 	  during the grace period. Use `--grace-no-mouse` to only unlock
 	  as a response to a key event.
+* `--fade-in <seconds>` to make the lock screen fade in.
 * Various effects which can be applied to the background image
 	* `--effect-blur <radius>x<times>`: Blur the image (thanks to yvbbrjdr's
 	  fast box blur algorithm in

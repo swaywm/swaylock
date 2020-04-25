@@ -1,5 +1,5 @@
-#ifndef _SWAYLOCK_EFFECTS_H_
-#define _SWAYLOCK_EFFECTS_H_
+#ifndef _SWAYLOCK_EFFECTS_H
+#define _SWAYLOCK_EFFECTS_H
 
 #include <stdbool.h>
 

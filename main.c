@@ -236,6 +236,7 @@ static void destroy_surface(struct swaylock_surface *surface) {
 	}
 	destroy_buffer(&surface->buffers[0]);
 	destroy_buffer(&surface->buffers[1]);
+	fade_destroy(&surface->fade);
 	wl_output_destroy(surface->output);
 	free(surface);
 }
@@ -246,6 +247,9 @@ static cairo_surface_t *select_image(struct swaylock_state *state,
 		struct swaylock_surface *surface);
 
 static bool surface_is_opaque(struct swaylock_surface *surface) {
+	if (!fade_is_complete(&surface->fade)) {
+		return false;
+	}
 	if (surface->image) {
 		return cairo_surface_get_content(surface->image) == CAIRO_CONTENT_COLOR;
 	}
@@ -254,6 +258,10 @@ static bool surface_is_opaque(struct swaylock_surface *surface) {
 
 static void create_layer_surface(struct swaylock_surface *surface) {
 	struct swaylock_state *state = surface->state;
+
+	if (state->args.fade_in) {
+		surface->fade.target_time = state->args.fade_in;
+	}
 
 	surface->image = select_image(state, surface);
 
@@ -306,6 +314,7 @@ static void layer_surface_configure(void *data,
 	surface->indicator_height = 1;
 	zwlr_layer_surface_v1_ack_configure(layer_surface, serial);
 	render_frame_background(surface);
+	render_background_fade_prepare(surface, surface->current_buffer);
 	render_frame(surface);
 }
 
@@ -334,9 +343,14 @@ static void surface_frame_handle_done(void *data, struct wl_callback *callback,
 		struct wl_callback *callback = wl_surface_frame(surface->surface);
 		wl_callback_add_listener(callback, &surface_frame_listener, surface);
 		surface->frame_pending = true;
+		surface->dirty = false;
+
+		if (!fade_is_complete(&surface->fade)) {
+			render_background_fade(surface, time);
+			surface->dirty = true;
+		}
 
 		render_frame(surface);
-		surface->dirty = false;
 	}
 }
 
@@ -808,6 +822,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_CLOCK,
 		LO_TIMESTR,
 		LO_DATESTR,
+		LO_FADE_IN,
 		LO_GRACE,
 		LO_GRACE_NO_MOUSE,
 	};
@@ -878,6 +893,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"clock", no_argument, NULL, LO_CLOCK},
 		{"timestr", required_argument, NULL, LO_TIMESTR},
 		{"datestr", required_argument, NULL, LO_DATESTR},
+		{"fade-in", required_argument, NULL, LO_FADE_IN},
 		{"grace", required_argument, NULL, LO_GRACE},
 		{"grace-no-mouse", no_argument, NULL, LO_GRACE_NO_MOUSE},
 		{0, 0, 0, 0}
@@ -898,6 +914,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Show current count of failed authentication attempts.\n"
 		"  -f, --daemonize                  "
 			"Detach from the controlling terminal after locking.\n"
+		"  --fade-in <seconds>              "
+			"Make the lock screen fade in instead of just popping in.\n"
 		"  --grace <seconds>                "
 			"Password grace period. Don't require the password for the first N seconds.\n"
 		"  --grace-no-mouse                 "
@@ -1400,6 +1418,11 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 				state->args.datestr = strdup(optarg);
 			}
 			break;
+		case LO_FADE_IN:
+			if (state) {
+				state->args.fade_in = parse_seconds(optarg);
+			}
+			break;
 		case LO_GRACE:
 			if (state) {
 				state->args.password_grace_period = parse_seconds(optarg);
@@ -1712,6 +1735,9 @@ int main(int argc, char **argv) {
 	if (state.args.password_grace_period > 0) {
 		loop_add_timer(state.eventloop, state.args.password_grace_period, end_grace_period, &state);
 	}
+
+	// Re-draw once to start the draw loop
+	damage_state(&state);
 
 	state.run_display = true;
 	while (state.run_display) {

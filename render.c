@@ -99,6 +99,46 @@ void render_frame_background(struct swaylock_surface *surface) {
 	wl_surface_commit(surface->surface);
 }
 
+void render_background_fade(struct swaylock_surface *surface, uint32_t time) {
+	struct swaylock_state *state = surface->state;
+
+	int buffer_width = surface->width * surface->scale;
+	int buffer_height = surface->height * surface->scale;
+	if (buffer_width == 0 || buffer_height == 0) {
+		return; // not yet configured
+	}
+
+	if (fade_is_complete(&surface->fade)) {
+		return;
+	}
+
+	surface->current_buffer = get_next_buffer(state->shm,
+			surface->buffers, buffer_width, buffer_height);
+	if (surface->current_buffer == NULL) {
+		return;
+	}
+
+	fade_update(&surface->fade, surface->current_buffer, time);
+
+	wl_surface_set_buffer_scale(surface->surface, surface->scale);
+	wl_surface_attach(surface->surface, surface->current_buffer->buffer, 0, 0);
+	wl_surface_damage(surface->surface, 0, 0, surface->width, surface->height);
+	wl_surface_commit(surface->surface);
+}
+
+void render_background_fade_prepare(struct swaylock_surface *surface, struct pool_buffer *buffer) {
+	if (fade_is_complete(&surface->fade)) {
+		return;
+	}
+
+	fade_prepare(&surface->fade, buffer);
+
+	wl_surface_set_buffer_scale(surface->surface, surface->scale);
+	wl_surface_attach(surface->surface, surface->current_buffer->buffer, 0, 0);
+	wl_surface_damage(surface->surface, 0, 0, surface->width, surface->height);
+	wl_surface_commit(surface->surface);
+}
+
 void render_frame(struct swaylock_surface *surface) {
 	struct swaylock_state *state = surface->state;
 

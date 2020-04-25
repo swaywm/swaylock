@@ -8,6 +8,7 @@
 #include "pool-buffer.h"
 #include "seat.h"
 #include "effects.h"
+#include "fade.h"
 #include "wlr-layer-shell-unstable-v1-client-protocol.h"
 
 enum auth_state {
@@ -73,6 +74,7 @@ struct swaylock_args {
 	bool clock;
 	char *timestr;
 	char *datestr;
+	uint32_t fade_in;
 	uint32_t password_grace_period;
 	bool password_grace_no_mouse;
 };
@@ -128,6 +130,7 @@ struct swaylock_surface {
 	struct pool_buffer buffers[2];
 	struct pool_buffer indicator_buffers[2];
 	struct pool_buffer *current_buffer;
+	struct swaylock_fade fade;
 	bool frame_pending, dirty;
 	uint32_t width, height;
 	uint32_t indicator_width, indicator_height;
@@ -149,6 +152,8 @@ void swaylock_handle_key(struct swaylock_state *state,
 		xkb_keysym_t keysym, uint32_t codepoint);
 void swaylock_handle_mouse(struct swaylock_state *state);
 void render_frame_background(struct swaylock_surface *surface);
+void render_background_fade(struct swaylock_surface *surface, uint32_t time);
+void render_background_fade_prepare(struct swaylock_surface *surface, struct pool_buffer *buffer);
 void render_frame(struct swaylock_surface *surface);
 void render_frames(struct swaylock_state *state);
 void damage_surface(struct swaylock_surface *surface);
