@@ -35,6 +35,9 @@ Locks your Wayland session.
 
 	Note: this is the default behavior of i3lock.
 
+*--fade-in* <seconds>
+	Fade in the lock screen.
+
 *--grace* <seconds>
 	Only require a password after some grace period.
 
