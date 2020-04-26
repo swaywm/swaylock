@@ -5,8 +5,6 @@
 #include <omp.h>
 #include <stdalign.h>
 
-#define FADE_PROFILE
-
 #ifdef FADE_PROFILE
 #include <time.h>
 double get_time() {
