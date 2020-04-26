@@ -5,6 +5,8 @@
 #include <omp.h>
 #include <stdalign.h>
 
+#define FADE_PROFILE
+
 #ifdef FADE_PROFILE
 #include <time.h>
 double get_time() {
@@ -31,23 +33,21 @@ static void set_alpha_sse(uint32_t *orig, struct pool_buffer *buf, float alpha) 
 
 	uint8_t *orig_bytes = (uint8_t *)orig;
 	uint8_t *dest_bytes = (uint8_t *)buf->data;
+	size_t length = ((size_t)buf->width * (size_t)buf->height * 4) / 8;
 
-	for (size_t y = 0; y < buf->height; ++y) {
-		for (size_t rx = 0; rx < buf->width / 2; ++rx) {
-			size_t x = rx * 2;
-			size_t index = (y * buf->width + x) * 4;
+	for (size_t i = 0; i < length; ++i) {
+		size_t index = i * 8;
 
-			// Read data into SSE register, where each byte is an u16
-			__m128i argb_vec = _mm_loadu_si64(orig_bytes + index);
-			argb_vec = _mm_unpacklo_epi8(argb_vec, dummy_vec);
+		// Read data into SSE register, where each byte is an u16
+		__m128i argb_vec = _mm_loadu_si64(orig_bytes + index);
+		argb_vec = _mm_unpacklo_epi8(argb_vec, dummy_vec);
 
-			// Multiply the 8 argb u16s with the 8 alpha u16s
-			argb_vec = _mm_mulhi_epu16(argb_vec, alpha_vec);
+		// Multiply the 8 argb u16s with the 8 alpha u16s
+		argb_vec = _mm_mulhi_epu16(argb_vec, alpha_vec);
 
-			// Put the low bytes of each argb u16 into the destination buffer
-			argb_vec = _mm_packus_epi16(argb_vec, dummy_vec);
-			_mm_storeu_si64(dest_bytes + index, argb_vec);
-		}
+		// Put the low bytes of each argb u16 into the destination buffer
+		argb_vec = _mm_packus_epi16(argb_vec, dummy_vec);
+		_mm_storeu_si64(dest_bytes + index, argb_vec);
 	}
 }
 
