@@ -1,6 +1,7 @@
 #ifndef _SWAYLOCK_SEAT_H
 #define _SWAYLOCK_SEAT_H
 #include <xkbcommon/xkbcommon.h>
+#include <stdbool.h>
 
 struct swaylock_xkb {
 	bool caps_lock;
@@ -14,6 +15,7 @@ struct swaylock_seat {
 	struct swaylock_state *state;
 	struct wl_pointer *pointer;
 	struct wl_keyboard *keyboard;
+	struct wl_touch *touch;
 };
 
 extern const struct wl_seat_listener seat_listener;

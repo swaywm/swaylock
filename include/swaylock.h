@@ -77,6 +77,7 @@ struct swaylock_args {
 	uint32_t fade_in;
 	uint32_t password_grace_period;
 	bool password_grace_no_mouse;
+	bool password_grace_no_touch;
 };
 
 struct swaylock_password {
@@ -151,6 +152,7 @@ struct swaylock_image {
 void swaylock_handle_key(struct swaylock_state *state,
 		xkb_keysym_t keysym, uint32_t codepoint);
 void swaylock_handle_mouse(struct swaylock_state *state);
+void swaylock_handle_touch(struct swaylock_state *state);
 void render_frame_background(struct swaylock_surface *surface);
 void render_background_fade(struct swaylock_surface *surface, uint32_t time);
 void render_background_fade_prepare(struct swaylock_surface *surface, struct pool_buffer *buffer);

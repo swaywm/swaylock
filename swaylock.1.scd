@@ -46,8 +46,10 @@ Locks your Wayland session.
 	after the grace period.
 
 *--grace-no-mouse*
-	With *--grace*, only unlock as a response to a
-	key event, not in response to a mouse event.
+	With *--grace*, don't unlock in response to a mouse event.
+
+*--grace-no-touch*
+	With *--grace*, don't unlock in response to a touch event.
 
 *-h, --help*
 	Show help message and quit.

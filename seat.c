@@ -151,6 +151,37 @@ static const struct wl_pointer_listener pointer_listener = {
 	.axis_discrete = wl_pointer_axis_discrete,
 };
 
+static void wl_touch_down(void *data, struct wl_touch *touch, uint32_t serial,
+		uint32_t time, struct wl_surface *surface, int32_t id, wl_fixed_t x, wl_fixed_t y) {
+	swaylock_handle_touch((struct swaylock_state *)data);
+}
+
+static void wl_touch_up(void *data, struct wl_touch *touch, uint32_t serial,
+		uint32_t time, int32_t id) {
+	// Who cares
+}
+
+static void wl_touch_motion(void *data, struct wl_touch *touch, uint32_t time,
+		int32_t id, wl_fixed_t x, wl_fixed_t y) {
+	swaylock_handle_touch((struct swaylock_state *)data);
+}
+
+static void wl_touch_frame(void *data, struct wl_touch *touch) {
+	// Who cares
+}
+
+static void wl_touch_cancel(void *data, struct wl_touch *touch) {
+	// Who cares
+}
+
+static const struct wl_touch_listener touch_listener = {
+	.down = wl_touch_down,
+	.up = wl_touch_up,
+	.motion = wl_touch_motion,
+	.frame = wl_touch_frame,
+	.cancel = wl_touch_cancel,
+};
+
 static void seat_handle_capabilities(void *data, struct wl_seat *wl_seat,
 		enum wl_seat_capability caps) {
 	struct swaylock_seat *seat = data;
@@ -169,6 +200,10 @@ static void seat_handle_capabilities(void *data, struct wl_seat *wl_seat,
 	if ((caps & WL_SEAT_CAPABILITY_KEYBOARD)) {
 		seat->keyboard = wl_seat_get_keyboard(wl_seat);
 		wl_keyboard_add_listener(seat->keyboard, &keyboard_listener, seat->state);
+	}
+	if ((caps & WL_SEAT_CAPABILITY_TOUCH)) {
+		seat->touch = wl_seat_get_touch(wl_seat);
+		wl_touch_add_listener(seat->touch, &touch_listener, seat->state);
 	}
 }
 

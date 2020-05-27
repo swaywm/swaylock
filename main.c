@@ -825,6 +825,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_FADE_IN,
 		LO_GRACE,
 		LO_GRACE_NO_MOUSE,
+		LO_GRACE_NO_TOUCH,
 	};
 
 	static struct option long_options[] = {
@@ -896,6 +897,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"fade-in", required_argument, NULL, LO_FADE_IN},
 		{"grace", required_argument, NULL, LO_GRACE},
 		{"grace-no-mouse", no_argument, NULL, LO_GRACE_NO_MOUSE},
+		{"grace-no-touch", no_argument, NULL, LO_GRACE_NO_TOUCH},
 		{0, 0, 0, 0}
 	};
 
@@ -919,7 +921,9 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		"  --grace <seconds>                "
 			"Password grace period. Don't require the password for the first N seconds.\n"
 		"  --grace-no-mouse                 "
-			"During the grace period, only unlock on a key press, not on a mouse event.\n"
+			"During the grace period, don't unlock on a mouse event.\n"
+		"  --grace-no-touch                 "
+			"During the grace period, don't unlock on a touch event.\n"
 		"  -h, --help                       "
 			"Show help message and quit.\n"
 		"  -i, --image [[<output>]:]<path>  "
@@ -1431,6 +1435,11 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		case LO_GRACE_NO_MOUSE:
 			if (state) {
 				state->args.password_grace_no_mouse = true;
+			}
+			break;
+		case LO_GRACE_NO_TOUCH:
+			if (state) {
+				state->args.password_grace_no_touch = true;
 			}
 			break;
 		default:

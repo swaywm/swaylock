@@ -40,9 +40,10 @@ The main new features compared to upstream swaylock are:
 	  even in the grace period.
 	* Used together with `--indicator-idle-visible`, the indicator is only
 	  visible after the grace period.
-	* By default, either a key press or a mouse event will unlock
-	  during the grace period. Use `--grace-no-mouse` to only unlock
-	  as a response to a key event.
+	* By default, a key press, a mouse event or a touch event will unlock
+	  during the grace period. Use `--grace-no-mouse` to not unlock as a response
+	  to a mouse event, and `--grace-no-touch` to not unlock as a response to
+	  a touch event.
 * `--fade-in <seconds>` to make the lock screen fade in.
 * Various effects which can be applied to the background image
 	* `--effect-blur <radius>x<times>`: Blur the image (thanks to yvbbrjdr's
