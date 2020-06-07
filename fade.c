@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <omp.h>
 #include <stdalign.h>
+#include <string.h>
 
 #ifdef FADE_PROFILE
 #include <time.h>

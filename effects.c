@@ -329,6 +329,9 @@ static void effect_compose(uint32_t *data, int width, int height,
 		struct swaylock_effect_screen_pos posh,
 		int gravity, char *imgpath) {
 #if !HAVE_GDK_PIXBUF
+	(void)&blend_pixels;
+	(void)&screen_size_to_pix;
+	(void)&screen_pos_pair_to_pix;
 	swaylock_log(LOG_ERROR, "Compose effect: Compiled without gdk_pixbuf support.\n");
 	return;
 #else
