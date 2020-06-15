@@ -102,14 +102,21 @@ void loop_poll(struct loop *loop) {
 	if (!wl_list_empty(&loop->timers)) {
 		struct timespec now;
 		clock_gettime(CLOCK_MONOTONIC, &now);
-		struct loop_timer *timer = NULL, *tmp_timer = NULL;
-		wl_list_for_each_safe(timer, tmp_timer, &loop->timers, link) {
+		struct loop_timer *timer;
+loop:
+		timer = NULL;
+		wl_list_for_each(timer, &loop->timers, link) {
 			bool expired = timer->expiry.tv_sec < now.tv_sec ||
 				(timer->expiry.tv_sec == now.tv_sec &&
 				 timer->expiry.tv_nsec < now.tv_nsec);
 			if (expired) {
 				timer->callback(timer->data);
 				loop_remove_timer(loop, timer);
+
+				// Since the timer's callback might have removed a timer,
+				// not even wl_list_for_each_safe would've allowed us to
+				// safely continue iterating.
+				goto loop;
 			}
 		}
 	}
