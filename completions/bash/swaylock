@@ -45,6 +45,8 @@ _swaylock()
     --indicator-idle-visible
     --indicator-radius
     --indicator-thickness
+    --indicator-x-position
+    --indicator-y-position
     --inside-caps-lock-color
     --inside-clear-color
     --inside-color

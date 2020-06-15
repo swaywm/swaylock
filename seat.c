@@ -15,16 +15,16 @@ static void keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard,
 		swaylock_log(LOG_ERROR, "Unknown keymap format %d, aborting", format);
 		exit(1);
 	}
-	char *map_shm = mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
+	char *map_shm = mmap(NULL, size - 1, PROT_READ, MAP_PRIVATE, fd, 0);
 	if (map_shm == MAP_FAILED) {
 		close(fd);
 		swaylock_log(LOG_ERROR, "Unable to initialize keymap shm, aborting");
 		exit(1);
 	}
-	struct xkb_keymap *keymap = xkb_keymap_new_from_string(
-			state->xkb.context, map_shm, XKB_KEYMAP_FORMAT_TEXT_V1,
+	struct xkb_keymap *keymap = xkb_keymap_new_from_buffer(
+			state->xkb.context, map_shm, size - 1, XKB_KEYMAP_FORMAT_TEXT_V1,
 			XKB_KEYMAP_COMPILE_NO_FLAGS);
-	munmap(map_shm, size);
+	munmap(map_shm, size - 1);
 	close(fd);
 	assert(keymap);
 	struct xkb_state *xkb_state = xkb_state_new(keymap);
