@@ -6,10 +6,12 @@
 #include "log.h"
 #include "swaylock.h"
 #include "seat.h"
+#include "loop.h"
 
 static void keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard,
 		uint32_t format, int32_t fd, uint32_t size) {
-	struct swaylock_state *state = data;
+	struct swaylock_seat *seat = data;
+	struct swaylock_state *state = seat->state;
 	if (format != WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1) {
 		close(fd);
 		swaylock_log(LOG_ERROR, "Unknown keymap format %d, aborting", format);
@@ -45,9 +47,18 @@ static void keyboard_leave(void *data, struct wl_keyboard *wl_keyboard,
 	// Who cares
 }
 
+static void keyboard_repeat(void *data) {
+	struct swaylock_seat *seat = data;
+	struct swaylock_state *state = seat->state;
+	seat->repeat_timer = loop_add_timer(
+		state->eventloop, seat->repeat_period_ms, keyboard_repeat, seat);
+	swaylock_handle_key(state, seat->repeat_sym, seat->repeat_codepoint);
+}
+
 static void keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
 		uint32_t serial, uint32_t time, uint32_t key, uint32_t _key_state) {
-	struct swaylock_state *state = data;
+	struct swaylock_seat *seat = data;
+	struct swaylock_state *state = seat->state;
 	enum wl_keyboard_key_state key_state = _key_state;
 	xkb_keysym_t sym = xkb_state_key_get_one_sym(state->xkb.state, key + 8);
 	uint32_t keycode = key_state == WL_KEYBOARD_KEY_STATE_PRESSED ?
@@ -56,12 +67,25 @@ static void keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
 	if (key_state == WL_KEYBOARD_KEY_STATE_PRESSED) {
 		swaylock_handle_key(state, sym, codepoint);
 	}
+
+	if (seat->repeat_timer) {
+		loop_remove_timer(seat->state->eventloop, seat->repeat_timer);
+		seat->repeat_timer = NULL;
+	}
+
+	if (key_state == WL_KEYBOARD_KEY_STATE_PRESSED && seat->repeat_period_ms > 0) {
+		seat->repeat_sym = sym;
+		seat->repeat_codepoint = codepoint;
+		seat->repeat_timer = loop_add_timer(
+			seat->state->eventloop, seat->repeat_delay_ms, keyboard_repeat, seat);
+	}
 }
 
 static void keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard,
 		uint32_t serial, uint32_t mods_depressed, uint32_t mods_latched,
 		uint32_t mods_locked, uint32_t group) {
-	struct swaylock_state *state = data;
+	struct swaylock_seat *seat = data;
+	struct swaylock_state *state = seat->state;
 	int layout_same = xkb_state_layout_index_is_active(state->xkb.state,
 		group, XKB_STATE_LAYOUT_EFFECTIVE);
 	if (!layout_same) {
@@ -82,7 +106,14 @@ static void keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard,
 
 static void keyboard_repeat_info(void *data, struct wl_keyboard *wl_keyboard,
 		int32_t rate, int32_t delay) {
-	// TODO
+	struct swaylock_seat *seat = data;
+	if (rate <= 0) {
+		seat->repeat_period_ms = -1;
+	} else {
+		// Keys per second -> milliseconds between keys
+		seat->repeat_period_ms = 1000 / rate;
+	}
+	seat->repeat_delay_ms = delay;
 }
 
 static const struct wl_keyboard_listener keyboard_listener = {
@@ -199,7 +230,7 @@ static void seat_handle_capabilities(void *data, struct wl_seat *wl_seat,
 	}
 	if ((caps & WL_SEAT_CAPABILITY_KEYBOARD)) {
 		seat->keyboard = wl_seat_get_keyboard(wl_seat);
-		wl_keyboard_add_listener(seat->keyboard, &keyboard_listener, seat->state);
+		wl_keyboard_add_listener(seat->keyboard, &keyboard_listener, seat);
 	}
 	if ((caps & WL_SEAT_CAPABILITY_TOUCH)) {
 		seat->touch = wl_seat_get_touch(wl_seat);
