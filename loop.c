@@ -21,6 +21,7 @@ struct loop_timer {
 	void (*callback)(void *data);
 	void *data;
 	struct timespec expiry;
+	bool removed;
 	struct wl_list link; // struct loop_timer::link
 };
 
@@ -104,12 +105,19 @@ void loop_poll(struct loop *loop) {
 		clock_gettime(CLOCK_MONOTONIC, &now);
 		struct loop_timer *timer = NULL, *tmp_timer = NULL;
 		wl_list_for_each_safe(timer, tmp_timer, &loop->timers, link) {
+			if (timer->removed) {
+				wl_list_remove(&timer->link);
+				free(timer);
+				continue;
+			}
+
 			bool expired = timer->expiry.tv_sec < now.tv_sec ||
 				(timer->expiry.tv_sec == now.tv_sec &&
 				 timer->expiry.tv_nsec < now.tv_nsec);
 			if (expired) {
 				timer->callback(timer->data);
-				loop_remove_timer(loop, timer);
+				wl_list_remove(&timer->link);
+				free(timer);
 			}
 		}
 	}
@@ -184,8 +192,7 @@ bool loop_remove_timer(struct loop *loop, struct loop_timer *remove) {
 	struct loop_timer *timer = NULL, *tmp_timer = NULL;
 	wl_list_for_each_safe(timer, tmp_timer, &loop->timers, link) {
 		if (timer == remove) {
-			wl_list_remove(&timer->link);
-			free(timer);
+			timer->removed = true;
 			return true;
 		}
 	}

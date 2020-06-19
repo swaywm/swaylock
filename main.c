@@ -314,7 +314,7 @@ static void handle_global(void *data, struct wl_registry *registry,
 				&wl_shm_interface, 1);
 	} else if (strcmp(interface, wl_seat_interface.name) == 0) {
 		struct wl_seat *seat = wl_registry_bind(
-				registry, name, &wl_seat_interface, 3);
+				registry, name, &wl_seat_interface, 4);
 		struct swaylock_seat *swaylock_seat =
 			calloc(1, sizeof(struct swaylock_seat));
 		swaylock_seat->state = state;
