@@ -51,7 +51,7 @@ static void keyboard_repeat(void *data) {
 	struct swaylock_seat *seat = data;
 	struct swaylock_state *state = seat->state;
 	seat->repeat_timer = loop_add_timer(
-		state->eventloop, seat->repeat_period, keyboard_repeat, seat);
+		state->eventloop, seat->repeat_period_ms, keyboard_repeat, seat);
 	swaylock_handle_key(state, seat->repeat_sym, seat->repeat_codepoint);
 }
 
@@ -73,11 +73,11 @@ static void keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
 		seat->repeat_timer = NULL;
 	}
 
-	if (key_state == WL_KEYBOARD_KEY_STATE_PRESSED && seat->repeat_period >= 0) {
+	if (key_state == WL_KEYBOARD_KEY_STATE_PRESSED && seat->repeat_period_ms > 0) {
 		seat->repeat_sym = sym;
 		seat->repeat_codepoint = codepoint;
 		seat->repeat_timer = loop_add_timer(
-			seat->state->eventloop, seat->repeat_delay, keyboard_repeat, seat);
+			seat->state->eventloop, seat->repeat_delay_ms, keyboard_repeat, seat);
 	}
 }
 
@@ -108,12 +108,12 @@ static void keyboard_repeat_info(void *data, struct wl_keyboard *wl_keyboard,
 		int32_t rate, int32_t delay) {
 	struct swaylock_seat *seat = data;
 	if (rate <= 0) {
-		seat->repeat_period = -1;
+		seat->repeat_period_ms = -1;
 	} else {
 		// Keys per second -> milliseconds between keys
-		seat->repeat_period = 1000 / rate;
+		seat->repeat_period_ms = 1000 / rate;
 	}
-	seat->repeat_delay = delay;
+	seat->repeat_delay_ms = delay;
 }
 
 static const struct wl_keyboard_listener keyboard_listener = {

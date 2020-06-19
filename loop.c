@@ -108,6 +108,7 @@ void loop_poll(struct loop *loop) {
 			if (timer->removed) {
 				wl_list_remove(&timer->link);
 				free(timer);
+				continue;
 			}
 
 			bool expired = timer->expiry.tv_sec < now.tv_sec ||
