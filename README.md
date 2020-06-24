@@ -34,6 +34,9 @@ The main new features compared to upstream swaylock are:
 	* Use `--indicator` to make the indicator always active
 	* Use `--timestr` and `--datestr` to set the date/time formats
 	  (using strftime-style formatting)
+* `--submit-on-touch` to use your touchscreen to submit a password.
+  If you can unlock your device with anything else than your password,
+  this might come helpful to trigger PAM's authentication process.
 * `--grace <seconds>` to set a password grace period, so that the password
   isn't required to unlock until some number of seconds have passed.
 	* Used together with `--indicator`, the indicator is always shown,
