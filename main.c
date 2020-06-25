@@ -823,6 +823,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_TIMESTR,
 		LO_DATESTR,
 		LO_FADE_IN,
+		LO_SUBMIT_ON_TOUCH,
 		LO_GRACE,
 		LO_GRACE_NO_MOUSE,
 		LO_GRACE_NO_TOUCH,
@@ -895,6 +896,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"timestr", required_argument, NULL, LO_TIMESTR},
 		{"datestr", required_argument, NULL, LO_DATESTR},
 		{"fade-in", required_argument, NULL, LO_FADE_IN},
+		{"submit-on-touch", no_argument, NULL, LO_SUBMIT_ON_TOUCH},
 		{"grace", required_argument, NULL, LO_GRACE},
 		{"grace-no-mouse", no_argument, NULL, LO_GRACE_NO_MOUSE},
 		{"grace-no-touch", no_argument, NULL, LO_GRACE_NO_TOUCH},
@@ -918,6 +920,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Detach from the controlling terminal after locking.\n"
 		"  --fade-in <seconds>              "
 			"Make the lock screen fade in instead of just popping in.\n"
+		"  --submit-on-touch                "
+			"Submit password in response to a touch event.\n"
 		"  --grace <seconds>                "
 			"Password grace period. Don't require the password for the first N seconds.\n"
 		"  --grace-no-mouse                 "
@@ -1425,6 +1429,11 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		case LO_FADE_IN:
 			if (state) {
 				state->args.fade_in = parse_seconds(optarg);
+			}
+			break;
+		case LO_SUBMIT_ON_TOUCH:
+			if (state) {
+				state->args.password_submit_on_touch = true;
 			}
 			break;
 		case LO_GRACE:

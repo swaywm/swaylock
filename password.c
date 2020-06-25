@@ -101,6 +101,8 @@ void swaylock_handle_mouse(struct swaylock_state *state) {
 void swaylock_handle_touch(struct swaylock_state *state) {
 	if (state->auth_state == AUTH_STATE_GRACE && !state->args.password_grace_no_touch) {
 		state->run_display = false;
+	} else if (state->auth_state != AUTH_STATE_VALIDATING && state->args.password_submit_on_touch) {
+		submit_password(state);
 	}
 }
 
