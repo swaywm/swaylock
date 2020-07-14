@@ -40,35 +40,13 @@ void initialize_pw_backend(int argc, char **argv) {
 }
 
 void run_pw_backend_child(void) {
-	/* This code runs as root */
 	struct passwd *pwent = getpwuid(getuid());
 	if (!pwent) {
 		swaylock_log_errno(LOG_ERROR, "failed to getpwuid");
 		exit(EXIT_FAILURE);
 	}
-	char *encpw = pwent->pw_passwd;
-	if (strcmp(encpw, "x") == 0) {
-		struct spwd *swent = getspnam(pwent->pw_name);
-		if (!swent) {
-			swaylock_log_errno(LOG_ERROR, "failed to getspnam");
-			exit(EXIT_FAILURE);
-		}
-		encpw = swent->sp_pwdp;
-	}
+	char *encpw = NULL;
 
-	/* We don't need any additional logging here because the parent process will
-	 * also fail here and will handle logging for us. */
-	if (setgid(getgid()) != 0) {
-		exit(EXIT_FAILURE);
-	}
-	if (setuid(getuid()) != 0) {
-		exit(EXIT_FAILURE);
-	}
-	if (setuid(0) != -1) {
-		exit(EXIT_FAILURE);
-	}
-
-	/* This code does not run as root */
 	swaylock_log(LOG_DEBUG, "Prepared to authorize user %s", pwent->pw_name);
 
 	while (1) {
@@ -78,6 +56,21 @@ void run_pw_backend_child(void) {
 			exit(EXIT_FAILURE);
 		} else if (size == 0) {
 			break;
+		}
+
+		pwent = getpwuid(getuid());
+		if (!pwent) {
+			swaylock_log_errno(LOG_ERROR, "failed to getpwuid");
+			exit(EXIT_FAILURE);
+		}
+		encpw = pwent->pw_passwd;
+		if (strcmp(encpw, "x") == 0) {
+			struct spwd *swent = getspnam(pwent->pw_name);
+			if (!swent) {
+				swaylock_log_errno(LOG_ERROR, "failed to getspnam");
+				exit(EXIT_FAILURE);
+			}
+			encpw = swent->sp_pwdp;
 		}
 
 		char *c = crypt(buf, encpw);
@@ -101,6 +94,8 @@ void run_pw_backend_child(void) {
 		sleep(2);
 	}
 
-	clear_buffer(encpw, strlen(encpw));
+	if (encpw != NULL) {
+		clear_buffer(encpw, strlen(encpw));
+	}
 	exit(EXIT_SUCCESS);
 }
