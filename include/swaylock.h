@@ -2,6 +2,12 @@
 #define _SWAYLOCK_H
 #include <stdbool.h>
 #include <stdint.h>
+#ifdef HAVE_EXPLICIT_BZERO
+#include <string.h>
+#include <strings.h>
+#else
+void explicit_bzero(void *buf, size_t size);
+#endif
 #include <wayland-client.h>
 #include "background-image.h"
 #include "cairo.h"
@@ -133,6 +139,5 @@ void schedule_indicator_clear(struct swaylock_state *state);
 
 void initialize_pw_backend(int argc, char **argv);
 void run_pw_backend_child(void);
-void clear_buffer(char *buf, size_t size);
 
 #endif

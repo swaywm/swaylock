@@ -110,6 +110,10 @@ client_protos = declare_dependency(
 conf_data = configuration_data()
 conf_data.set10('HAVE_GDK_PIXBUF', gdk_pixbuf.found())
 
+if cc.has_function('explicit_bzero')
+	conf_data.set('HAVE_EXPLICIT_BZERO', 1)
+endif
+
 subdir('include')
 
 dependencies = [

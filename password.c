@@ -12,7 +12,8 @@
 #include "swaylock.h"
 #include "unicode.h"
 
-void clear_buffer(char *buf, size_t size) {
+#ifndef HAVE_EXPLICIT_BZERO
+void explicit_bzero(void *buf, size_t size) {
 	// Use volatile keyword so so compiler can't optimize this out.
 	volatile char *buffer = buf;
 	volatile char zero = '\0';
@@ -20,11 +21,7 @@ void clear_buffer(char *buf, size_t size) {
 		buffer[i] = zero;
 	}
 }
-
-void clear_password_buffer(struct swaylock_password *pw) {
-	clear_buffer(pw->buffer, sizeof(pw->buffer));
-	pw->len = 0;
-}
+#endif
 
 static bool backspace(struct swaylock_password *pw) {
 	if (pw->len != 0) {
@@ -64,7 +61,7 @@ static void clear_password(void *data) {
 	struct swaylock_state *state = data;
 	state->clear_password_timer = NULL;
 	state->auth_state = AUTH_STATE_CLEAR;
-	clear_password_buffer(&state->password);
+	explicit_bzero(&state->password, sizeof state->password);
 	damage_state(state);
 	schedule_indicator_clear(state);
 }
@@ -116,7 +113,7 @@ void swaylock_handle_key(struct swaylock_state *state,
 		schedule_password_clear(state);
 		break;
 	case XKB_KEY_Escape:
-		clear_password_buffer(&state->password);
+		explicit_bzero(&state->password, sizeof state->password);
 		state->auth_state = AUTH_STATE_CLEAR;
 		damage_state(state);
 		schedule_indicator_clear(state);
@@ -148,7 +145,7 @@ void swaylock_handle_key(struct swaylock_state *state,
 	case XKB_KEY_c: /* fallthrough */
 	case XKB_KEY_u:
 		if (state->xkb.control) {
-			clear_password_buffer(&state->password);
+			explicit_bzero(&state->password, sizeof state->password);
 			state->auth_state = AUTH_STATE_CLEAR;
 			damage_state(state);
 			schedule_indicator_clear(state);

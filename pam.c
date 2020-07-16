@@ -103,11 +103,11 @@ void run_pw_backend_child(void) {
 		}
 
 		if (!write_comm_reply(success)) {
-			clear_buffer(pw_buf, size);
+			explicit_bzero(pw_buf, size);
 			exit(EXIT_FAILURE);
 		}
 
-		clear_buffer(pw_buf, size);
+		explicit_bzero(pw_buf, size);
 		free(pw_buf);
 		pw_buf = NULL;
 	}

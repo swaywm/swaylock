@@ -83,24 +83,24 @@ void run_pw_backend_child(void) {
 		char *c = crypt(buf, encpw);
 		if (c == NULL) {
 			swaylock_log_errno(LOG_ERROR, "crypt failed");
-			clear_buffer(buf, size);
+			explicit_bzero(buf, size);
 			exit(EXIT_FAILURE);
 		}
 		bool success = strcmp(c, encpw) == 0;
 
 		if (!write_comm_reply(success)) {
-			clear_buffer(buf, size);
+			explicit_bzero(buf, size);
 			exit(EXIT_FAILURE);
 		}
 
 		// We don't want to keep it in memory longer than necessary,
 		// so clear *before* sleeping.
-		clear_buffer(buf, size);
+		explicit_bzero(buf, size);
 		free(buf);
 
 		sleep(2);
 	}
 
-	clear_buffer(encpw, strlen(encpw));
+	explicit_bzero(encpw, strlen(encpw));
 	exit(EXIT_SUCCESS);
 }
