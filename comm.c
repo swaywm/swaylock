@@ -91,7 +91,7 @@ bool write_comm_request(struct swaylock_password *pw) {
 	result = true;
 
 out:
-	explicit_bzero(pw, sizeof *pw);
+	explicit_bzero(pw, sizeof(*pw));
 	return result;
 }
 
