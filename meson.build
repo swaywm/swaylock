@@ -109,7 +109,10 @@ client_protos = declare_dependency(
 
 conf_data = configuration_data()
 conf_data.set10('HAVE_GDK_PIXBUF', gdk_pixbuf.found())
-conf_data.set10('HAVE_EXPLICIT_BZERO', cc.has_function('explicit_bzero'))
+
+conf_data.set10('HAVE_EXPLICIT_BZERO', cc.has_function('explicit_bzero', prefix : '''#include <string.h>
+#include <strings.h>
+#include <limits.h>''', args : '-D_GNU_SOURCE'))
 
 subdir('include')
 
