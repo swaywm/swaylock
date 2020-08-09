@@ -383,6 +383,7 @@ static void handle_wl_output_geometry(void *data, struct wl_output *wl_output,
 		int32_t transform) {
 	struct swaylock_surface *surface = data;
 	surface->subpixel = subpixel;
+	surface->transform = transform;
 	if (surface->state->run_display) {
 		damage_surface(surface);
 	}
@@ -499,7 +500,40 @@ static void handle_screencopy_frame_buffer(void *data,
 
 static void handle_screencopy_frame_flags(void *data,
 		struct zwlr_screencopy_frame_v1 *frame, uint32_t flags) {
-	// Who cares
+	struct swaylock_surface *surface = data;
+
+	// The transform affecting a screenshot consists of three parts:
+	// Whether it's flipped vertically, whether it's flipped horizontally,
+	// and the four rotation options (0, 90, 180, 270).
+	// Any of the combinations of vertical flips, horizontal flips and rotation,
+	// can be expressed in terms of only horizontal flips and rotation
+	// (which is what the enum wl_output_transform encodes).
+	// Therefore, instead of inverting the Y axis or keeping around the
+	// "was it vertically flipped?" bit, we just map our state space onto the
+	// state space encoded by wl_output_transform and let load_background_from_buffer
+	// handle the rest.
+	if (flags & ZWLR_SCREENCOPY_FRAME_V1_FLAGS_Y_INVERT) {
+		switch (surface->transform) {
+		case WL_OUTPUT_TRANSFORM_NORMAL:
+			surface->screencopy.transform = WL_OUTPUT_TRANSFORM_FLIPPED_180; break;
+		case WL_OUTPUT_TRANSFORM_90:
+			surface->screencopy.transform = WL_OUTPUT_TRANSFORM_FLIPPED_90; break;
+		case WL_OUTPUT_TRANSFORM_180:
+			surface->screencopy.transform = WL_OUTPUT_TRANSFORM_FLIPPED; break;
+		case WL_OUTPUT_TRANSFORM_270:
+			surface->screencopy.transform = WL_OUTPUT_TRANSFORM_FLIPPED_270; break;
+		case WL_OUTPUT_TRANSFORM_FLIPPED:
+			surface->screencopy.transform = WL_OUTPUT_TRANSFORM_180; break;
+		case WL_OUTPUT_TRANSFORM_FLIPPED_90:
+			surface->screencopy.transform = WL_OUTPUT_TRANSFORM_90; break;
+		case WL_OUTPUT_TRANSFORM_FLIPPED_180:
+			surface->screencopy.transform = WL_OUTPUT_TRANSFORM_NORMAL; break;
+		case WL_OUTPUT_TRANSFORM_FLIPPED_270:
+			surface->screencopy.transform = WL_OUTPUT_TRANSFORM_270; break;
+		}
+	} else {
+		surface->screencopy.transform = surface->transform;
+	}
 }
 
 static void handle_screencopy_frame_ready(void *data,
@@ -513,7 +547,8 @@ static void handle_screencopy_frame_ready(void *data,
 			surface->screencopy.format,
 			surface->screencopy.width,
 			surface->screencopy.height,
-			surface->screencopy.stride);
+			surface->screencopy.stride,
+			surface->screencopy.transform);
 
 	if (!image->cairo_surface) {
 		free(image);

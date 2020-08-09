@@ -23,21 +23,116 @@ enum background_mode parse_background_mode(const char *mode) {
 }
 
 cairo_surface_t *load_background_from_buffer(void *buf, uint32_t format,
-		uint32_t width, uint32_t height, uint32_t stride) {
-	cairo_surface_t *image = cairo_image_surface_create(
-			CAIRO_FORMAT_RGB24, width, height);
+		uint32_t width, uint32_t height, uint32_t stride, enum wl_output_transform transform) {
+	bool rotated =
+		transform == WL_OUTPUT_TRANSFORM_90 ||
+		transform == WL_OUTPUT_TRANSFORM_270 ||
+		transform == WL_OUTPUT_TRANSFORM_FLIPPED_90 ||
+		transform == WL_OUTPUT_TRANSFORM_FLIPPED_270;
 
-	// The image from Wayland is flipped.
-	void *cdata = cairo_image_surface_get_data(image);
-	uint32_t cstride = cairo_image_surface_get_stride(image);
-	for (size_t cy = 0; cy < height; ++cy) {
-		size_t wy = height - cy - 1;
-		memcpy((char *)cdata + cstride * cy, (char *)buf + stride * wy, width * 4);
+	cairo_surface_t *image;
+	if (rotated) {
+		image = cairo_image_surface_create(CAIRO_FORMAT_RGB24, height, width);
+	} else {
+		image = cairo_image_surface_create(CAIRO_FORMAT_RGB24, width, height);
+	}
+	if (image == NULL) {
+		swaylock_log(LOG_ERROR, "Failed to create image..");
+		return NULL;
 	}
 
-	if (!image) {
-		swaylock_log(LOG_ERROR, "Failed to create background image.");
-		return NULL;
+	unsigned char *destbuf = cairo_image_surface_get_data(image);
+	size_t destwidth = cairo_image_surface_get_width(image);
+	size_t destheight = cairo_image_surface_get_height(image);
+	size_t deststride = cairo_image_surface_get_stride(image);
+	unsigned char *srcbuf = buf;
+	size_t srcstride = stride;
+	size_t minstride = srcstride < deststride ? srcstride : deststride;
+
+	// Lots of these are mostly-copy-and-pasted, with a lot of boilerplate
+	// for each option.
+	// The only interesting differencess between a lot of these cases are
+	// the definition of srcx and srcy.
+	// I don't think it's worth adding a macro to make this "cleaner" though,
+	// as that would obfuscate what's actually going on.
+	switch (transform) {
+	case WL_OUTPUT_TRANSFORM_NORMAL:
+		// In most cases, the transform is probably normal. Luckily, it can be
+		// done with just one big memcpy.
+		if (srcstride == deststride) {
+			memcpy(destbuf, srcbuf, destheight * deststride);
+		} else {
+			for (size_t y = 0; y < destheight; ++y) {
+				memcpy(destbuf + y * deststride, srcbuf + y * srcstride, minstride);
+			}
+		}
+		break;
+	case WL_OUTPUT_TRANSFORM_90:
+		for (size_t desty = 0; desty < destheight; ++desty) {
+			size_t srcx = desty;
+			for (size_t destx = 0; destx < destwidth; ++destx) {
+				size_t srcy = destwidth - destx - 1;
+				*((uint32_t *)(destbuf + desty * deststride) + destx) =
+					*((uint32_t *)(srcbuf + srcy * srcstride) + srcx);
+			}
+		}
+		break;
+	case WL_OUTPUT_TRANSFORM_180:
+		for (size_t desty = 0; desty < destheight; ++desty) {
+			size_t srcy = destheight - desty - 1;
+			for (size_t destx = 0; destx < destwidth; ++destx) {
+				size_t srcx = destwidth - destx - 1;
+				*((uint32_t *)(destbuf + desty * deststride) + destx) =
+					*((uint32_t *)(srcbuf + srcy * srcstride) + srcx);
+			}
+		}
+		break;
+	case WL_OUTPUT_TRANSFORM_270:
+		for (size_t desty = 0; desty < destheight; ++desty) {
+			size_t srcx = destheight - desty - 1;
+			for (size_t destx = 0; destx < destwidth; ++destx) {
+				size_t srcy = destx;
+				*((uint32_t *)(destbuf + desty * deststride) + destx) =
+					*((uint32_t *)(srcbuf + srcy * srcstride) + srcx);
+			}
+		}
+		break;
+	case WL_OUTPUT_TRANSFORM_FLIPPED:
+		for (size_t desty = 0; desty < destheight; ++desty) {
+			size_t srcy = desty;
+			for (size_t destx = 0; destx < destwidth; ++destx) {
+				size_t srcx = destwidth - destx - 1;
+				*((uint32_t *)(destbuf + desty * deststride) + destx) =
+					*((uint32_t *)(srcbuf + srcy * srcstride) + srcx);
+			}
+		}
+		break;
+	case WL_OUTPUT_TRANSFORM_FLIPPED_90:
+		for (size_t desty = 0; desty < destheight; ++desty) {
+			size_t srcx = desty;
+			for (size_t destx = 0; destx < destwidth; ++destx) {
+				size_t srcy = destx;
+				*((uint32_t *)(destbuf + desty * deststride) + destx) =
+					*((uint32_t *)(srcbuf + srcy * srcstride) + srcx);
+			}
+		}
+		break;
+	case WL_OUTPUT_TRANSFORM_FLIPPED_180:
+		for (size_t desty = 0; desty < destheight; ++desty) {
+			size_t srcy = destheight - desty - 1;
+			memcpy(destbuf + desty * deststride, srcbuf + srcy * srcstride, minstride);
+		}
+		break;
+	case WL_OUTPUT_TRANSFORM_FLIPPED_270:
+		for (size_t desty = 0; desty < destheight; ++desty) {
+			size_t srcx = destheight - desty - 1;
+			for (size_t destx = 0; destx < destwidth; ++destx) {
+				size_t srcy = destwidth - destx - 1;
+				*((uint32_t *)(destbuf + desty * deststride) + destx) =
+					*((uint32_t *)(srcbuf + srcy * srcstride) + srcx);
+			}
+		}
+		break;
 	}
 
 	return image;

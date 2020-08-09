@@ -116,6 +116,7 @@ struct swaylock_surface {
 		cairo_surface_t *image;
 		struct {
 			uint32_t format, width, height, stride;
+			enum wl_output_transform transform;
 			void *data;
 			struct swaylock_image *image;
 		} screencopy;
@@ -138,6 +139,7 @@ struct swaylock_surface {
 	uint32_t indicator_width, indicator_height;
 	int32_t scale;
 	enum wl_output_subpixel subpixel;
+	enum wl_output_transform transform;
 	char *output_name;
 	struct wl_list link;
 };
