@@ -515,21 +515,29 @@ static void handle_screencopy_frame_flags(void *data,
 	if (flags & ZWLR_SCREENCOPY_FRAME_V1_FLAGS_Y_INVERT) {
 		switch (surface->transform) {
 		case WL_OUTPUT_TRANSFORM_NORMAL:
-			surface->screencopy.transform = WL_OUTPUT_TRANSFORM_FLIPPED_180; break;
+			surface->screencopy.transform = WL_OUTPUT_TRANSFORM_FLIPPED_180;
+			break;
 		case WL_OUTPUT_TRANSFORM_90:
-			surface->screencopy.transform = WL_OUTPUT_TRANSFORM_FLIPPED_90; break;
+			surface->screencopy.transform = WL_OUTPUT_TRANSFORM_FLIPPED_90;
+			break;
 		case WL_OUTPUT_TRANSFORM_180:
-			surface->screencopy.transform = WL_OUTPUT_TRANSFORM_FLIPPED; break;
+			surface->screencopy.transform = WL_OUTPUT_TRANSFORM_FLIPPED;
+			break;
 		case WL_OUTPUT_TRANSFORM_270:
-			surface->screencopy.transform = WL_OUTPUT_TRANSFORM_FLIPPED_270; break;
+			surface->screencopy.transform = WL_OUTPUT_TRANSFORM_FLIPPED_270;
+			break;
 		case WL_OUTPUT_TRANSFORM_FLIPPED:
-			surface->screencopy.transform = WL_OUTPUT_TRANSFORM_180; break;
+			surface->screencopy.transform = WL_OUTPUT_TRANSFORM_180;
+			break;
 		case WL_OUTPUT_TRANSFORM_FLIPPED_90:
-			surface->screencopy.transform = WL_OUTPUT_TRANSFORM_90; break;
+			surface->screencopy.transform = WL_OUTPUT_TRANSFORM_90;
+			break;
 		case WL_OUTPUT_TRANSFORM_FLIPPED_180:
-			surface->screencopy.transform = WL_OUTPUT_TRANSFORM_NORMAL; break;
+			surface->screencopy.transform = WL_OUTPUT_TRANSFORM_NORMAL;
+			break;
 		case WL_OUTPUT_TRANSFORM_FLIPPED_270:
-			surface->screencopy.transform = WL_OUTPUT_TRANSFORM_270; break;
+			surface->screencopy.transform = WL_OUTPUT_TRANSFORM_270;
+			break;
 		}
 	} else {
 		surface->screencopy.transform = surface->transform;

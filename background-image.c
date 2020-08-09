@@ -50,9 +50,9 @@ cairo_surface_t *load_background_from_buffer(void *buf, uint32_t format,
 	size_t minstride = srcstride < deststride ? srcstride : deststride;
 
 	// Lots of these are mostly-copy-and-pasted, with a lot of boilerplate
-	// for each option.
+	// for each case.
 	// The only interesting differencess between a lot of these cases are
-	// the definition of srcx and srcy.
+	// the definitions of srcx and srcy.
 	// I don't think it's worth adding a macro to make this "cleaner" though,
 	// as that would obfuscate what's actually going on.
 	switch (transform) {
