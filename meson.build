@@ -3,7 +3,7 @@ project(
 	'c',
 	version: '1.6',
 	license: 'MIT',
-	meson_version: '>=0.48.0',
+	meson_version: '>=0.50.0',
 	default_options: [
 		'c_std=c11',
 		'warning_level=2',
@@ -27,6 +27,8 @@ sysconfdir = get_option('sysconfdir')
 prefix = get_option('prefix')
 is_freebsd = host_machine.system().startswith('freebsd')
 
+subdir('po')
+
 add_project_arguments(
 	'-DSYSCONFDIR="/@0@"'.format(join_paths(prefix, sysconfdir)),
 	language : 'c')
@@ -38,6 +40,7 @@ endif
 wayland_client = dependency('wayland-client')
 wayland_protos = dependency('wayland-protocols', version: '>=1.14')
 xkbcommon      = dependency('xkbcommon')
+xkeyboard_config = dependency('xkeyboard-config')
 cairo          = dependency('cairo')
 gdk_pixbuf     = dependency('gdk-pixbuf-2.0', required: get_option('gdk-pixbuf'))
 bash_comp      = dependency('bash-completion', required: false)
@@ -45,6 +48,7 @@ fish_comp      = dependency('fish', required: false)
 libpam         = cc.find_library('pam', required: get_option('pam'))
 crypt          = cc.find_library('crypt', required: not libpam.found())
 math           = cc.find_library('m')
+intl           = cc.find_library('intl', required: false)
 
 git = find_program('git', required: false)
 scdoc = find_program('scdoc', required: get_option('man-pages'))
@@ -116,6 +120,7 @@ dependencies = [
 	cairo,
 	client_protos,
 	gdk_pixbuf,
+	intl,
 	math,
 	xkbcommon,
 	wayland_client,

@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <wayland-client.h>
+#include <libintl.h>
 #include "cairo.h"
 #include "background-image.h"
 #include "swaylock.h"
@@ -157,20 +158,20 @@ void render_frame(struct swaylock_surface *surface) {
 		}
 		switch (state->auth_state) {
 		case AUTH_STATE_VALIDATING:
-			text = "verifying";
+			text = gettext("verifying");
 			break;
 		case AUTH_STATE_INVALID:
-			text = "wrong";
+			text = gettext("wrong");
 			break;
 		case AUTH_STATE_CLEAR:
-			text = "cleared";
+			text = gettext("cleared");
 			break;
 		case AUTH_STATE_INPUT:
 		case AUTH_STATE_INPUT_NOP:
 		case AUTH_STATE_BACKSPACE:
 			// Caps Lock has higher priority
 			if (state->xkb.caps_lock && state->args.show_caps_lock_text) {
-				text = "Caps Lock";
+				text = gettext("Caps Lock");
 			} else if (state->args.show_failed_attempts &&
 					state->failed_attempts > 0) {
 				if (state->failed_attempts > 999) {
@@ -193,7 +194,8 @@ void render_frame(struct swaylock_surface *surface) {
 					++curr_layout;
 				}
 				// will handle invalid index if none are active
-				layout_text = xkb_keymap_layout_get_name(state->xkb.keymap, curr_layout);
+				layout_text = dgettext("xkeyboard-config",
+					xkb_keymap_layout_get_name(state->xkb.keymap, curr_layout));
 			}
 			break;
 		default:
