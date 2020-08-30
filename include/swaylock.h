@@ -8,6 +8,7 @@
 #include "pool-buffer.h"
 #include "seat.h"
 #include "wlr-layer-shell-unstable-v1-client-protocol.h"
+#include "wlr-output-power-management-unstable-v1-client-protocol.h"
 
 enum auth_state {
 	AUTH_STATE_IDLE,
@@ -63,6 +64,7 @@ struct swaylock_args {
 	bool show_failed_attempts;
 	bool daemonize;
 	bool indicator_idle_visible;
+	bool use_dpms;
 };
 
 struct swaylock_password {
@@ -89,6 +91,7 @@ struct swaylock_state {
 	int failed_attempts;
 	bool run_display;
 	struct zxdg_output_manager_v1 *zxdg_output_manager;
+	struct zwlr_output_power_manager_v1 *zwlr_output_power_manager;
 };
 
 struct swaylock_surface {
@@ -111,6 +114,9 @@ struct swaylock_surface {
 	enum wl_output_subpixel subpixel;
 	char *output_name;
 	struct wl_list link;
+	struct zwlr_output_power_v1 *wlr_output_power;
+	enum zwlr_output_power_v1_mode power_mode;
+	bool power_mode_pending;
 };
 
 // There is exactly one swaylock_image for each -i argument
