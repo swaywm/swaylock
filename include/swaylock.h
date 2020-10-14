@@ -106,7 +106,6 @@ struct swaylock_state {
 	bool indicator_dirty;
 	int render_randnum;
 	int failed_attempts;
-	size_t n_screenshots_done;
 	bool run_display;
 	struct zxdg_output_manager_v1 *zxdg_output_manager;
 };
@@ -119,8 +118,10 @@ struct swaylock_surface {
 			enum wl_output_transform transform;
 			void *data;
 			struct swaylock_image *image;
+			bool ready;
 		} screencopy;
 	};
+	bool ready;
 	struct swaylock_state *state;
 	struct wl_output *output;
 	uint32_t output_global_name;
