@@ -112,6 +112,7 @@ struct swaylock_surface {
 	struct wl_subsurface *subsurface;
 	struct ext_session_lock_surface_v1 *ext_session_lock_surface_v1;
 	struct pool_buffer indicator_buffers[2];
+	bool created;
 	bool frame_pending, dirty;
 	uint32_t width, height;
 	int32_t scale;
