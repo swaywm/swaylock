@@ -357,7 +357,6 @@ static void handle_global(void *data, struct wl_registry *registry,
 				&wl_output_interface, 3);
 		surface->output_global_name = name;
 		wl_output_add_listener(surface->output, &_wl_output_listener, surface);
-
 		wl_list_insert(&state->surfaces, &surface->link);
 
 		if (state->run_display) {
