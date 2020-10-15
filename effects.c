@@ -12,10 +12,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <spawn.h>
+#include <time.h>
 #include "effects.h"
 #include "log.h"
-
-#include <time.h>
 
 // glib might or might not have already defined MIN,
 // depending on whether we have pixbuf or not...
@@ -39,6 +38,20 @@ static int screen_pos_to_pix(struct swaylock_effect_screen_pos pos, int screensi
 	if (actual < 0)
 		actual = screensize + actual;
 	return actual;
+}
+
+static const char *effect_name(struct swaylock_effect *effect) {
+	switch (effect->tag) {
+	case EFFECT_BLUR: return "blur";
+	case EFFECT_PIXELATE: return "pixelate";
+	case EFFECT_SCALE: return "scale";
+	case EFFECT_GREYSCALE: return "greyscale";
+	case EFFECT_VIGNETTE: return "vignette";
+	case EFFECT_COMPOSE: return "compose";
+	case EFFECT_CUSTOM: return effect->e.custom;
+	}
+
+	abort();
 }
 
 static void screen_pos_pair_to_pix(
@@ -508,7 +521,7 @@ static char *effect_custom_compile(const char *path) {
 		return outpath;
 	}
 
-	static const char *fmt = "cc -shared -O3 -march=native -fopenmp -o '%s' '%s' -lm";
+	static const char *fmt = "cc -shared -g -O2 -march=native -fopenmp -o '%s' '%s' -lm";
 	char *cmd = malloc(strlen(fmt) + outlen - 2 + abspathlen - 2 + 1);
 	sprintf(cmd, fmt, outpath, abspath);
 	free(abspath);
@@ -550,111 +563,147 @@ static void effect_custom(uint32_t *data, int width, int height,
 	}
 }
 
+static cairo_surface_t *run_effect(cairo_surface_t *surface,
+		struct swaylock_effect *effect) {
+	switch (effect->tag) {
+	case EFFECT_BLUR: {
+		cairo_surface_t *surf = cairo_image_surface_create(
+				CAIRO_FORMAT_RGB24,
+				cairo_image_surface_get_width(surface),
+				cairo_image_surface_get_height(surface));
+
+		if (cairo_surface_status(surf) != CAIRO_STATUS_SUCCESS) {
+			swaylock_log(LOG_ERROR, "Failed to create surface for blur effect");
+			cairo_surface_destroy(surf);
+			break;
+		}
+
+		effect_blur(
+				(uint32_t *)cairo_image_surface_get_data(surf),
+				(uint32_t *)cairo_image_surface_get_data(surface),
+				cairo_image_surface_get_width(surface),
+				cairo_image_surface_get_height(surface),
+				effect->e.blur.radius, effect->e.blur.times);
+		cairo_surface_flush(surf);
+		cairo_surface_destroy(surface);
+		surface = surf;
+		break;
+	}
+
+	case EFFECT_PIXELATE: {
+		effect_pixelate(
+				(uint32_t *)cairo_image_surface_get_data(surface),
+				cairo_image_surface_get_width(surface),
+				cairo_image_surface_get_height(surface),
+				effect->e.pixelate.factor);
+		cairo_surface_flush(surface);
+		break;
+	}
+
+	case EFFECT_SCALE: {
+		cairo_surface_t *surf = cairo_image_surface_create(
+				CAIRO_FORMAT_RGB24,
+				cairo_image_surface_get_width(surface) * effect->e.scale,
+				cairo_image_surface_get_height(surface) * effect->e.scale);
+
+		if (cairo_surface_status(surf) != CAIRO_STATUS_SUCCESS) {
+			swaylock_log(LOG_ERROR, "Failed to create surface for scale effect");
+			cairo_surface_destroy(surf);
+			break;
+		}
+
+		effect_scale(
+				(uint32_t *)cairo_image_surface_get_data(surf),
+				(uint32_t *)cairo_image_surface_get_data(surface),
+				cairo_image_surface_get_width(surface),
+				cairo_image_surface_get_height(surface),
+				effect->e.scale);
+		cairo_surface_flush(surf);
+		cairo_surface_destroy(surface);
+		surface = surf;
+		break;
+	}
+
+	case EFFECT_GREYSCALE: {
+		effect_greyscale(
+				(uint32_t *)cairo_image_surface_get_data(surface),
+				cairo_image_surface_get_width(surface),
+				cairo_image_surface_get_height(surface));
+		cairo_surface_flush(surface);
+		break;
+	}
+
+	case EFFECT_VIGNETTE: {
+		effect_vignette(
+				(uint32_t *)cairo_image_surface_get_data(surface),
+				cairo_image_surface_get_width(surface),
+				cairo_image_surface_get_height(surface),
+				effect->e.vignette.base,
+				effect->e.vignette.factor);
+		cairo_surface_flush(surface);
+		break;
+	}
+
+	case EFFECT_COMPOSE: {
+		effect_compose(
+				(uint32_t *)cairo_image_surface_get_data(surface),
+				cairo_image_surface_get_width(surface),
+				cairo_image_surface_get_height(surface),
+				effect->e.compose.x, effect->e.compose.y,
+				effect->e.compose.w, effect->e.compose.h,
+				effect->e.compose.gravity, effect->e.compose.imgpath);
+		cairo_surface_flush(surface);
+		break;
+	}
+
+	case EFFECT_CUSTOM: {
+		effect_custom(
+				(uint32_t *)cairo_image_surface_get_data(surface),
+				cairo_image_surface_get_width(surface),
+				cairo_image_surface_get_height(surface),
+				effect->e.custom);
+		cairo_surface_flush(surface);
+		break;
+	} }
+
+	return surface;
+}
+
 cairo_surface_t *swaylock_effects_run(cairo_surface_t *surface,
 		struct swaylock_effect *effects, int count) {
 	for (int i = 0; i < count; ++i) {
 		struct swaylock_effect *effect = &effects[i];
-		switch (effect->tag) {
-		case EFFECT_BLUR: {
-			cairo_surface_t *surf = cairo_image_surface_create(
-					CAIRO_FORMAT_RGB24,
-					cairo_image_surface_get_width(surface),
-					cairo_image_surface_get_height(surface));
-
-			if (cairo_surface_status(surf) != CAIRO_STATUS_SUCCESS) {
-				swaylock_log(LOG_ERROR, "Failed to create surface for blur effect");
-				cairo_surface_destroy(surf);
-				break;
-			}
-
-			effect_blur(
-					(uint32_t *)cairo_image_surface_get_data(surf),
-					(uint32_t *)cairo_image_surface_get_data(surface),
-					cairo_image_surface_get_width(surface),
-					cairo_image_surface_get_height(surface),
-					effect->e.blur.radius, effect->e.blur.times);
-			cairo_surface_flush(surf);
-			cairo_surface_destroy(surface);
-			surface = surf;
-			break;
-		}
-
-		case EFFECT_PIXELATE: {
-			effect_pixelate(
-					(uint32_t *)cairo_image_surface_get_data(surface),
-					cairo_image_surface_get_width(surface),
-					cairo_image_surface_get_height(surface),
-					effect->e.pixelate.factor);
-			cairo_surface_flush(surface);
-			break;
-		}
-
-		case EFFECT_SCALE: {
-			cairo_surface_t *surf = cairo_image_surface_create(
-					CAIRO_FORMAT_RGB24,
-					cairo_image_surface_get_width(surface) * effect->e.scale,
-					cairo_image_surface_get_height(surface) * effect->e.scale);
-
-			if (cairo_surface_status(surf) != CAIRO_STATUS_SUCCESS) {
-				swaylock_log(LOG_ERROR, "Failed to create surface for scale effect");
-				cairo_surface_destroy(surf);
-				break;
-			}
-
-			effect_scale(
-					(uint32_t *)cairo_image_surface_get_data(surf),
-					(uint32_t *)cairo_image_surface_get_data(surface),
-					cairo_image_surface_get_width(surface),
-					cairo_image_surface_get_height(surface),
-					effect->e.scale);
-			cairo_surface_flush(surf);
-			cairo_surface_destroy(surface);
-			surface = surf;
-			break;
-		}
-
-		case EFFECT_GREYSCALE: {
-			effect_greyscale(
-					(uint32_t *)cairo_image_surface_get_data(surface),
-					cairo_image_surface_get_width(surface),
-					cairo_image_surface_get_height(surface));
-			cairo_surface_flush(surface);
-			break;
-		}
-
-		case EFFECT_VIGNETTE: {
-			effect_vignette(
-					(uint32_t *)cairo_image_surface_get_data(surface),
-					cairo_image_surface_get_width(surface),
-					cairo_image_surface_get_height(surface),
-					effect->e.vignette.base,
-					effect->e.vignette.factor);
-			cairo_surface_flush(surface);
-			break;
-		}
-
-		case EFFECT_COMPOSE: {
-			effect_compose(
-					(uint32_t *)cairo_image_surface_get_data(surface),
-					cairo_image_surface_get_width(surface),
-					cairo_image_surface_get_height(surface),
-					effect->e.compose.x, effect->e.compose.y,
-					effect->e.compose.w, effect->e.compose.h,
-					effect->e.compose.gravity, effect->e.compose.imgpath);
-			cairo_surface_flush(surface);
-			break;
-		}
-
-		case EFFECT_CUSTOM: {
-			effect_custom(
-					(uint32_t *)cairo_image_surface_get_data(surface),
-					cairo_image_surface_get_width(surface),
-					cairo_image_surface_get_height(surface),
-					effect->e.custom);
-			cairo_surface_flush(surface);
-			break;
-		} }
+		surface = run_effect(surface, effect);
 	}
+
+	return surface;
+}
+
+#define TIME_MSEC(tv) ((tv).tv_sec * 1000.0 + (tv).tv_nsec / 1000000.0)
+#define TIME_DELTA(first, last) (TIME_MSEC(last) - TIME_MSEC(first))
+
+cairo_surface_t *swaylock_effects_run_timed(cairo_surface_t *surface,
+		struct swaylock_effect *effects, int count) {
+	struct timespec start_tv;
+	clock_gettime(CLOCK_MONOTONIC, &start_tv);
+
+	fprintf(stderr, "Running %i effects:\n", count);
+	for (int i = 0; i < count; ++i) {
+		struct timespec effect_start_tv;
+		clock_gettime(CLOCK_MONOTONIC, &effect_start_tv);
+
+		struct swaylock_effect *effect = &effects[i];
+		surface = run_effect(surface, effect);
+
+		struct timespec effect_end_tv;
+		clock_gettime(CLOCK_MONOTONIC, &effect_end_tv);
+		printf("    %s: %fms\n", effect_name(effect),
+				TIME_DELTA(effect_start_tv, effect_end_tv));
+	}
+
+	struct timespec end_tv;
+	clock_gettime(CLOCK_MONOTONIC, &end_tv);
+	printf("Effects took %fms.\n", TIME_DELTA(start_tv, end_tv));
 
 	return surface;
 }

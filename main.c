@@ -579,6 +579,7 @@ static void handle_screencopy_frame_ready(void *data,
 		struct zwlr_screencopy_frame_v1 *frame, uint32_t tv_sec_hi,
 		uint32_t tv_sec_lo, uint32_t tv_nsec) {
 	struct swaylock_surface *surface = data;
+	struct swaylock_state *state = surface->state;
 
 	cairo_surface_t *image = load_background_from_buffer(
 			surface->screencopy.data,
@@ -589,6 +590,14 @@ static void handle_screencopy_frame_ready(void *data,
 			surface->screencopy.transform);
 	if (image == NULL) {
 		swaylock_log(LOG_ERROR, "Failed to create image from screenshot");
+	} else if (state->args.effects_count > 0) {
+		if (state->args.time_effects) {
+			surface->image = swaylock_effects_run_timed(
+					image, state->args.effects, state->args.effects_count);
+		} else {
+			surface->image = swaylock_effects_run(
+					image, state->args.effects, state->args.effects_count);
+		}
 	} else {
 		surface->image = image;
 	}
@@ -770,7 +779,7 @@ static char *join_args(char **argv, int argc) {
 	return res;
 }
 
-static void load_image(char *arg, struct swaylock_state *state) {
+	static void load_image(char *arg, struct swaylock_state *state) {
 	// [[<output>]:]<path>
 	struct swaylock_image *image = calloc(1, sizeof(struct swaylock_image));
 	char *separator = strchr(arg, ':');
@@ -921,6 +930,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_EFFECT_VIGNETTE,
 		LO_EFFECT_COMPOSE,
 		LO_EFFECT_CUSTOM,
+		LO_TIME_EFFECTS,
 		LO_INDICATOR,
 		LO_CLOCK,
 		LO_TIMESTR,
@@ -994,6 +1004,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"effect-vignette", required_argument, NULL, LO_EFFECT_VIGNETTE},
 		{"effect-compose", required_argument, NULL, LO_EFFECT_COMPOSE},
 		{"effect-custom", required_argument, NULL, LO_EFFECT_CUSTOM},
+		{"time-effects", no_argument, NULL, LO_TIME_EFFECTS},
 		{"indicator", no_argument, NULL, LO_INDICATOR},
 		{"clock", no_argument, NULL, LO_CLOCK},
 		{"timestr", required_argument, NULL, LO_TIMESTR},
@@ -1155,6 +1166,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Apply a vignette effect to images. Base and factor should be numbers between 0 and 1.\n"
 		"  --effect-custom <path>           "
 			"Apply a custom effect from a shared object or C source file.\n"
+		"  --time-effects                   "
+			"Measure the time it takes to run each effect.\n"
 		"\n"
 		"All <color> options are of the form <rrggbb[aa]>.\n";
 
@@ -1505,6 +1518,11 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 				struct swaylock_effect *effect = &state->args.effects[state->args.effects_count - 1];
 				effect->tag = EFFECT_CUSTOM;
 				effect->e.custom = strdup(optarg);
+			}
+			break;
+		case LO_TIME_EFFECTS:
+			if (state) {
+				state->args.time_effects = true;
 			}
 			break;
 		case LO_INDICATOR:

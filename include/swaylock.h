@@ -70,6 +70,7 @@ struct swaylock_args {
 	bool screenshots;
 	struct swaylock_effect *effects;
 	int effects_count;
+	bool time_effects;
 	bool indicator;
 	bool clock;
 	char *timestr;

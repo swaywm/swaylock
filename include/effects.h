@@ -58,4 +58,7 @@ struct swaylock_effect {
 cairo_surface_t *swaylock_effects_run(cairo_surface_t *surface,
 		struct swaylock_effect *effects, int count);
 
+cairo_surface_t *swaylock_effects_run_timed(cairo_surface_t *surface,
+		struct swaylock_effect *effects, int count);
+
 #endif
