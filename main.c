@@ -159,6 +159,8 @@ static void create_layer_surface(struct swaylock_surface *surface) {
 		wl_region_destroy(region);
 	}
 
+	surface->ready = true;
+
 	wl_surface_commit(surface->surface);
 }
 
@@ -211,6 +213,10 @@ static const struct wl_callback_listener surface_frame_listener = {
 };
 
 void damage_surface(struct swaylock_surface *surface) {
+	if (!surface->ready) {
+		return;
+	}
+
 	surface->dirty = true;
 	if (surface->frame_pending) {
 		return;
@@ -336,6 +342,18 @@ static void handle_global(void *data, struct wl_registry *registry,
 				&wl_output_interface, 3);
 		surface->output_global_name = name;
 		wl_output_add_listener(surface->output, &_wl_output_listener, surface);
+
+		if (state->zxdg_output_manager) {
+			surface->xdg_output = zxdg_output_manager_v1_get_xdg_output(
+					state->zxdg_output_manager, surface->output);
+			zxdg_output_v1_add_listener(
+					surface->xdg_output, &_xdg_output_listener, surface);
+			wl_display_roundtrip(state->display);
+		} else {
+			swaylock_log(LOG_INFO, "Compositor does not support zxdg output "
+					"manager, images assigned to named outputs will not work");
+		}
+
 		wl_list_insert(&state->surfaces, &surface->link);
 
 		if (state->run_display) {
@@ -1194,20 +1212,6 @@ int main(int argc, char **argv) {
 		swaylock_log(LOG_ERROR, "Exiting - failed to inhibit input:"
 				" is another lockscreen already running?");
 		return 2;
-	}
-
-	if (state.zxdg_output_manager) {
-		struct swaylock_surface *surface;
-		wl_list_for_each(surface, &state.surfaces, link) {
-			surface->xdg_output = zxdg_output_manager_v1_get_xdg_output(
-						state.zxdg_output_manager, surface->output);
-			zxdg_output_v1_add_listener(
-					surface->xdg_output, &_xdg_output_listener, surface);
-		}
-		wl_display_roundtrip(state.display);
-	} else {
-		swaylock_log(LOG_INFO, "Compositor does not support zxdg output "
-				"manager, images assigned to named outputs will not work");
 	}
 
 	struct swaylock_surface *surface;
