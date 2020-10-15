@@ -118,10 +118,24 @@ static bool surface_is_opaque(struct swaylock_surface *surface) {
 	return (surface->state->args.colors.background & 0xff) == 0xff;
 }
 
+struct zxdg_output_v1_listener _xdg_output_listener;
+
 static void create_layer_surface(struct swaylock_surface *surface) {
 	struct swaylock_state *state = surface->state;
 
 	surface->image = select_image(state, surface);
+
+	static bool has_printed_zxdg_error = false;
+	if (state->zxdg_output_manager) {
+		surface->xdg_output = zxdg_output_manager_v1_get_xdg_output(
+				state->zxdg_output_manager, surface->output);
+		zxdg_output_v1_add_listener(
+				surface->xdg_output, &_xdg_output_listener, surface);
+	} else if (!has_printed_zxdg_error) {
+		swaylock_log(LOG_INFO, "Compositor does not support zxdg output "
+				"manager, images assigned to named outputs will not work");
+		has_printed_zxdg_error = true;
+	}
 
 	surface->surface = wl_compositor_create_surface(state->compositor);
 	assert(surface->surface);
@@ -295,7 +309,14 @@ static void handle_xdg_output_description(void *data, struct zxdg_output_v1 *out
 }
 
 static void handle_xdg_output_done(void *data, struct zxdg_output_v1 *output) {
-	// Who cares
+	struct swaylock_surface *surface = data;
+	cairo_surface_t *new_image = select_image(surface->state, surface);
+	if (new_image != surface->image) {
+		surface->image = new_image;
+		if (surface->state->run_display) {
+			damage_surface(surface);
+		}
+	}
 }
 
 struct zxdg_output_v1_listener _xdg_output_listener = {
@@ -342,17 +363,6 @@ static void handle_global(void *data, struct wl_registry *registry,
 				&wl_output_interface, 3);
 		surface->output_global_name = name;
 		wl_output_add_listener(surface->output, &_wl_output_listener, surface);
-
-		if (state->zxdg_output_manager) {
-			surface->xdg_output = zxdg_output_manager_v1_get_xdg_output(
-					state->zxdg_output_manager, surface->output);
-			zxdg_output_v1_add_listener(
-					surface->xdg_output, &_xdg_output_listener, surface);
-			wl_display_roundtrip(state->display);
-		} else {
-			swaylock_log(LOG_INFO, "Compositor does not support zxdg output "
-					"manager, images assigned to named outputs will not work");
-		}
 
 		wl_list_insert(&state->surfaces, &surface->link);
 
