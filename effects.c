@@ -1,11 +1,15 @@
 #define _POSIX_C_SOURCE 200809
+#define _XOPEN_SOURCE 500
 #include <omp.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <dlfcn.h>
 #include <string.h>
 #include <errno.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 #include <spawn.h>
 #include "effects.h"
@@ -393,7 +397,7 @@ static void effect_compose(uint32_t *data, int width, int height,
 #endif
 }
 
-static void effect_custom(uint32_t *data, int width, int height,
+static void effect_custom_run(uint32_t *data, int width, int height,
 		char *path) {
 	void *dl = dlopen(path, RTLD_LAZY);
 	if (dl == NULL) {
@@ -427,6 +431,124 @@ static void effect_custom(uint32_t *data, int width, int height,
 	swaylock_log(LOG_ERROR, "Custom effect: %s", dlerror());
 }
 
+static bool file_is_outdated(const char *input, const char *output) {
+	struct stat instat, outstat;
+	if (stat(input, &instat) < 0) {
+		return true;
+	}
+
+	if (stat(output, &outstat) < 0) {
+		return true;
+	}
+
+	if (instat.st_mtim.tv_sec > outstat.st_mtim.tv_sec) {
+		return true;
+	}
+
+	if (
+			instat.st_mtim.tv_sec == outstat.st_mtim.tv_sec &&
+			instat.st_mtim.tv_nsec >= outstat.st_mtim.tv_nsec) {
+		return true;
+	}
+
+	return false;
+}
+
+static char *effect_custom_compile(const char *path) {
+	static char *cachepath = NULL;
+	static size_t cachelen;
+	if (!cachepath) {
+		char *xdgdir = getenv("XDG_DATA_HOME");
+		if (xdgdir) {
+			cachepath = malloc(strlen(xdgdir) + strlen("/swaylock") + 1);
+			cachelen = sprintf(cachepath, "%s/swaylock", xdgdir);
+		} else {
+			char *homedir = getenv("HOME");
+			if (homedir == NULL) {
+				swaylock_log(LOG_ERROR,
+						"Can't compile custom effect; neither $HOME nor $XDG_CONFIG_HOME "
+						"is defined.");
+				return NULL;
+			}
+
+			cachepath = malloc(strlen(homedir) + strlen("/.cache/swaylock") + 1);
+			cachelen = sprintf(cachepath, "%s/.cache/swaylock", homedir);
+		}
+
+		if (mkdir(cachepath, 0777) < 0 && errno != EEXIST) {
+			swaylock_log(LOG_ERROR,
+					"Can't compile custom effect; mkdir %s failed: %s\n",
+					cachepath, strerror(errno));
+			free(cachepath);
+			cachepath = NULL;
+			return NULL;
+		}
+	}
+
+	// Find the true, absolute path of the input file
+	char *abspath = realpath(path, NULL);
+	size_t abspathlen = strlen(abspath);
+
+	char *outpath = malloc(cachelen + 1 + abspathlen + 3 + 1);
+	size_t outlen = sprintf(outpath, "%s/%s.so", cachepath, abspath);
+
+	// Sanitize
+	for (char *ch = outpath + cachelen + 1; ch < outpath + cachelen + 1 + abspathlen; ++ch) {
+		if (!(
+				(*ch >= 'a' && *ch <= 'z') ||
+				(*ch >= 'A' && *ch <= 'Z') ||
+				(*ch >= '0' && *ch <= '9') ||
+				(*ch == '.'))) {
+			*ch = '_';
+		}
+	}
+
+	if (!file_is_outdated(path, outpath)) {
+		free(abspath);
+		return outpath;
+	}
+
+	static const char *fmt = "cc -shared -O3 -march=native -fopenmp -o '%s' '%s' -lm";
+	char *cmd = malloc(strlen(fmt) + outlen - 2 + abspathlen - 2 + 1);
+	sprintf(cmd, fmt, outpath, abspath);
+	free(abspath);
+	fprintf(stderr, "Compiling custom effect: %s\n", cmd);
+
+	// Finally, compile.
+	int ret = system(cmd);
+	free(cmd);
+	if (ret != 0) {
+		if (ret == -1) {
+			swaylock_log(LOG_ERROR, "Custom effect: system(): %s", strerror(errno));
+			free(outpath);
+			return NULL;
+		} else {
+			swaylock_log(LOG_ERROR, "Custom effect compilation failed\n");
+			free(outpath);
+			return NULL;
+		}
+	}
+
+	return outpath;
+}
+
+static void effect_custom(uint32_t *data, int width, int height,
+		char *path) {
+	size_t pathlen = strlen(path);
+	if (pathlen > 3 && strcmp(path + pathlen - 3, ".so") == 0) {
+		effect_custom_run(data, width, height, path);
+	} else if (pathlen > 2 && strcmp(path + pathlen - 2, ".c") == 0) {
+		char *compiled = effect_custom_compile(path);
+		if (compiled != NULL) {
+			effect_custom_run(data, width, height, compiled);
+			free(compiled);
+		}
+	} else {
+		swaylock_log(
+			LOG_ERROR, "%s: Unknown file type for custom effect (expected .c or .so)",
+			path);
+	}
+}
 
 cairo_surface_t *swaylock_effects_run(cairo_surface_t *surface,
 		struct swaylock_effect *effects, int count) {
