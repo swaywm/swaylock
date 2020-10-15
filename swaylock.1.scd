@@ -249,6 +249,9 @@ Locks your Wayland session.
 *void swaylock_effect(uint32\_t \*data, int width, int height)*++
 or an *uint32\_t swaylock_pixel(uint32\_t pix, int x, int y, int width, int height)*.
 
+*--time-effects*
+	Measure the time it takes to run each effect.
+
 # AUTHORS
 
 Maintained by Martin Dørum, forked from upstream Swaylock which is maintained

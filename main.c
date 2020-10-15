@@ -292,8 +292,13 @@ static void create_layer_surface(struct swaylock_surface *surface) {
 
 	// Apply effects
 	if (state->args.effects_count > 0) {
-		surface->image = swaylock_effects_run(
-			surface->image, state->args.effects, state->args.effects_count);
+		if (state->args.time_effects) {
+			surface->image = swaylock_effects_run_timed(
+					surface->image, state->args.effects, state->args.effects_count);
+		} else {
+			surface->image = swaylock_effects_run(
+				surface->image, state->args.effects, state->args.effects_count);
+		}
 	}
 
 	surface->surface = wl_compositor_create_surface(state->compositor);
@@ -869,6 +874,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_EFFECT_VIGNETTE,
 		LO_EFFECT_COMPOSE,
 		LO_EFFECT_CUSTOM,
+		LO_TIME_EFFECTS,
 		LO_INDICATOR,
 		LO_CLOCK,
 		LO_TIMESTR,
@@ -942,6 +948,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"effect-vignette", required_argument, NULL, LO_EFFECT_VIGNETTE},
 		{"effect-compose", required_argument, NULL, LO_EFFECT_COMPOSE},
 		{"effect-custom", required_argument, NULL, LO_EFFECT_CUSTOM},
+		{"time-effects", no_argument, NULL, LO_TIME_EFFECTS},
 		{"indicator", no_argument, NULL, LO_INDICATOR},
 		{"clock", no_argument, NULL, LO_CLOCK},
 		{"timestr", required_argument, NULL, LO_TIMESTR},
@@ -1103,6 +1110,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Apply a vignette effect to images. Base and factor should be numbers between 0 and 1.\n"
 		"  --effect-custom <path>           "
 			"Apply a custom effect from a shared object or C source file.\n"
+		"  --time-effects                   "
+			"Measure the time it takes to run each effect.\n"
 		"\n"
 		"All <color> options are of the form <rrggbb[aa]>.\n";
 
@@ -1453,6 +1462,11 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 				struct swaylock_effect *effect = &state->args.effects[state->args.effects_count - 1];
 				effect->tag = EFFECT_CUSTOM;
 				effect->e.custom = strdup(optarg);
+			}
+			break;
+		case LO_TIME_EFFECTS:
+			if (state) {
+				state->args.time_effects = true;
 			}
 			break;
 		case LO_INDICATOR:
