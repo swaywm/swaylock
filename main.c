@@ -291,7 +291,7 @@ static void create_layer_surface(struct swaylock_surface *surface) {
 	}
 
 	// Apply effects
-	if (state->args.effects_count > 0) {
+	if (surface->image && state->args.effects_count > 0) {
 		if (state->args.time_effects) {
 			surface->image = swaylock_effects_run_timed(
 					surface->image, state->args.effects, state->args.effects_count);
