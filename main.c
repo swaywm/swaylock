@@ -173,8 +173,6 @@ static void create_layer_surface(struct swaylock_surface *surface) {
 		wl_region_destroy(region);
 	}
 
-	surface->ready = true;
-
 	wl_surface_commit(surface->surface);
 }
 
@@ -227,10 +225,6 @@ static const struct wl_callback_listener surface_frame_listener = {
 };
 
 void damage_surface(struct swaylock_surface *surface) {
-	if (!surface->ready) {
-		return;
-	}
-
 	surface->dirty = true;
 	if (surface->frame_pending) {
 		return;

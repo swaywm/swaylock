@@ -110,7 +110,6 @@ struct swaylock_surface {
 	int32_t scale;
 	enum wl_output_subpixel subpixel;
 	char *output_name;
-	bool ready;
 	struct wl_list link;
 };
 
