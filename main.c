@@ -131,6 +131,7 @@ static void create_layer_surface(struct swaylock_surface *surface) {
 				state->zxdg_output_manager, surface->output);
 		zxdg_output_v1_add_listener(
 				surface->xdg_output, &_xdg_output_listener, surface);
+		surface->events_pending += 1;
 	} else if (!has_printed_zxdg_error) {
 		swaylock_log(LOG_INFO, "Compositor does not support zxdg output "
 				"manager, images assigned to named outputs will not work");
@@ -162,7 +163,12 @@ static void create_layer_surface(struct swaylock_surface *surface) {
 			surface->layer_surface, true);
 	zwlr_layer_surface_v1_add_listener(surface->layer_surface,
 			&layer_surface_listener, surface);
+	surface->events_pending += 1;
 
+	wl_surface_commit(surface->surface);
+}
+
+static void initially_render_surface(struct swaylock_surface *surface) {
 	if (surface_is_opaque(surface) &&
 			surface->state->args.mode != BACKGROUND_MODE_CENTER &&
 			surface->state->args.mode != BACKGROUND_MODE_FIT) {
@@ -173,7 +179,8 @@ static void create_layer_surface(struct swaylock_surface *surface) {
 		wl_region_destroy(region);
 	}
 
-	wl_surface_commit(surface->surface);
+	render_frame_background(surface);
+	render_frame(surface);
 }
 
 static void layer_surface_configure(void *data,
@@ -185,8 +192,10 @@ static void layer_surface_configure(void *data,
 	surface->indicator_width = 1;
 	surface->indicator_height = 1;
 	zwlr_layer_surface_v1_ack_configure(layer_surface, serial);
-	render_frame_background(surface);
-	render_frame(surface);
+
+	if (--surface->events_pending == 0) {
+		initially_render_surface(surface);
+	}
 }
 
 static void layer_surface_closed(void *data,
@@ -307,9 +316,10 @@ static void handle_xdg_output_done(void *data, struct zxdg_output_v1 *output) {
 	cairo_surface_t *new_image = select_image(surface->state, surface);
 	if (new_image != surface->image) {
 		surface->image = new_image;
-		if (surface->state->run_display) {
-			damage_surface(surface);
-		}
+	}
+
+	if (--surface->events_pending == 0) {
+		initially_render_surface(surface);
 	}
 }
 
