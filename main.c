@@ -258,6 +258,8 @@ static bool surface_is_opaque(struct swaylock_surface *surface) {
 	return (surface->state->args.colors.background & 0xff) == 0xff;
 }
 
+struct zxdg_output_v1_listener _xdg_output_listener;
+
 static void create_layer_surface(struct swaylock_surface *surface) {
 	struct swaylock_state *state = surface->state;
 
@@ -266,6 +268,19 @@ static void create_layer_surface(struct swaylock_surface *surface) {
 	}
 
 	surface->image = select_image(state, surface);
+
+	static bool has_printed_zxdg_error = false;
+	if (state->zxdg_output_manager) {
+		surface->xdg_output = zxdg_output_manager_v1_get_xdg_output(
+				state->zxdg_output_manager, surface->output);
+		zxdg_output_v1_add_listener(
+				surface->xdg_output, &_xdg_output_listener, surface);
+		surface->events_pending += 1;
+	} else if (!has_printed_zxdg_error) {
+		swaylock_log(LOG_INFO, "Compositor does not support zxdg output "
+				"manager, images assigned to named outputs will not work");
+		has_printed_zxdg_error = true;
+	}
 
 	surface->surface = wl_compositor_create_surface(state->compositor);
 	assert(surface->surface);
@@ -292,7 +307,12 @@ static void create_layer_surface(struct swaylock_surface *surface) {
 			surface->layer_surface, true);
 	zwlr_layer_surface_v1_add_listener(surface->layer_surface,
 			&layer_surface_listener, surface);
+	surface->events_pending += 1;
 
+	wl_surface_commit(surface->surface);
+}
+
+static void initially_render_surface(struct swaylock_surface *surface) {
 	if (surface_is_opaque(surface) &&
 			surface->state->args.mode != BACKGROUND_MODE_CENTER &&
 			surface->state->args.mode != BACKGROUND_MODE_FIT) {
@@ -303,7 +323,9 @@ static void create_layer_surface(struct swaylock_surface *surface) {
 		wl_region_destroy(region);
 	}
 
-	wl_surface_commit(surface->surface);
+	render_frame_background(surface);
+	render_background_fade_prepare(surface, surface->current_buffer);
+	render_frame(surface);
 }
 
 static void layer_surface_configure(void *data,
@@ -315,9 +337,10 @@ static void layer_surface_configure(void *data,
 	surface->indicator_width = 1;
 	surface->indicator_height = 1;
 	zwlr_layer_surface_v1_ack_configure(layer_surface, serial);
-	render_frame_background(surface);
-	render_background_fade_prepare(surface, surface->current_buffer);
-	render_frame(surface);
+
+	if (--surface->events_pending == 0) {
+		initially_render_surface(surface);
+	}
 }
 
 static void layer_surface_closed(void *data,
@@ -550,27 +573,33 @@ static void handle_screencopy_frame_ready(void *data,
 		struct zwlr_screencopy_frame_v1 *frame, uint32_t tv_sec_hi,
 		uint32_t tv_sec_lo, uint32_t tv_nsec) {
 	struct swaylock_surface *surface = data;
-	struct swaylock_image *image = surface->screencopy.image;
 
-	image->cairo_surface = load_background_from_buffer(
+	cairo_surface_t *image = load_background_from_buffer(
 			surface->screencopy.data,
 			surface->screencopy.format,
 			surface->screencopy.width,
 			surface->screencopy.height,
 			surface->screencopy.stride,
 			surface->screencopy.transform);
-
-	if (!image->cairo_surface) {
-		free(image);
-		exit(1);
+	if (image == NULL) {
+		swaylock_log(LOG_ERROR, "Failed to create image from screenshot");
+	} else {
+		surface->image = image;
 	}
 
-	surface->state->n_screenshots_done += 1;
+	if (--surface->events_pending == 0) {
+		initially_render_surface(surface);
+	}
 }
 
 static void handle_screencopy_frame_failed(void *data,
 		struct zwlr_screencopy_frame_v1 *frame) {
-	fprintf(stderr, "Screencopy failed!\n");
+	struct swaylock_surface *surface = data;
+	swaylock_log(LOG_ERROR, "Screencopy failed");
+
+	if (--surface->events_pending == 0) {
+		initially_render_surface(surface);
+	}
 }
 
 static const struct zwlr_screencopy_frame_v1_listener screencopy_frame_listener = {
@@ -604,7 +633,30 @@ static void handle_xdg_output_description(void *data, struct zxdg_output_v1 *out
 }
 
 static void handle_xdg_output_done(void *data, struct zxdg_output_v1 *output) {
-	// Who cares
+	struct swaylock_surface *surface = data;
+	struct swaylock_state *state = surface->state;
+	cairo_surface_t *new_image = select_image(surface->state, surface);
+
+	if (new_image == surface->image && state->args.screenshots) {
+		static bool has_printed_screencopy_error = false;
+		if (state->screencopy_manager) {
+			surface->screencopy_frame = zwlr_screencopy_manager_v1_capture_output(
+					state->screencopy_manager, false, surface->output);
+			zwlr_screencopy_frame_v1_add_listener(surface->screencopy_frame,
+					&screencopy_frame_listener, surface);
+			surface->events_pending += 1;
+		} else if (!has_printed_screencopy_error) {
+			swaylock_log(LOG_INFO, "Compositor does not support screencopy manager, "
+					"screenshots will not work");
+			has_printed_screencopy_error = true;
+		}
+	} else {
+		surface->image = new_image;
+	}
+
+	if (--surface->events_pending == 0) {
+		initially_render_surface(surface);
+	}
 }
 
 struct zxdg_output_v1_listener _xdg_output_listener = {
@@ -1722,53 +1774,6 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	if (state.zxdg_output_manager) {
-		struct swaylock_surface *surface;
-		wl_list_for_each(surface, &state.surfaces, link) {
-			surface->xdg_output = zxdg_output_manager_v1_get_xdg_output(
-						state.zxdg_output_manager, surface->output);
-			zxdg_output_v1_add_listener(
-					surface->xdg_output, &_xdg_output_listener, surface);
-		}
-		wl_display_roundtrip(state.display);
-	} else {
-		swaylock_log(LOG_INFO, "Compositor does not support zxdg output "
-				"manager, images assigned to named outputs will not work");
-	}
-
-	if (state.args.screenshots) {
-		state.n_screenshots_done = 0;
-		size_t n_pending = 0;
-		struct swaylock_surface *surface;
-		wl_list_for_each(surface, &state.surfaces, link) {
-			surface->screencopy_frame = zwlr_screencopy_manager_v1_capture_output(
-					state.screencopy_manager, false, surface->output);
-			zwlr_screencopy_frame_v1_add_listener(surface->screencopy_frame,
-					&screencopy_frame_listener, surface);
-
-			++n_pending;
-		}
-
-		bool done = false;
-		while (!done && wl_display_dispatch(state.display) != -1) {
-			done = (state.n_screenshots_done == n_pending);
-		}
-
-		if (!done) {
-			fprintf(stderr, "failed to screenshoot all outputs\n");
-			return EXIT_FAILURE;
-		}
-	}
-
-	// Apply effects
-	struct swaylock_image *image;
-	if (state.args.effects_count > 0) {
-		wl_list_for_each(image, &state.images, link) {
-			image->cairo_surface = swaylock_effects_run(
-					image->cairo_surface, state.args.effects, state.args.effects_count);
-		}
-	}
-
 	zwlr_input_inhibit_manager_v1_get_inhibitor(state.input_inhibit_manager);
 	if (wl_display_roundtrip(state.display) == -1) {
 		free(state.args.font);
@@ -1780,6 +1785,12 @@ int main(int argc, char **argv) {
 	struct swaylock_surface *surface;
 	wl_list_for_each(surface, &state.surfaces, link) {
 		create_layer_surface(surface);
+	}
+
+	wl_list_for_each(surface, &state.surfaces, link) {
+		while (surface->events_pending > 0) {
+			wl_display_roundtrip(state.display);
+		}
 	}
 
 	if (state.args.daemonize) {
