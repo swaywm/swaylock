@@ -191,7 +191,7 @@ int lenient_strcmp(char *a, char *b) {
 	}
 }
 
-static void daemonize(void) {
+static int daemonize_start() {
 	int fds[2];
 	if (pipe(fds) != 0) {
 		swaylock_log(LOG_ERROR, "Failed to pipe");
@@ -209,11 +209,7 @@ static void daemonize(void) {
 			write(fds[1], &success, 1);
 			exit(1);
 		}
-		success = 1;
-		if (write(fds[1], &success, 1) != 1) {
-			exit(1);
-		}
-		close(fds[1]);
+		return fds[1];
 	} else {
 		close(fds[1]);
 		uint8_t success;
@@ -224,6 +220,16 @@ static void daemonize(void) {
 		close(fds[0]);
 		exit(0);
 	}
+}
+
+static void daemonize_done(void *fdptr) {
+	int fd = *(int *)fdptr;
+	uint8_t success = 1;
+	if (write(fd, &success, 1) != 1) {
+		swaylock_log(LOG_ERROR, "Failed to tell parent process that daemonization is done");
+		exit(1);
+	}
+	close(fd);
 }
 
 static void destroy_surface(struct swaylock_surface *surface) {
@@ -1793,9 +1799,10 @@ int main(int argc, char **argv) {
 		}
 	}
 
+	int daemonfd;
 	if (state.args.daemonize) {
 		wl_display_roundtrip(state.display);
-		daemonize();
+		daemonfd = daemonize_start();
 	}
 
 	state.eventloop = loop_create();
@@ -1805,6 +1812,12 @@ int main(int argc, char **argv) {
 	loop_add_fd(state.eventloop, get_comm_reply_fd(), POLLIN, comm_in, NULL);
 
 	loop_add_timer(state.eventloop, 1000, timer_render, &state);
+
+	if (state.args.daemonize && state.args.fade_in) {
+		loop_add_timer(state.eventloop, state.args.fade_in + 500, daemonize_done, &daemonfd);
+	} else if (state.args.daemonize) {
+		daemonize_done(&daemonfd);
+	}
 
 	if (state.args.password_grace_period > 0) {
 		loop_add_timer(state.eventloop, state.args.password_grace_period, end_grace_period, &state);
