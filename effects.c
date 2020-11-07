@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <spawn.h>
 #include <time.h>
+#include <stdio.h>
 #include "effects.h"
 #include "log.h"
 
