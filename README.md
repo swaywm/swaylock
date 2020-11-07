@@ -58,7 +58,7 @@ The main new features compared to upstream swaylock are:
 	* `--effect-greyscale`: Make the image greyscale.
 	* `--effect-vignette <base>:<factor>`: Apply a vignette effect (range is 0-1).
 	* `--effect-compose <position>;<size>;<gravity>;<path>`: Overlay another image.
-	* `--effect-custom <path>`: Load a custom effect from a shared object.
+	* `--effect-custom <path>`: Load a custom effect from a C file or shared object.
 
 New feature ideas are welcome as issues (though I may never get around to
 implement them), new feature implementations are welcome as pull requests :)

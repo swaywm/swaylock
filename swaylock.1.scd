@@ -246,7 +246,7 @@ Locks your Wayland session.
 
 *--effect-custom <path>*
 	Load a custom effect from a shared object. The .so must export a++
-*void swaylock_effect(uint32\_t \*data, int width, int height)*++
+*void swaylock_effect(uint32\_t \*data, int width, int height, int scale)*++
 or an *uint32\_t swaylock_pixel(uint32\_t pix, int x, int y, int width, int height)*.
 
 *--time-effects*

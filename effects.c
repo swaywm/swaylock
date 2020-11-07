@@ -349,7 +349,7 @@ static void effect_vignette(uint32_t *data, int width, int height,
 	}
 }
 
-static void effect_compose(uint32_t *data, int scale, int width, int height,
+static void effect_compose(uint32_t *data, int width, int height, int scale,
 		struct swaylock_effect_screen_pos posx,
 		struct swaylock_effect_screen_pos posy,
 		struct swaylock_effect_screen_pos posw,
@@ -420,7 +420,7 @@ static void effect_compose(uint32_t *data, int scale, int width, int height,
 #endif
 }
 
-static void effect_custom_run(uint32_t *data, int width, int height,
+static void effect_custom_run(uint32_t *data, int width, int height, int scale,
 		char *path) {
 	void *dl = dlopen(path, RTLD_LAZY);
 	if (dl == NULL) {
@@ -428,10 +428,10 @@ static void effect_custom_run(uint32_t *data, int width, int height,
 		return;
 	}
 
-	void (*effect_func)(uint32_t *data, int width, int height) =
+	void (*effect_func)(uint32_t *data, int width, int height, int scale) =
 		dlsym(dl, "swaylock_effect");
 	if (effect_func != NULL) {
-		effect_func(data, width, height);
+		effect_func(data, width, height, scale);
 		dlclose(dl);
 		return;
 	}
@@ -451,6 +451,7 @@ static void effect_custom_run(uint32_t *data, int width, int height,
 		return;
 	}
 
+	(void)dlsym(dl, "swaylock_effect"); // Change the result of dlerror()
 	swaylock_log(LOG_ERROR, "Custom effect: %s", dlerror());
 }
 
@@ -555,15 +556,15 @@ static char *effect_custom_compile(const char *path) {
 	return outpath;
 }
 
-static void effect_custom(uint32_t *data, int width, int height,
+static void effect_custom(uint32_t *data, int width, int height, int scale,
 		char *path) {
 	size_t pathlen = strlen(path);
 	if (pathlen > 3 && strcmp(path + pathlen - 3, ".so") == 0) {
-		effect_custom_run(data, width, height, path);
+		effect_custom_run(data, width, height, scale, path);
 	} else if (pathlen > 2 && strcmp(path + pathlen - 2, ".c") == 0) {
 		char *compiled = effect_custom_compile(path);
 		if (compiled != NULL) {
-			effect_custom_run(data, width, height, compiled);
+			effect_custom_run(data, width, height, scale, compiled);
 			free(compiled);
 		}
 	} else {
@@ -656,9 +657,10 @@ static cairo_surface_t *run_effect(cairo_surface_t *surface, int scale,
 
 	case EFFECT_COMPOSE: {
 		effect_compose(
-				(uint32_t *)cairo_image_surface_get_data(surface), scale,
+				(uint32_t *)cairo_image_surface_get_data(surface),
 				cairo_image_surface_get_width(surface),
 				cairo_image_surface_get_height(surface),
+				scale,
 				effect->e.compose.x, effect->e.compose.y,
 				effect->e.compose.w, effect->e.compose.h,
 				effect->e.compose.gravity, effect->e.compose.imgpath);
@@ -671,6 +673,7 @@ static cairo_surface_t *run_effect(cairo_surface_t *surface, int scale,
 				(uint32_t *)cairo_image_surface_get_data(surface),
 				cairo_image_surface_get_width(surface),
 				cairo_image_surface_get_height(surface),
+				scale,
 				effect->e.custom);
 		cairo_surface_flush(surface);
 		break;
