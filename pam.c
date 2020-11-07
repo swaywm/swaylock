@@ -112,6 +112,8 @@ void run_pw_backend_child(void) {
 		pw_buf = NULL;
 	}
 
+	pam_setcred(auth_handle, PAM_REFRESH_CRED);
+
 	if (pam_end(auth_handle, pam_status) != PAM_SUCCESS) {
 		swaylock_log(LOG_ERROR, "pam_end failed");
 		exit(EXIT_FAILURE);
