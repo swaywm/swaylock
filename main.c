@@ -593,10 +593,12 @@ static void handle_screencopy_frame_ready(void *data,
 	} else if (state->args.effects_count > 0) {
 		if (state->args.time_effects) {
 			surface->image = swaylock_effects_run_timed(
-					image, state->args.effects, state->args.effects_count);
+					image, surface->scale,
+					state->args.effects, state->args.effects_count);
 		} else {
 			surface->image = swaylock_effects_run(
-					image, state->args.effects, state->args.effects_count);
+					image, surface->scale,
+					state->args.effects, state->args.effects_count);
 		}
 	} else {
 		surface->image = image;

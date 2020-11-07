@@ -25,19 +25,28 @@
 
 extern char **environ;
 
-static int screen_size_to_pix(struct swaylock_effect_screen_pos size, int screensize) {
-	int actual = size.pos;
-	if (size.is_percent)
-		actual = (size.pos / 100.0) * screensize;
-	return actual;
+static int screen_size_to_pix(struct swaylock_effect_screen_pos size, int screensize, int scale) {
+	if (size.is_percent) {
+		return (size.pos / 100.0) * screensize;
+	} else if (size.pos > 0) {
+		return size.pos * scale;
+	} else {
+		return size.pos;
+	}
 }
 
-static int screen_pos_to_pix(struct swaylock_effect_screen_pos pos, int screensize) {
-	int actual = pos.pos;
-	if (pos.is_percent)
+static int screen_pos_to_pix(struct swaylock_effect_screen_pos pos, int screensize, int scale) {
+	int actual;
+	if (pos.is_percent) {
 		actual = (pos.pos / 100.0) * screensize;
-	if (actual < 0)
+	} else {
+		actual = pos.pos * scale;
+	}
+
+	if (actual < 0) {
 		actual = screensize + actual;
+	}
+
 	return actual;
 }
 
@@ -59,10 +68,10 @@ static void screen_pos_pair_to_pix(
 		struct swaylock_effect_screen_pos posx,
 		struct swaylock_effect_screen_pos posy,
 		int objwidth, int objheight,
-		int screenwidth, int screenheight, int gravity,
+		int screenwidth, int screenheight, int scale, int gravity,
 		int *outx, int *outy) {
-	int x = screen_pos_to_pix(posx, screenwidth);
-	int y = screen_pos_to_pix(posy, screenheight);
+	int x = screen_pos_to_pix(posx, screenwidth, scale);
+	int y = screen_pos_to_pix(posy, screenheight, scale);
 
 	// Adjust X
 	switch (gravity) {
@@ -340,7 +349,7 @@ static void effect_vignette(uint32_t *data, int width, int height,
 	}
 }
 
-static void effect_compose(uint32_t *data, int width, int height,
+static void effect_compose(uint32_t *data, int scale, int width, int height,
 		struct swaylock_effect_screen_pos posx,
 		struct swaylock_effect_screen_pos posy,
 		struct swaylock_effect_screen_pos posw,
@@ -353,8 +362,8 @@ static void effect_compose(uint32_t *data, int width, int height,
 	swaylock_log(LOG_ERROR, "Compose effect: Compiled without gdk_pixbuf support.\n");
 	return;
 #else
-	int imgw = screen_size_to_pix(posw, width);
-	int imgh = screen_size_to_pix(posh, height);
+	int imgw = screen_size_to_pix(posw, width, scale);
+	int imgh = screen_size_to_pix(posh, height, scale);
 	bool preserve_aspect = imgw < 0 || imgh < 0;
 
 	GError *err = NULL;
@@ -379,7 +388,7 @@ static void effect_compose(uint32_t *data, int width, int height,
 	int imgx, imgy;
 	screen_pos_pair_to_pix(
 			posx, posy, bufw, bufh,
-			width, height, gravity,
+			width, height, scale, gravity,
 			&imgx, &imgy);
 
 #pragma omp parallel for
@@ -564,7 +573,7 @@ static void effect_custom(uint32_t *data, int width, int height,
 	}
 }
 
-static cairo_surface_t *run_effect(cairo_surface_t *surface,
+static cairo_surface_t *run_effect(cairo_surface_t *surface, int scale,
 		struct swaylock_effect *effect) {
 	switch (effect->tag) {
 	case EFFECT_BLUR: {
@@ -647,7 +656,7 @@ static cairo_surface_t *run_effect(cairo_surface_t *surface,
 
 	case EFFECT_COMPOSE: {
 		effect_compose(
-				(uint32_t *)cairo_image_surface_get_data(surface),
+				(uint32_t *)cairo_image_surface_get_data(surface), scale,
 				cairo_image_surface_get_width(surface),
 				cairo_image_surface_get_height(surface),
 				effect->e.compose.x, effect->e.compose.y,
@@ -670,11 +679,11 @@ static cairo_surface_t *run_effect(cairo_surface_t *surface,
 	return surface;
 }
 
-cairo_surface_t *swaylock_effects_run(cairo_surface_t *surface,
+cairo_surface_t *swaylock_effects_run(cairo_surface_t *surface, int scale,
 		struct swaylock_effect *effects, int count) {
 	for (int i = 0; i < count; ++i) {
 		struct swaylock_effect *effect = &effects[i];
-		surface = run_effect(surface, effect);
+		surface = run_effect(surface, scale, effect);
 	}
 
 	return surface;
@@ -683,7 +692,7 @@ cairo_surface_t *swaylock_effects_run(cairo_surface_t *surface,
 #define TIME_MSEC(tv) ((tv).tv_sec * 1000.0 + (tv).tv_nsec / 1000000.0)
 #define TIME_DELTA(first, last) (TIME_MSEC(last) - TIME_MSEC(first))
 
-cairo_surface_t *swaylock_effects_run_timed(cairo_surface_t *surface,
+cairo_surface_t *swaylock_effects_run_timed(cairo_surface_t *surface, int scale,
 		struct swaylock_effect *effects, int count) {
 	struct timespec start_tv;
 	clock_gettime(CLOCK_MONOTONIC, &start_tv);
@@ -694,7 +703,7 @@ cairo_surface_t *swaylock_effects_run_timed(cairo_surface_t *surface,
 		clock_gettime(CLOCK_MONOTONIC, &effect_start_tv);
 
 		struct swaylock_effect *effect = &effects[i];
-		surface = run_effect(surface, effect);
+		surface = run_effect(surface, scale, effect);
 
 		struct timespec effect_end_tv;
 		clock_gettime(CLOCK_MONOTONIC, &effect_end_tv);

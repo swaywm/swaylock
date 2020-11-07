@@ -55,10 +55,10 @@ struct swaylock_effect {
 	} tag;
 };
 
-cairo_surface_t *swaylock_effects_run(cairo_surface_t *surface,
+cairo_surface_t *swaylock_effects_run(cairo_surface_t *surface, int scale,
 		struct swaylock_effect *effects, int count);
 
-cairo_surface_t *swaylock_effects_run_timed(cairo_surface_t *surface,
+cairo_surface_t *swaylock_effects_run_timed(cairo_surface_t *surface, int scale,
 		struct swaylock_effect *effects, int count);
 
 #endif
