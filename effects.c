@@ -231,17 +231,17 @@ static void blur_once(uint32_t *dest, uint32_t *src, uint32_t *scratch,
 // This effect_blur function, and the associated blur_* functions,
 // are my own adaptations of code in yvbbrjdr's i3lock-fancy-rapid:
 // https://github.com/yvbbrjdr/i3lock-fancy-rapid
-static void effect_blur(uint32_t *dest, uint32_t *src, int width, int height,
+static void effect_blur(uint32_t *dest, uint32_t *src, int width, int height, int scale,
 		int radius, int times) {
 	uint32_t *origdest = dest;
 
 	uint32_t *scratch = malloc(width * height * sizeof(*scratch));
-	blur_once(dest, src, scratch, width, height, radius);
+	blur_once(dest, src, scratch, width, height, radius * scale);
 	for (int i = 0; i < times - 1; ++i) {
 		uint32_t *tmp = src;
 		src = dest;
 		dest = tmp;
-		blur_once(dest, src, scratch, width, height, radius);
+		blur_once(dest, src, scratch, width, height, radius * scale);
 	}
 	free(scratch);
 
@@ -251,7 +251,8 @@ static void effect_blur(uint32_t *dest, uint32_t *src, int width, int height,
 		memcpy(origdest, dest, width * height * sizeof(*dest));
 }
 
-static void effect_pixelate(uint32_t *data, int width, int height, int factor) {
+static void effect_pixelate(uint32_t *data, int width, int height, int scale, int factor) {
+	factor *= scale;
 #pragma omp parallel for
 	for (int y = 0; y < height / factor + 1; ++y) {
 		for (int x = 0; x < width / factor + 1; ++x) {
@@ -594,6 +595,7 @@ static cairo_surface_t *run_effect(cairo_surface_t *surface, int scale,
 				(uint32_t *)cairo_image_surface_get_data(surface),
 				cairo_image_surface_get_width(surface),
 				cairo_image_surface_get_height(surface),
+				scale,
 				effect->e.blur.radius, effect->e.blur.times);
 		cairo_surface_flush(surf);
 		cairo_surface_destroy(surface);
@@ -606,6 +608,7 @@ static cairo_surface_t *run_effect(cairo_surface_t *surface, int scale,
 				(uint32_t *)cairo_image_surface_get_data(surface),
 				cairo_image_surface_get_width(surface),
 				cairo_image_surface_get_height(surface),
+				scale,
 				effect->e.pixelate.factor);
 		cairo_surface_flush(surface);
 		break;
