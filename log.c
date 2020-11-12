@@ -15,6 +15,7 @@ static const char *verbosity_colors[] = {
 	[LOG_ERROR ] = "\x1B[1;31m",
 	[LOG_INFO  ] = "\x1B[1;34m",
 	[LOG_DEBUG ] = "\x1B[1;30m",
+	[LOG_TRACE ] = "\x1B[1;32m",
 };
 
 void swaylock_log_init(enum log_importance verbosity) {
@@ -58,6 +59,17 @@ void _swaylock_log(enum log_importance verbosity, const char *fmt, ...) {
 	va_end(args);
 }
 
+// This is mainly here for performance.
+// Don't want to do _swaylock_strip_path every event if we're not tracing.
+void _swaylock_trace(const char *file, int line, const char *func) {
+	if (LOG_TRACE > log_importance) {
+		return;
+	}
+
+	_swaylock_log(LOG_TRACE, "[%s:%d]: trace: %s",
+			_swaylock_strip_path(file), line, func);
+}
+
 const char *_swaylock_strip_path(const char *filepath) {
 	if (*filepath == '.') {
 		while (*filepath == '.' || *filepath == '/') {
@@ -65,4 +77,4 @@ const char *_swaylock_strip_path(const char *filepath) {
 		}
 	}
 	return filepath;
-}
+ }

@@ -10,6 +10,7 @@ enum log_importance {
 	LOG_ERROR = 1,
 	LOG_INFO = 2,
 	LOG_DEBUG = 3,
+	LOG_TRACE = 4,
 	LOG_IMPORTANCE_LAST,
 };
 
@@ -24,6 +25,8 @@ void swaylock_log_init(enum log_importance verbosity);
 void _swaylock_log(enum log_importance verbosity, const char *format, ...)
 	_ATTRIB_PRINTF(2, 3);
 
+void _swaylock_trace(const char *file, int line, const char *func);
+
 const char *_swaylock_strip_path(const char *filepath);
 
 #define swaylock_log(verb, fmt, ...) \
@@ -32,5 +35,8 @@ const char *_swaylock_strip_path(const char *filepath);
 
 #define swaylock_log_errno(verb, fmt, ...) \
 	swaylock_log(verb, fmt ": %s", ##__VA_ARGS__, strerror(errno))
+
+#define swaylock_trace() \
+	_swaylock_trace(__FILE__, __LINE__, __func__)
 
 #endif
