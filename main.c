@@ -192,6 +192,7 @@ int lenient_strcmp(char *a, char *b) {
 }
 
 static int daemonize_start() {
+	swaylock_trace();
 	int fds[2];
 	if (pipe(fds) != 0) {
 		swaylock_log(LOG_ERROR, "Failed to pipe");
@@ -223,6 +224,7 @@ static int daemonize_start() {
 }
 
 static void daemonize_done(void *fdptr) {
+	swaylock_trace();
 	int fd = *(int *)fdptr;
 	uint8_t success = 1;
 	if (write(fd, &success, 1) != 1) {
@@ -233,6 +235,8 @@ static void daemonize_done(void *fdptr) {
 }
 
 static void destroy_surface(struct swaylock_surface *surface) {
+	swaylock_log(LOG_DEBUG, "Destroy surface for output %s", surface->output_name);
+
 	wl_list_remove(&surface->link);
 	if (surface->layer_surface != NULL) {
 		zwlr_layer_surface_v1_destroy(surface->layer_surface);
@@ -319,6 +323,7 @@ static void create_layer_surface(struct swaylock_surface *surface) {
 }
 
 static void initially_render_surface(struct swaylock_surface *surface) {
+	swaylock_log(LOG_DEBUG, "Surface for output %s ready", surface->output_name);
 	if (surface_is_opaque(surface) &&
 			surface->state->args.mode != BACKGROUND_MODE_CENTER &&
 			surface->state->args.mode != BACKGROUND_MODE_FIT) {
@@ -337,6 +342,7 @@ static void initially_render_surface(struct swaylock_surface *surface) {
 static void layer_surface_configure(void *data,
 		struct zwlr_layer_surface_v1 *layer_surface,
 		uint32_t serial, uint32_t width, uint32_t height) {
+	swaylock_trace();
 	struct swaylock_surface *surface = data;
 	surface->width = width;
 	surface->height = height;
@@ -351,6 +357,7 @@ static void layer_surface_configure(void *data,
 
 static void layer_surface_closed(void *data,
 		struct zwlr_layer_surface_v1 *layer_surface) {
+	swaylock_trace();
 	struct swaylock_surface *surface = data;
 	destroy_surface(surface);
 }
@@ -412,6 +419,7 @@ static void handle_wl_output_geometry(void *data, struct wl_output *wl_output,
 		int32_t x, int32_t y, int32_t width_mm, int32_t height_mm,
 		int32_t subpixel, const char *make, const char *model,
 		int32_t transform) {
+	swaylock_trace();
 	struct swaylock_surface *surface = data;
 	surface->subpixel = subpixel;
 	surface->transform = transform;
@@ -431,6 +439,7 @@ static void handle_wl_output_done(void *data, struct wl_output *output) {
 
 static void handle_wl_output_scale(void *data, struct wl_output *output,
 		int32_t factor) {
+	swaylock_trace();
 	struct swaylock_surface *surface = data;
 	surface->scale = factor;
 	if (surface->state->run_display) {
@@ -484,29 +493,31 @@ static struct wl_buffer *create_shm_buffer(struct wl_shm *shm, enum wl_shm_forma
 	return buffer;
 }
 
+static cairo_surface_t *apply_effects(cairo_surface_t *image, struct swaylock_state *state, int scale) {
+	if (state->args.effects_count == 0) {
+		return image;
+	}
+
+	if (state->args.time_effects) {
+		return swaylock_effects_run_timed(
+				image, scale,
+				state->args.effects, state->args.effects_count);
+	} else {
+		return swaylock_effects_run(
+				image, scale,
+				state->args.effects, state->args.effects_count);
+	}
+}
+
 static void handle_screencopy_frame_buffer(void *data,
 		struct zwlr_screencopy_frame_v1 *frame, uint32_t format, uint32_t width,
 		uint32_t height, uint32_t stride) {
+	swaylock_trace();
 	struct swaylock_surface *surface = data;
 
 	struct swaylock_image *image = calloc(1, sizeof(struct swaylock_image));
 	image->path = NULL;
 	image->output_name = surface->output_name;
-
-	struct swaylock_image *iter_image, *temp;
-	wl_list_for_each_safe(iter_image, temp, &surface->state->images, link) {
-		if (lenient_strcmp(iter_image->output_name, image->output_name) == 0) {
-			swaylock_log(LOG_DEBUG,
-					"Replacing image defined for output %s with screenshot",
-					image->output_name);
-			wl_list_remove(&iter_image->link);
-			free(iter_image->cairo_surface);
-			free(iter_image->output_name);
-			free(iter_image->path);
-			free(iter_image);
-			break;
-		}
-	}
 
 	void *bufdata;
 	struct wl_buffer *buf = create_shm_buffer(surface->state->shm, format, width, height, stride, &bufdata);
@@ -524,13 +535,11 @@ static void handle_screencopy_frame_buffer(void *data,
 	surface->screencopy.data = bufdata;
 
 	zwlr_screencopy_frame_v1_copy(frame, buf);
-
-	wl_list_insert(&surface->state->images, &image->link);
-	swaylock_log(LOG_DEBUG, "Loaded screenshot for output %s", surface->output_name);
 }
 
 static void handle_screencopy_frame_flags(void *data,
 		struct zwlr_screencopy_frame_v1 *frame, uint32_t flags) {
+	swaylock_trace();
 	struct swaylock_surface *surface = data;
 
 	// The transform affecting a screenshot consists of three parts:
@@ -575,22 +584,10 @@ static void handle_screencopy_frame_flags(void *data,
 	}
 }
 
-static void apply_surface_effects(cairo_surface_t *image, struct swaylock_surface *surface) {
-	struct swaylock_state *state = surface->state;
-	if (surface->state->args.time_effects) {
-		surface->image = swaylock_effects_run_timed(
-				image, surface->scale,
-				state->args.effects, state->args.effects_count);
-	} else {
-		surface->image = swaylock_effects_run(
-				image, surface->scale,
-				state->args.effects, state->args.effects_count);
-	}
-}
-
 static void handle_screencopy_frame_ready(void *data,
 		struct zwlr_screencopy_frame_v1 *frame, uint32_t tv_sec_hi,
 		uint32_t tv_sec_lo, uint32_t tv_nsec) {
+	swaylock_trace();
 	struct swaylock_surface *surface = data;
 	struct swaylock_state *state = surface->state;
 
@@ -603,12 +600,14 @@ static void handle_screencopy_frame_ready(void *data,
 			surface->screencopy.transform);
 	if (image == NULL) {
 		swaylock_log(LOG_ERROR, "Failed to create image from screenshot");
-	} else if (state->args.effects_count > 0) {
-		apply_surface_effects(image, surface);
-	} else {
-		surface->image = image;
+	} else  {
+		surface->screencopy.image->cairo_surface =
+			apply_effects(image, state, surface->scale);
+		surface->image = surface->screencopy.image->cairo_surface;
 	}
 
+	swaylock_log(LOG_DEBUG, "Loaded screenshot for output %s", surface->output_name);
+	wl_list_insert(&state->images, &surface->screencopy.image->link);
 	if (--surface->events_pending == 0) {
 		initially_render_surface(surface);
 	}
@@ -616,6 +615,7 @@ static void handle_screencopy_frame_ready(void *data,
 
 static void handle_screencopy_frame_failed(void *data,
 		struct zwlr_screencopy_frame_v1 *frame) {
+	swaylock_trace();
 	struct swaylock_surface *surface = data;
 	swaylock_log(LOG_ERROR, "Screencopy failed");
 
@@ -643,6 +643,7 @@ static void handle_xdg_output_logical_position(void *data,
 
 static void handle_xdg_output_name(void *data, struct zxdg_output_v1 *output,
 		const char *name) {
+	swaylock_trace();
 	swaylock_log(LOG_DEBUG, "output name is %s", name);
 	struct swaylock_surface *surface = data;
 	surface->xdg_output = output;
@@ -655,6 +656,7 @@ static void handle_xdg_output_description(void *data, struct zxdg_output_v1 *out
 }
 
 static void handle_xdg_output_done(void *data, struct zxdg_output_v1 *output) {
+	swaylock_trace();
 	struct swaylock_surface *surface = data;
 	struct swaylock_state *state = surface->state;
 	cairo_surface_t *new_image = select_image(surface->state, surface);
@@ -673,7 +675,12 @@ static void handle_xdg_output_done(void *data, struct zxdg_output_v1 *output) {
 			has_printed_screencopy_error = true;
 		}
 	} else if (new_image != NULL) {
-		apply_surface_effects(new_image, surface);
+		if (state->args.screenshots) {
+			swaylock_log(LOG_DEBUG,
+					"Using existing image instead of taking a screenshot for output %s.",
+					surface->output_name);
+		}
+		surface->image = new_image;
 	}
 
 	if (--surface->events_pending == 0) {
@@ -841,6 +848,7 @@ static void load_image(char *arg, struct swaylock_state *state) {
 		free(image);
 		return;
 	}
+
 	wl_list_insert(&state->images, &image->link);
 	swaylock_log(LOG_DEBUG, "Loaded image %s for output %s", image->path,
 			image->output_name ? image->output_name : "*");
@@ -895,6 +903,7 @@ enum line_mode {
 static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		enum line_mode *line_mode, char **config_path) {
 	enum long_option_codes {
+		LO_TRACE,
 		LO_BS_HL_COLOR = 256,
 		LO_CAPS_LOCK_BS_HL_COLOR,
 		LO_CAPS_LOCK_KEY_HL_COLOR,
@@ -953,6 +962,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"config", required_argument, NULL, 'C'},
 		{"color", required_argument, NULL, 'c'},
 		{"debug", no_argument, NULL, 'd'},
+		{"trace", no_argument, NULL, LO_TRACE},
 		{"ignore-empty-password", no_argument, NULL, 'e'},
 		{"daemonize", no_argument, NULL, 'f'},
 		{"help", no_argument, NULL, 'h'},
@@ -1033,6 +1043,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Turn the screen into the given color instead of white.\n"
 		"  -d, --debug                      "
 			"Enable debugging output.\n"
+		"  -t, --trace                      "
+			"Enable tracing output.\n"
 		"  -e, --ignore-empty-password      "
 			"When an empty password is provided, do not validate it.\n"
 		"  -F, --show-failed-attempts       "
@@ -1201,6 +1213,9 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		case 'd':
 			swaylock_log_init(LOG_DEBUG);
 			break;
+		case LO_TRACE:
+			swaylock_log_init(LOG_TRACE);
+			break;
 		case 'e':
 			if (state) {
 				state->args.ignore_empty = true;
@@ -1264,7 +1279,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 				}
 			}
 			break;
-		case 't':
+		case 'T':
 			if (state) {
 				state->args.mode = BACKGROUND_MODE_TILE;
 			}
@@ -1763,6 +1778,13 @@ int main(int argc, char **argv) {
 			free(state.args.font);
 			return result;
 		}
+	}
+
+	// Need to apply effects to all images loaded with --image
+	struct swaylock_image *iter_image, *temp;
+	wl_list_for_each_safe(iter_image, temp, &state.images, link) {
+		iter_image->cairo_surface = apply_effects(
+				iter_image->cairo_surface, &state, 1);
 	}
 
 	if (line_mode == LM_INSIDE) {
