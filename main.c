@@ -575,6 +575,19 @@ static void handle_screencopy_frame_flags(void *data,
 	}
 }
 
+static void apply_surface_effects(cairo_surface_t *image, struct swaylock_surface *surface) {
+	struct swaylock_state *state = surface->state;
+	if (surface->state->args.time_effects) {
+		surface->image = swaylock_effects_run_timed(
+				image, surface->scale,
+				state->args.effects, state->args.effects_count);
+	} else {
+		surface->image = swaylock_effects_run(
+				image, surface->scale,
+				state->args.effects, state->args.effects_count);
+	}
+}
+
 static void handle_screencopy_frame_ready(void *data,
 		struct zwlr_screencopy_frame_v1 *frame, uint32_t tv_sec_hi,
 		uint32_t tv_sec_lo, uint32_t tv_nsec) {
@@ -591,15 +604,7 @@ static void handle_screencopy_frame_ready(void *data,
 	if (image == NULL) {
 		swaylock_log(LOG_ERROR, "Failed to create image from screenshot");
 	} else if (state->args.effects_count > 0) {
-		if (state->args.time_effects) {
-			surface->image = swaylock_effects_run_timed(
-					image, surface->scale,
-					state->args.effects, state->args.effects_count);
-		} else {
-			surface->image = swaylock_effects_run(
-					image, surface->scale,
-					state->args.effects, state->args.effects_count);
-		}
+		apply_surface_effects(image, surface);
 	} else {
 		surface->image = image;
 	}
@@ -667,8 +672,8 @@ static void handle_xdg_output_done(void *data, struct zxdg_output_v1 *output) {
 					"screenshots will not work");
 			has_printed_screencopy_error = true;
 		}
-	} else {
-		surface->image = new_image;
+	} else if (new_image != NULL) {
+		apply_surface_effects(new_image, surface);
 	}
 
 	if (--surface->events_pending == 0) {
