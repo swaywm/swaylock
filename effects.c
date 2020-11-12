@@ -281,7 +281,7 @@ static void effect_pixelate(uint32_t *data, int width, int height, int scale, in
 			for (int ry = ystart; ry < ylim; ++ry) {
 				for (int rx = xstart; rx < xlim; ++rx) {
 					int index = ry * width + rx;
-					data[index] = r << 16 | g << 8 | b;
+					data[index] = (data[index] & 0xff000000ul) | r << 16 | g << 8 | b;
 				}
 			}
 		}
@@ -318,7 +318,7 @@ static void effect_greyscale(uint32_t *data, int width, int height) {
 			if (luma < 0) luma = 0;
 			if (luma > 255) luma = 255;
 			luma &= 0xFF;
-			data[index] = luma << 16 | luma << 8 | luma;
+			data[index] = (data[index] & 0xff000000ul) | luma << 16 | luma << 8 | luma;
 		}
 	}
 }
@@ -345,7 +345,7 @@ static void effect_vignette(uint32_t *data, int width, int height,
 			g = (int)(g * vignette_factor) & 0xFF;
 			b = (int)(b * vignette_factor) & 0xFF;
 
-			data[index] = r << 16 | g << 8 | b;
+			data[index] = (data[index] & 0xff000000ul) | r << 16 | g << 8 | b;
 		}
 	}
 }
