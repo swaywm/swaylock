@@ -225,13 +225,18 @@ static int daemonize_start() {
 
 static void daemonize_done(void *fdptr) {
 	swaylock_trace();
-	int fd = *(int *)fdptr;
+	int *fd = (int *)fdptr;
+	if (*fd < 0) {
+		return;
+	}
+
 	uint8_t success = 1;
-	if (write(fd, &success, 1) != 1) {
+	if (write(*fd, &success, 1) != 1) {
 		swaylock_log(LOG_ERROR, "Failed to tell parent process that daemonization is done");
 		exit(1);
 	}
-	close(fd);
+	close(*fd);
+	*fd = -1;
 }
 
 static void destroy_surface(struct swaylock_surface *surface) {
@@ -1780,13 +1785,6 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	// Need to apply effects to all images loaded with --image
-	struct swaylock_image *iter_image, *temp;
-	wl_list_for_each_safe(iter_image, temp, &state.images, link) {
-		iter_image->cairo_surface = apply_effects(
-				iter_image->cairo_surface, &state, 1);
-	}
-
 	if (line_mode == LM_INSIDE) {
 		state.args.colors.line = state.args.colors.inside;
 	} else if (line_mode == LM_RING) {
@@ -1835,6 +1833,20 @@ int main(int argc, char **argv) {
 		return 2;
 	}
 
+	// Must daemonize before we run any effects, since effects use openmp
+	int daemonfd;
+	if (state.args.daemonize) {
+		wl_display_roundtrip(state.display);
+		daemonfd = daemonize_start();
+	}
+
+	// Need to apply effects to all images loaded with --image
+	struct swaylock_image *iter_image, *temp;
+	wl_list_for_each_safe(iter_image, temp, &state.images, link) {
+		iter_image->cairo_surface = apply_effects(
+				iter_image->cairo_surface, &state, 1);
+	}
+
 	struct swaylock_surface *surface;
 	wl_list_for_each(surface, &state.surfaces, link) {
 		create_layer_surface(surface);
@@ -1844,12 +1856,6 @@ int main(int argc, char **argv) {
 		while (surface->events_pending > 0) {
 			wl_display_roundtrip(state.display);
 		}
-	}
-
-	int daemonfd;
-	if (state.args.daemonize) {
-		wl_display_roundtrip(state.display);
-		daemonfd = daemonize_start();
 	}
 
 	state.eventloop = loop_create();
@@ -1880,6 +1886,10 @@ int main(int argc, char **argv) {
 			break;
 		}
 		loop_poll(state.eventloop);
+	}
+
+	if (state.args.daemonize && state.args.fade_in) {
+		daemonize_done(&daemonfd); // In case we exit before --fade-in timeout
 	}
 
 	free(state.args.font);
