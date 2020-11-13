@@ -281,7 +281,7 @@ static void effect_pixelate(uint32_t *data, int width, int height, int scale, in
 			for (int ry = ystart; ry < ylim; ++ry) {
 				for (int rx = xstart; rx < xlim; ++rx) {
 					int index = ry * width + rx;
-					data[index] = (data[index] & 0xff000000ul) | r << 16 | g << 8 | b;
+					data[index] = r << 16 | g << 8 | b;
 				}
 			}
 		}
@@ -318,7 +318,7 @@ static void effect_greyscale(uint32_t *data, int width, int height) {
 			if (luma < 0) luma = 0;
 			if (luma > 255) luma = 255;
 			luma &= 0xFF;
-			data[index] = (data[index] & 0xff000000ul) | luma << 16 | luma << 8 | luma;
+			data[index] = luma << 16 | luma << 8 | luma;
 		}
 	}
 }
@@ -345,7 +345,7 @@ static void effect_vignette(uint32_t *data, int width, int height,
 			g = (int)(g * vignette_factor) & 0xFF;
 			b = (int)(b * vignette_factor) & 0xFF;
 
-			data[index] = (data[index] & 0xff000000ul) | r << 16 | g << 8 | b;
+			data[index] = r << 16 | g << 8 | b;
 		}
 	}
 }
@@ -685,8 +685,37 @@ static cairo_surface_t *run_effect(cairo_surface_t *surface, int scale,
 	return surface;
 }
 
+static cairo_surface_t *ensure_format(cairo_surface_t *surface) {
+	if (cairo_image_surface_get_format(surface) == CAIRO_FORMAT_RGB24) {
+		return surface;
+	}
+
+	swaylock_log(LOG_DEBUG, "Have to convert surface to CAIRO_FORMAT_RGB24 from %i.",
+			(int)cairo_image_surface_get_format(surface));
+
+	cairo_surface_t *surf = cairo_image_surface_create(
+			CAIRO_FORMAT_RGB24,
+			cairo_image_surface_get_width(surface),
+			cairo_image_surface_get_height(surface));
+	if (cairo_surface_status(surf) != CAIRO_STATUS_SUCCESS) {
+		swaylock_log(LOG_ERROR, "Failed to create surface for scale effect");
+		cairo_surface_destroy(surf);
+		return NULL;
+	}
+
+	memcpy(
+			cairo_image_surface_get_data(surf),
+			cairo_image_surface_get_data(surface),
+			cairo_image_surface_get_stride(surface) * cairo_image_surface_get_height(surface));
+	cairo_surface_destroy(surface);
+	return surf;
+}
+
 cairo_surface_t *swaylock_effects_run(cairo_surface_t *surface, int scale,
 		struct swaylock_effect *effects, int count) {
+	surface = ensure_format(surface);
+	if (surface == NULL) return NULL;
+
 	for (int i = 0; i < count; ++i) {
 		struct swaylock_effect *effect = &effects[i];
 		surface = run_effect(surface, scale, effect);
@@ -702,6 +731,9 @@ cairo_surface_t *swaylock_effects_run_timed(cairo_surface_t *surface, int scale,
 		struct swaylock_effect *effects, int count) {
 	struct timespec start_tv;
 	clock_gettime(CLOCK_MONOTONIC, &start_tv);
+
+	surface = ensure_format(surface);
+	if (surface == NULL) return NULL;
 
 	fprintf(stderr, "Running %i effects:\n", count);
 	for (int i = 0; i < count; ++i) {
