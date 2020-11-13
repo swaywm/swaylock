@@ -18,7 +18,6 @@ add_project_arguments(
 		'-Wundef',
 		'-Wvla',
 		'-fopenmp',
-		'-O3',
 		'-mtune=native',
 	],
 	language: 'c',
