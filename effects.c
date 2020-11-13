@@ -713,13 +713,13 @@ cairo_surface_t *swaylock_effects_run_timed(cairo_surface_t *surface, int scale,
 
 		struct timespec effect_end_tv;
 		clock_gettime(CLOCK_MONOTONIC, &effect_end_tv);
-		printf("    %s: %fms\n", effect_name(effect),
+		fprintf(stderr, "    %s: %fms\n", effect_name(effect),
 				TIME_DELTA(effect_start_tv, effect_end_tv));
 	}
 
 	struct timespec end_tv;
 	clock_gettime(CLOCK_MONOTONIC, &end_tv);
-	printf("Effects took %fms.\n", TIME_DELTA(start_tv, end_tv));
+	fprintf(stderr, "Effects took %fms.\n", TIME_DELTA(start_tv, end_tv));
 
 	return surface;
 }
