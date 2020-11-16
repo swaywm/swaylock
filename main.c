@@ -464,7 +464,7 @@ static struct wl_buffer *create_shm_buffer(struct wl_shm *shm, enum wl_shm_forma
 	int size = stride * height;
 
 	const char shm_name[] = "/swaylock-shm";
-	int fd = shm_open(shm_name, O_RDWR | O_CREAT | O_EXCL, 0);
+	int fd = shm_open(shm_name, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
 	if (fd < 0) {
 		fprintf(stderr, "shm_open failed\n");
 		return NULL;
