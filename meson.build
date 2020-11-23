@@ -18,7 +18,6 @@ add_project_arguments(
 		'-Wundef',
 		'-Wvla',
 		'-fopenmp',
-		'-mtune=native',
 	],
 	language: 'c',
 )
@@ -43,6 +42,15 @@ add_project_arguments(
 if is_freebsd
 	add_project_arguments('-D_C11_SOURCE', language: 'c')
 endif
+
+test_cflags = [
+	'-mtune=native',
+]
+foreach cflag : test_cflags
+	if cc.has_argument(cflag)
+		add_project_arguments(cflag, language: 'c')
+	endif
+endforeach
 
 wayland_client = dependency('wayland-client')
 wayland_protos = dependency('wayland-protocols', version: '>=1.14')
