@@ -119,6 +119,7 @@ static bool surface_is_opaque(struct swaylock_surface *surface) {
 }
 
 struct zxdg_output_v1_listener _xdg_output_listener;
+static const struct wl_callback_listener surface_ready_listener;
 
 static void create_layer_surface(struct swaylock_surface *surface) {
 	struct swaylock_state *state = surface->state;
@@ -131,7 +132,6 @@ static void create_layer_surface(struct swaylock_surface *surface) {
 				state->zxdg_output_manager, surface->output);
 		zxdg_output_v1_add_listener(
 				surface->xdg_output, &_xdg_output_listener, surface);
-		surface->events_pending += 1;
 	} else if (!has_printed_zxdg_error) {
 		swaylock_log(LOG_INFO, "Compositor does not support zxdg output "
 				"manager, images assigned to named outputs will not work");
@@ -163,9 +163,12 @@ static void create_layer_surface(struct swaylock_surface *surface) {
 			surface->layer_surface, true);
 	zwlr_layer_surface_v1_add_listener(surface->layer_surface,
 			&layer_surface_listener, surface);
-	surface->events_pending += 1;
 
 	wl_surface_commit(surface->surface);
+
+	wl_callback_add_listener(
+			wl_display_sync(surface->state->display),
+			&surface_ready_listener, surface);
 }
 
 static void initially_render_surface(struct swaylock_surface *surface) {
@@ -183,6 +186,17 @@ static void initially_render_surface(struct swaylock_surface *surface) {
 	render_frame(surface);
 }
 
+static void handle_surface_ready(void *data, struct wl_callback *callback,
+		uint32_t time) {
+	struct swaylock_surface *surface = (struct swaylock_surface *)data;
+	initially_render_surface(surface);
+	surface->ready = true;
+}
+
+static const struct wl_callback_listener surface_ready_listener = {
+	.done = handle_surface_ready,
+};
+
 static void layer_surface_configure(void *data,
 		struct zwlr_layer_surface_v1 *layer_surface,
 		uint32_t serial, uint32_t width, uint32_t height) {
@@ -192,10 +206,6 @@ static void layer_surface_configure(void *data,
 	surface->indicator_width = 1;
 	surface->indicator_height = 1;
 	zwlr_layer_surface_v1_ack_configure(layer_surface, serial);
-
-	if (--surface->events_pending == 0) {
-		initially_render_surface(surface);
-	}
 }
 
 static void layer_surface_closed(void *data,
@@ -309,10 +319,6 @@ static void handle_xdg_output_name(void *data, struct zxdg_output_v1 *output,
 		cairo_surface_t *new_image = select_image(surface->state, surface);
 		if (new_image != surface->image) {
 			surface->image = new_image;
-		}
-
-		if (--surface->events_pending == 0) {
-			initially_render_surface(surface);
 		}
 	}
 }
@@ -1236,7 +1242,7 @@ int main(int argc, char **argv) {
 	}
 
 	wl_list_for_each(surface, &state.surfaces, link) {
-		while (surface->events_pending > 0) {
+		while (surface->ready > 0) {
 			wl_display_roundtrip(state.display);
 		}
 	}
