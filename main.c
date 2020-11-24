@@ -304,6 +304,17 @@ static void handle_xdg_output_name(void *data, struct zxdg_output_v1 *output,
 	struct swaylock_surface *surface = data;
 	surface->xdg_output = output;
 	surface->output_name = strdup(name);
+
+	if (surface->output_name != NULL) {
+		cairo_surface_t *new_image = select_image(surface->state, surface);
+		if (new_image != surface->image) {
+			surface->image = new_image;
+		}
+
+		if (--surface->events_pending == 0) {
+			initially_render_surface(surface);
+		}
+	}
 }
 
 static void handle_xdg_output_description(void *data, struct zxdg_output_v1 *output,
@@ -312,15 +323,7 @@ static void handle_xdg_output_description(void *data, struct zxdg_output_v1 *out
 }
 
 static void handle_xdg_output_done(void *data, struct zxdg_output_v1 *output) {
-	struct swaylock_surface *surface = data;
-	cairo_surface_t *new_image = select_image(surface->state, surface);
-	if (new_image != surface->image) {
-		surface->image = new_image;
-	}
-
-	if (--surface->events_pending == 0) {
-		initially_render_surface(surface);
-	}
+	// Who cares
 }
 
 struct zxdg_output_v1_listener _xdg_output_listener = {
