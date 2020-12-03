@@ -71,6 +71,7 @@ implement them), new feature implementations are welcome as pull requests :)
 * Fedora (Copr): [swaylock-effects](https://copr.fedorainfracloud.org/coprs/eddsalkield/swaylock-effects/)
   (thanks to Edd Salkield)
 * FreeBSD: [swaylock-effects](https://www.freshports.org/x11/swaylock-effects/)
+* Gentoo (GURU overlay): [swaylock-effects](https://gpo.zugaina.org/Overlays/guru/gui-apps/swaylock-effects)
 
 ### Compiling from Source
 
