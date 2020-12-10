@@ -43,6 +43,10 @@ if is_freebsd
 	add_project_arguments('-D_C11_SOURCE', language: 'c')
 endif
 
+if get_option('sse')
+	add_project_arguments('-DUSE_SSE', language: 'c')
+endif
+
 test_cflags = [
 	'-mtune=native',
 ]

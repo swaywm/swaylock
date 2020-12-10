@@ -15,7 +15,7 @@ double get_time() {
 }
 #endif
 
-#ifdef __SSE2__
+#if defined(USE_SSE) && defined(__SSE2__)
 #define set_alpha set_alpha_sse
 
 #include <immintrin.h>
