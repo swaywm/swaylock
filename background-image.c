@@ -4,6 +4,40 @@
 #include "log.h"
 #include "swaylock.h"
 
+// Cairo RGB24 uses 32 bits per pixel, as XRGB, in native endianness.
+// xrgb32_le uses 32 bits per pixel, as XRGB, little endian.
+void cairo_rgb24_from_xrgb32_le(uint32_t *buf, int width, int height, int stride) {
+	unsigned char *src = (unsigned char *)buf;
+
+	for (int y = 0; y < height; ++y) {
+		for (int x = 0; x < width; ++x) {
+			unsigned char *srcpix = src + width * stride + x * 4;
+			uint32_t *destpix = buf + width * stride + x;
+			*destpix = 0 |
+				(uint32_t)srcpix[1] << 24 |
+				(uint32_t)srcpix[2] << 8 |
+				(uint32_t)srcpix[3];
+		}
+	}
+}
+
+// Cairo RGB24 uses 32 bits per pixel, as XRGB, in native endianness.
+// xbgr32_le uses 32 bits per pixel, as XRGB, little endian.
+static void cairo_rgb24_from_xbgr32_le(uint32_t *buf, int width, int height, int stride) {
+	unsigned char *src = (unsigned char *)buf;
+
+	for (int y = 0; y < height; ++y) {
+		for (int x = 0; x < width; ++x) {
+			unsigned char *srcpix = src + width * stride + x * 4;
+			uint32_t *destpix = buf + width * stride + x;
+			*destpix = 0 |
+				(uint32_t)srcpix[3] << 24 |
+				(uint32_t)srcpix[2] << 8 |
+				(uint32_t)srcpix[1];
+		}
+	}
+}
+
 enum background_mode parse_background_mode(const char *mode) {
 	if (strcmp(mode, "stretch") == 0) {
 		return BACKGROUND_MODE_STRETCH;
@@ -133,6 +167,31 @@ cairo_surface_t *load_background_from_buffer(void *buf, uint32_t format,
 			}
 		}
 		break;
+	}
+
+	if (format == WL_SHM_FORMAT_XBGR8888 || format == WL_SHM_FORMAT_ABGR8888) {
+		cairo_rgb24_from_xbgr32_le(
+				(uint32_t *)cairo_image_surface_get_data(image),
+				cairo_image_surface_get_width(image),
+				cairo_image_surface_get_height(image),
+				cairo_image_surface_get_stride(image));
+	} else {
+		if (format != WL_SHM_FORMAT_XRGB8888 && format != WL_SHM_FORMAT_ARGB8888) {
+			swaylock_log(LOG_ERROR,
+					"Unknown pixel format: %u. Assuming XRGB32. Colors may look wrong.",
+					format);
+		}
+
+		// If we're little endian, we don't have to do anything
+		int test = 1;
+		bool is_little_endian = *(char *)&test == 1;
+		if (!is_little_endian) {
+			cairo_rgb24_from_xrgb32_le(
+					(uint32_t *)cairo_image_surface_get_data(image),
+					cairo_image_surface_get_width(image),
+					cairo_image_surface_get_height(image),
+					cairo_image_surface_get_stride(image));
+		}
 	}
 
 	return image;
