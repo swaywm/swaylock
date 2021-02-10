@@ -72,18 +72,22 @@ static struct pool_buffer *create_buffer(struct wl_shm *shm,
 	uint32_t stride = width * 4;
 	size_t size = stride * height;
 
-	char *name;
-	int fd = create_pool_file(size, &name);
-	assert(fd != -1);
-	void *data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-	struct wl_shm_pool *pool = wl_shm_create_pool(shm, fd, size);
-	buf->buffer = wl_shm_pool_create_buffer(pool, 0,
-			width, height, stride, format);
-	wl_shm_pool_destroy(pool);
-	close(fd);
-	unlink(name);
-	free(name);
-	fd = -1;
+	void *data = NULL;
+	if (size > 0) {
+		char *name;
+		int fd = create_pool_file(size, &name);
+		assert(fd != -1);
+		data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+		struct wl_shm_pool *pool = wl_shm_create_pool(shm, fd, size);
+		buf->buffer = wl_shm_pool_create_buffer(pool, 0,
+				width, height, stride, format);
+		wl_buffer_add_listener(buf->buffer, &buffer_listener, buf);
+		wl_shm_pool_destroy(pool);
+		close(fd);
+		unlink(name);
+		free(name);
+		fd = -1;
+	}
 
 	buf->size = size;
 	buf->width = width;
@@ -92,8 +96,6 @@ static struct pool_buffer *create_buffer(struct wl_shm *shm,
 	buf->surface = cairo_image_surface_create_for_data(data,
 			CAIRO_FORMAT_ARGB32, width, height, stride);
 	buf->cairo = cairo_create(buf->surface);
-
-	wl_buffer_add_listener(buf->buffer, &buffer_listener, buf);
 	return buf;
 }
 
