@@ -64,7 +64,7 @@ void render_frame_background(struct swaylock_surface *surface) {
 
 	wl_surface_set_buffer_scale(surface->surface, surface->scale);
 	wl_surface_attach(surface->surface, surface->current_buffer->buffer, 0, 0);
-	wl_surface_damage(surface->surface, 0, 0, surface->width, surface->height);
+	wl_surface_damage_buffer(surface->surface, 0, 0, INT32_MAX, INT32_MAX);
 	wl_surface_commit(surface->surface);
 }
 
@@ -315,7 +315,7 @@ void render_frame(struct swaylock_surface *surface) {
 
 	wl_surface_set_buffer_scale(surface->child, surface->scale);
 	wl_surface_attach(surface->child, surface->current_buffer->buffer, 0, 0);
-	wl_surface_damage(surface->child, 0, 0, surface->current_buffer->width, surface->current_buffer->height);
+	wl_surface_damage_buffer(surface->child, 0, 0, INT32_MAX, INT32_MAX);
 	wl_surface_commit(surface->child);
 
 	wl_surface_commit(surface->surface);
