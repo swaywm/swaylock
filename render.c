@@ -269,7 +269,7 @@ void render_frame(struct swaylock_surface *surface) {
 				arc_radius + arc_thickness / 2, 0, 2 * M_PI);
 		cairo_stroke(cairo);
 
-		// display layout text seperately
+		// display layout text separately
 		if (layout_text) {
 			cairo_text_extents_t extents;
 			cairo_font_extents_t fe;
