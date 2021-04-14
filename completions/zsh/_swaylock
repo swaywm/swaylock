@@ -9,6 +9,7 @@ _arguments -s \
 	'(--caps-lock-key-hl-color)'--caps-lock-key-hl-color'[Sets the color of the key press highlight segments when Caps Lock is active]:color:' \
 	'(--color -c)'{--color,-c}'[Turn the screen into the given color instead of white]:color:' \
 	'(--config -C)'{--config,-C}'[Path to the config file]:filename:_files' \
+	'(--pam -P)'{--pam,-P}'[PAM service name]:filename:->pam_service' \
 	'(--daemonize -f)'{--daemonize,-f}'[Detach from the controlling terminal after locking]' \
 	'(--debug -d)'{--debug,-d}'[Enable debugging output]' \
 	'(--disable-caps-lock-text -L)'{--disable-caps-lock-text,-L}'[Disable the Caps Lock text]' \
@@ -57,3 +58,10 @@ _arguments -s \
 	'(--text-wrong-color)'--text-wrong-color'[Sets the color of the text when invalid]:color:' \
 	'(--tiling -t)'{--tiling,-t}'[Same as --scaling=tile]' \
 	'(--version -v)'{--version,-v}'[Show the version number and quit]'
+case "$state" in
+	"pam_service")
+		local -a pam_services
+		pam_services=($(ls /etc/pam.d/))
+		_multi_parts / pam_services
+	;;
+esac

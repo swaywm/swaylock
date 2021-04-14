@@ -7,6 +7,7 @@ _swaylock()
 
   short=(
     -C
+    -P
     -c
     -d
     -e
@@ -32,6 +33,7 @@ _swaylock()
     --caps-lock-key-hl-color
     --color
     --config
+    --pam
     --daemonize
     --debug
     --disable-caps-lock-text
@@ -92,6 +94,10 @@ _swaylock()
   )
 
   case $prev in
+    -P|--pam)
+      COMPREPLY=($(compgen -W "$(ls /etc/pam.d/)" -- "$cur"))
+      return
+      ;;
     -c|--color)
       return
       ;;
