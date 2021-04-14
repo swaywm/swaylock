@@ -5,11 +5,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <getopt.h>
 #include "comm.h"
 #include "log.h"
 #include "swaylock.h"
 
 static char *pw_buf = NULL;
+static char *pw_pam_service = "swaylock";
 
 void initialize_pw_backend(int argc, char **argv) {
 	if (getuid() != geteuid() || getgid() != getegid()) {
@@ -20,6 +22,25 @@ void initialize_pw_backend(int argc, char **argv) {
 	}
 	if (!spawn_comm_child()) {
 		exit(EXIT_FAILURE);
+	}
+	static struct option long_options[] = {
+		{"pam", required_argument, NULL, 'P'},
+		{NULL, no_argument, NULL, 0}
+	};
+	int c;
+	optind = 1;
+	while(1) {
+		int opt_idx = 0;
+		c = getopt_long(argc, argv, "P:", long_options, &opt_idx);
+		if (c == -1) {
+			break;
+		}
+
+		switch (c) {
+			case 0:
+				pw_pam_service = strdup(optarg);
+				break;
+		}
 	}
 }
 
@@ -78,7 +99,7 @@ void run_pw_backend_child(void) {
 		.appdata_ptr = NULL,
 	};
 	pam_handle_t *auth_handle = NULL;
-	if (pam_start("swaylock", username, &conv, &auth_handle) != PAM_SUCCESS) {
+	if (pam_start(pw_pam_service, username, &conv, &auth_handle) != PAM_SUCCESS) {
 		swaylock_log(LOG_ERROR, "pam_start failed");
 		exit(EXIT_FAILURE);
 	}

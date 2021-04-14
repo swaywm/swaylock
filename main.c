@@ -543,6 +543,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 
 	static struct option long_options[] = {
 		{"config", required_argument, NULL, 'C'},
+		{"pam", required_argument, NULL, 'P'},
 		{"color", required_argument, NULL, 'c'},
 		{"debug", no_argument, NULL, 'd'},
 		{"ignore-empty-password", no_argument, NULL, 'e'},
@@ -603,6 +604,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		"\n"
 		"  -C, --config <config_file>       "
 			"Path to the config file.\n"
+		"  -P, --pam <pam_config>           "
+			"custom pam config (\"swaylock\" by default)\n"
 		"  -c, --color <color>              "
 			"Turn the screen into the given color instead of white.\n"
 		"  -d, --debug                      "
@@ -722,7 +725,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 	optind = 1;
 	while (1) {
 		int opt_idx = 0;
-		c = getopt_long(argc, argv, "c:deFfhi:kKLlnrs:tuvC:", long_options,
+		c = getopt_long(argc, argv, "c:deFfhi:kKLlnrs:tuvC:P:", long_options,
 				&opt_idx);
 		if (c == -1) {
 			break;
@@ -732,6 +735,9 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			if (config_path) {
 				*config_path = strdup(optarg);
 			}
+			break;
+		case 'P':
+			// skipping argument (parsed in pam.c)
 			break;
 		case 'c':
 			if (state) {
