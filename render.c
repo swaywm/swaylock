@@ -134,12 +134,18 @@ void render_frame(struct swaylock_surface *surface) {
 
 	if (state->args.show_indicator && (state->auth_state != AUTH_STATE_IDLE ||
 			state->args.indicator_idle_visible)) {
-		// Draw circle
+		// Fill inner circle
+		cairo_set_line_width(cairo, 0);
+		cairo_arc(cairo, buffer_width / 2, buffer_diameter / 2,
+				arc_radius - arc_thickness / 2, 0, 2 * M_PI);
+		set_color_for_state(cairo, state, &state->args.colors.inside);
+		cairo_fill_preserve(cairo);
+		cairo_stroke(cairo);
+
+		// Draw ring
 		cairo_set_line_width(cairo, arc_thickness);
 		cairo_arc(cairo, buffer_width / 2, buffer_diameter / 2, arc_radius,
 				0, 2 * M_PI);
-		set_color_for_state(cairo, state, &state->args.colors.inside);
-		cairo_fill_preserve(cairo);
 		set_color_for_state(cairo, state, &state->args.colors.ring);
 		cairo_stroke(cairo);
 
