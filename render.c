@@ -311,6 +311,10 @@ void render_frame(struct swaylock_surface *surface) {
 			}
 		}
 
+		// Ensure buffer size is multiple of buffer scale - required by protocol
+		new_height += surface->scale - (new_height % surface->scale);
+		new_width += surface->scale - (new_width % surface->scale);
+
 		if (buffer_width != new_width || buffer_height != new_height) {
 			destroy_buffer(surface->current_buffer);
 			surface->indicator_width = new_width;
