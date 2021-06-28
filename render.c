@@ -310,17 +310,17 @@ void render_frame(struct swaylock_surface *surface) {
 				new_width = extents.width + 2 * box_padding;
 			}
 		}
+	}
 
-		// Ensure buffer size is multiple of buffer scale - required by protocol
-		new_height += surface->scale - (new_height % surface->scale);
-		new_width += surface->scale - (new_width % surface->scale);
+	// Ensure buffer size is multiple of buffer scale - required by protocol
+	new_height += surface->scale - (new_height % surface->scale);
+	new_width += surface->scale - (new_width % surface->scale);
 
-		if (buffer_width != new_width || buffer_height != new_height) {
-			destroy_buffer(surface->current_buffer);
-			surface->indicator_width = new_width;
-			surface->indicator_height = new_height;
-			render_frame(surface);
-		}
+	if (buffer_width != new_width || buffer_height != new_height) {
+		destroy_buffer(surface->current_buffer);
+		surface->indicator_width = new_width;
+		surface->indicator_height = new_height;
+		render_frame(surface);
 	}
 
 	wl_surface_set_buffer_scale(surface->child, surface->scale);
