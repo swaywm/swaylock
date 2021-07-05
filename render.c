@@ -321,6 +321,7 @@ void render_frame(struct swaylock_surface *surface) {
 		surface->indicator_width = new_width;
 		surface->indicator_height = new_height;
 		render_frame(surface);
+		return;
 	}
 
 	wl_surface_set_buffer_scale(surface->child, surface->scale);
