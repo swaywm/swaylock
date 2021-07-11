@@ -1059,7 +1059,7 @@ static int load_config(char *path, struct swaylock_state *state,
 		char *flag = malloc(nread + 3);
 		if (flag == NULL) {
 			free(line);
-			free(config);
+			fclose(config);
 			swaylock_log(LOG_ERROR, "Failed to allocate memory");
 			return 0;
 		}
