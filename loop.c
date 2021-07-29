@@ -81,7 +81,11 @@ void loop_poll(struct loop *loop) {
 		ms = 0;
 	}
 
-	poll(loop->fds, loop->fd_length, ms);
+	int ret = poll(loop->fds, loop->fd_length, ms);
+	if (ret < 0) {
+		swaylock_log_errno(LOG_ERROR, "poll failed");
+		exit(1);
+	}
 
 	// Dispatch fds
 	size_t fd_index = 0;
