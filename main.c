@@ -11,6 +11,8 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
+#include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
 #include <wayland-client.h>
@@ -57,13 +59,35 @@ int lenient_strcmp(char *a, char *b) {
 	}
 }
 
-static void daemonize(void) {
+static void handle_fork_error(void) {
+	int err = errno;
+
+	swaylock_log(LOG_ERROR, "Fork ERROR %d: %s", err, strerror(err));
+
+	// TODO: If we're forking, we're probably doing so BEFORE we've had
+	//	   a chance to start the crash-restarting process. What should
+	//	   we do here?
+	//	   In, say, the case of ENOMEM, closing the Wayland session and
+	//	   logging out the user could be an option...
+	exit(1);
+}
+
+/// Makes a new process (forks) and disconnects from the original.
+///  Returns a file descriptor. Closing the file descriptor
+/// disconnects from the parent process, allowing it to close.
+static int daemonize(void) {
 	int fds[2];
+	pid_t child_pid;
+
 	if (pipe(fds) != 0) {
 		swaylock_log(LOG_ERROR, "Failed to pipe");
 		exit(1);
 	}
-	if (fork() == 0) {
+
+	child_pid = fork();
+	if (child_pid == -1) {
+		handle_fork_error();
+	} else if (child_pid == 0) {
 		setsid();
 		close(fds[0]);
 		int devnull = open("/dev/null", O_RDWR);
@@ -79,7 +103,11 @@ static void daemonize(void) {
 		if (write(fds[1], &success, 1) != 1) {
 			exit(1);
 		}
-		close(fds[1]);
+
+		// Allow the client to close the communication
+		// file descriptor, allowing a delayed disconnection
+		// from the parent process.
+		return fds[1];
 	} else {
 		close(fds[1]);
 		uint8_t success;
@@ -89,6 +117,60 @@ static void daemonize(void) {
 		}
 		close(fds[0]);
 		exit(0);
+	}
+
+	return -1;
+}
+
+static void start_crash_relauncher(void) {
+	int restart_count = 0;
+	int successful_exit = 0;
+
+	// Fork after the child process stops,
+	// unless it exits successfully.
+	while (!successful_exit) {
+		pid_t child_pid = fork();
+		int err = 0;
+		int child_status = 0;
+
+		if (child_pid == -1) {
+			handle_fork_error();
+		}
+
+		if (child_pid == 0) {
+			// Let the child handle the UI
+			return;
+		}
+
+		do {
+			err = waitpid(child_pid, &child_status, 0);
+		} while (err == -1 && errno == EINTR);
+
+		// TODO: Should we restart the child even if it exits with, say, code 1?
+		//   ^^ Use WIFEXITSTATUS(...) for this ^^
+		// Check whether the child exited normally.
+		successful_exit = WIFEXITED(child_status);
+		if (!successful_exit) {
+			swaylock_log(LOG_ERROR,
+					"Danger! User input process exited abnormally. "
+					"Exit status was %d. "
+					"Attempting to restart it...", child_status);
+
+			restart_count ++;
+		}
+	}
+
+	// The child should return early. If we're here,
+	// we're in the crash relauncher process and need
+	// to cleanup.
+	if (restart_count == 0 && successful_exit) {
+		exit(0);
+	} else {
+		swaylock_log(LOG_ERROR,
+				"Child process crashed %d times, final exit was %s.",
+				restart_count,
+				successful_exit ? "successful" : "unsuccessful");
+		exit(1);
 	}
 }
 
@@ -601,39 +683,39 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 	const char usage[] =
 		"Usage: swaylock [options...]\n"
 		"\n"
-		"  -C, --config <config_file>       "
+		"  -C, --config <config_file>	   "
 			"Path to the config file.\n"
-		"  -c, --color <color>              "
+		"  -c, --color <color>	          "
 			"Turn the screen into the given color instead of white.\n"
-		"  -d, --debug                      "
+		"  -d, --debug	                  "
 			"Enable debugging output.\n"
-		"  -e, --ignore-empty-password      "
+		"  -e, --ignore-empty-password	  "
 			"When an empty password is provided, do not validate it.\n"
-		"  -F, --show-failed-attempts       "
+		"  -F, --show-failed-attempts	   "
 			"Show current count of failed authentication attempts.\n"
-		"  -f, --daemonize                  "
+		"  -f, --daemonize	              "
 			"Detach from the controlling terminal after locking.\n"
-		"  -h, --help                       "
+		"  -h, --help	                   "
 			"Show help message and quit.\n"
 		"  -i, --image [[<output>]:]<path>  "
 			"Display the given image, optionally only on the given output.\n"
-		"  -k, --show-keyboard-layout       "
+		"  -k, --show-keyboard-layout	   "
 			"Display the current xkb layout while typing.\n"
-		"  -K, --hide-keyboard-layout       "
+		"  -K, --hide-keyboard-layout	   "
 			"Hide the current xkb layout while typing.\n"
-		"  -L, --disable-caps-lock-text     "
+		"  -L, --disable-caps-lock-text	 "
 			"Disable the Caps Lock text.\n"
-		"  -l, --indicator-caps-lock        "
+		"  -l, --indicator-caps-lock	    "
 			"Show the current Caps Lock state also on the indicator.\n"
-		"  -s, --scaling <mode>             "
+		"  -s, --scaling <mode>	         "
 			"Image scaling mode: stretch, fill, fit, center, tile, solid_color.\n"
-		"  -t, --tiling                     "
+		"  -t, --tiling	                 "
 			"Same as --scaling=tile.\n"
-		"  -u, --no-unlock-indicator        "
+		"  -u, --no-unlock-indicator	    "
 			"Disable the unlock indicator.\n"
-		"  -v, --version                    "
+		"  -v, --version	                "
 			"Show the version number and quit.\n"
-		"  --bs-hl-color <color>            "
+		"  --bs-hl-color <color>	        "
 			"Sets the color of backspace highlight segments.\n"
 		"  --caps-lock-bs-hl-color <color>  "
 			"Sets the color of backspace highlight segments when Caps Lock "
@@ -641,79 +723,79 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		"  --caps-lock-key-hl-color <color> "
 			"Sets the color of the key press highlight segments when "
 			"Caps Lock is active.\n"
-		"  --font <font>                    "
+		"  --font <font>	                "
 			"Sets the font of the text.\n"
-		"  --font-size <size>               "
+		"  --font-size <size>	           "
 			"Sets a fixed font size for the indicator text.\n"
-		"  --indicator-idle-visible         "
+		"  --indicator-idle-visible	     "
 			"Sets the indicator to show even if idle.\n"
-		"  --indicator-radius <radius>      "
+		"  --indicator-radius <radius>	  "
 			"Sets the indicator radius.\n"
-		"  --indicator-thickness <thick>    "
+		"  --indicator-thickness <thick>	"
 			"Sets the indicator thickness.\n"
-		"  --indicator-x-position <x>       "
+		"  --indicator-x-position <x>	   "
 			"Sets the horizontal position of the indicator.\n"
-		"  --indicator-y-position <y>       "
+		"  --indicator-y-position <y>	   "
 			"Sets the vertical position of the indicator.\n"
-		"  --inside-color <color>           "
+		"  --inside-color <color>	       "
 			"Sets the color of the inside of the indicator.\n"
-		"  --inside-clear-color <color>     "
+		"  --inside-clear-color <color>	 "
 			"Sets the color of the inside of the indicator when cleared.\n"
 		"  --inside-caps-lock-color <color> "
 			"Sets the color of the inside of the indicator when Caps Lock "
 			"is active.\n"
-		"  --inside-ver-color <color>       "
+		"  --inside-ver-color <color>	   "
 			"Sets the color of the inside of the indicator when verifying.\n"
-		"  --inside-wrong-color <color>     "
+		"  --inside-wrong-color <color>	 "
 			"Sets the color of the inside of the indicator when invalid.\n"
-		"  --key-hl-color <color>           "
+		"  --key-hl-color <color>	       "
 			"Sets the color of the key press highlight segments.\n"
-		"  --layout-bg-color <color>        "
+		"  --layout-bg-color <color>	    "
 			"Sets the background color of the box containing the layout text.\n"
-		"  --layout-border-color <color>    "
+		"  --layout-border-color <color>	"
 			"Sets the color of the border of the box containing the layout text.\n"
-		"  --layout-text-color <color>      "
+		"  --layout-text-color <color>	  "
 			"Sets the color of the layout text.\n"
-		"  --line-color <color>             "
+		"  --line-color <color>	         "
 			"Sets the color of the line between the inside and ring.\n"
-		"  --line-clear-color <color>       "
+		"  --line-clear-color <color>	   "
 			"Sets the color of the line between the inside and ring when "
 			"cleared.\n"
 		"  --line-caps-lock-color <color>   "
 			"Sets the color of the line between the inside and ring when "
 			"Caps Lock is active.\n"
-		"  --line-ver-color <color>         "
+		"  --line-ver-color <color>	     "
 			"Sets the color of the line between the inside and ring when "
 			"verifying.\n"
-		"  --line-wrong-color <color>       "
+		"  --line-wrong-color <color>	   "
 			"Sets the color of the line between the inside and ring when "
 			"invalid.\n"
-		"  -n, --line-uses-inside           "
+		"  -n, --line-uses-inside	       "
 			"Use the inside color for the line between the inside and ring.\n"
-		"  -r, --line-uses-ring             "
+		"  -r, --line-uses-ring	         "
 			"Use the ring color for the line between the inside and ring.\n"
-		"  --ring-color <color>             "
+		"  --ring-color <color>	         "
 			"Sets the color of the ring of the indicator.\n"
-		"  --ring-clear-color <color>       "
+		"  --ring-clear-color <color>	   "
 			"Sets the color of the ring of the indicator when cleared.\n"
 		"  --ring-caps-lock-color <color>   "
 			"Sets the color of the ring of the indicator when Caps Lock "
 			"is active.\n"
-		"  --ring-ver-color <color>         "
+		"  --ring-ver-color <color>	     "
 			"Sets the color of the ring of the indicator when verifying.\n"
-		"  --ring-wrong-color <color>       "
+		"  --ring-wrong-color <color>	   "
 			"Sets the color of the ring of the indicator when invalid.\n"
-		"  --separator-color <color>        "
+		"  --separator-color <color>	    "
 			"Sets the color of the lines that separate highlight segments.\n"
-		"  --text-color <color>             "
+		"  --text-color <color>	         "
 			"Sets the color of the text.\n"
-		"  --text-clear-color <color>       "
+		"  --text-clear-color <color>	   "
 			"Sets the color of the text when cleared.\n"
 		"  --text-caps-lock-color <color>   "
 			"Sets the color of the text when Caps Lock is active.\n"
-		"  --text-ver-color <color>         "
+		"  --text-ver-color <color>	     "
 			"Sets the color of the text when verifying.\n"
-		"  --text-wrong-color <color>       "
+		"  --text-wrong-color <color>	   "
 			"Sets the color of the text when invalid.\n"
 		"\n"
 		"All <color> options are of the form <rrggbb[aa]>.\n";
@@ -1081,6 +1163,7 @@ static struct swaylock_state state;
 static void display_in(int fd, short mask, void *data) {
 	if (wl_display_dispatch(state.display) == -1) {
 		state.run_display = false;
+		swaylock_log(LOG_ERROR, "wl_display_dispatch error: %s", strerror(errno));
 	}
 }
 
@@ -1100,6 +1183,7 @@ int main(int argc, char **argv) {
 	swaylock_log_init(LOG_ERROR);
 	initialize_pw_backend(argc, argv);
 	srand(time(NULL));
+
 
 	enum line_mode line_mode = LM_LINE;
 	state.failed_attempts = 0;
@@ -1124,6 +1208,7 @@ int main(int argc, char **argv) {
 	};
 	wl_list_init(&state.images);
 	set_default_colors(&state.args.colors);
+
 
 	char *config_path = NULL;
 	int result = parse_options(argc, argv, NULL, NULL, &config_path);
@@ -1168,6 +1253,16 @@ int main(int argc, char **argv) {
 	}
 #endif
 
+	// We need to start the crash relauncher (and therefore, the daemonizer)
+	// before we connect to the display. Otherwise, the display can become
+	// invalidated...
+	int daemon_parent_comm_id = -1;
+	if (state.args.daemonize) {
+		daemon_parent_comm_id = daemonize();
+	}
+
+	start_crash_relauncher();
+
 	wl_list_init(&state.surfaces);
 	state.xkb.context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 	state.display = wl_display_connect(NULL);
@@ -1178,6 +1273,8 @@ int main(int argc, char **argv) {
 				"WAYLAND_DISPLAY environment variable.");
 		return EXIT_FAILURE;
 	}
+
+	int display_fd = wl_display_get_fd(state.display);
 
 	struct wl_registry *registry = wl_display_get_registry(state.display);
 	wl_registry_add_listener(registry, &registry_listener, &state);
@@ -1218,15 +1315,15 @@ int main(int argc, char **argv) {
 	}
 
 	if (state.args.daemonize) {
-		wl_display_roundtrip(state.display);
-		daemonize();
+		close(daemon_parent_comm_id);
 	}
 
 	state.eventloop = loop_create();
-	loop_add_fd(state.eventloop, wl_display_get_fd(state.display), POLLIN,
+	loop_add_fd(state.eventloop, display_fd, POLLIN,
 			display_in, NULL);
 
 	loop_add_fd(state.eventloop, get_comm_reply_fd(), POLLIN, comm_in, NULL);
+
 
 	state.run_display = true;
 	while (state.run_display) {
