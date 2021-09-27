@@ -189,6 +189,10 @@ Locks your Wayland session.
 *--text-wrong-color* <rrggbb[aa]>
 	Sets the color of the text when invalid.
 
+# MISC
+
+Text input can be cleared by pressing Escape, Ctrl+U, or Ctrl+C.
+
 # AUTHORS
 
 Maintained by Drew DeVault <sir@cmpwn.com>, who is assisted by other open
