@@ -15,6 +15,8 @@
 #include <unistd.h>
 #include <wayland-client.h>
 #include <wordexp.h>
+#include <locale.h>
+#include <libintl.h>
 #include "background-image.h"
 #include "cairo.h"
 #include "comm.h"
@@ -1100,6 +1102,10 @@ int main(int argc, char **argv) {
 	swaylock_log_init(LOG_ERROR);
 	initialize_pw_backend(argc, argv);
 	srand(time(NULL));
+
+	setlocale(LC_ALL, "");
+	bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR);
+	textdomain(GETTEXT_PACKAGE);
 
 	enum line_mode line_mode = LM_LINE;
 	state.failed_attempts = 0;
