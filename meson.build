@@ -3,7 +3,7 @@ project(
 	'c',
 	version: '1.6',
 	license: 'MIT',
-	meson_version: '>=0.48.0',
+	meson_version: '>=0.58.0',
 	default_options: [
 		'c_std=c11',
 		'warning_level=2',
@@ -52,15 +52,15 @@ wayland_scanner = find_program('wayland-scanner')
 
 version = '"@0@"'.format(meson.project_version())
 if git.found()
-	git_commit_hash = run_command([git.path(), 'describe', '--always', '--tags'])
-	git_branch = run_command([git.path(), 'rev-parse', '--abbrev-ref', 'HEAD'])
+	git_commit_hash = run_command([git, 'describe', '--always', '--tags'])
+	git_branch = run_command([git, 'rev-parse', '--abbrev-ref', 'HEAD'])
 	if git_commit_hash.returncode() == 0 and git_branch.returncode() == 0
 		version = '"@0@ (" __DATE__ ", branch \'@1@\')"'.format(git_commit_hash.stdout().strip(), git_branch.stdout().strip())
 	endif
 endif
 add_project_arguments('-DSWAYLOCK_VERSION=@0@'.format(version), language: 'c')
 
-wl_protocol_dir = wayland_protos.get_pkgconfig_variable('pkgdatadir')
+wl_protocol_dir = wayland_protos.get_variable('pkgdatadir')
 
 if wayland_client.version().version_compare('>=1.14.91')
 	code_type = 'private-code'
@@ -175,7 +175,7 @@ if scdoc.found()
 			input: filename,
 			output: output,
 			command: [
-				sh, '-c', '@0@ < @INPUT@ > @1@'.format(scdoc.path(), output)
+				sh, '-c', '@0@ < @INPUT@ > @1@'.format(scdoc.full_path(), output)
 			],
 			install: true,
 			install_dir: '@0@/man@1@'.format(mandir, section)
@@ -199,7 +199,7 @@ if get_option('bash-completions')
 		'completions/bash/swaylock',
 	)
 	if bash_comp.found()
-		bash_install_dir = bash_comp.get_pkgconfig_variable('completionsdir')
+		bash_install_dir = bash_comp.get_variable('completionsdir')
 	else
 		bash_install_dir = datadir + '/bash-completion/completions'
 	endif
@@ -212,7 +212,7 @@ if get_option('fish-completions')
 		'completions/fish/swaylock.fish',
 	)
 	if fish_comp.found()
-		fish_install_dir = fish_comp.get_pkgconfig_variable('completionsdir')
+		fish_install_dir = fish_comp.get_variable('completionsdir')
 	else
 		fish_install_dir = datadir + '/fish/vendor_completions.d'
 	endif
