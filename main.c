@@ -26,6 +26,7 @@
 #include "wlr-input-inhibitor-unstable-v1-client-protocol.h"
 #include "wlr-layer-shell-unstable-v1-client-protocol.h"
 #include "xdg-output-unstable-v1-client-protocol.h"
+#include "ext-session-lock-v1-client-protocol.h"
 
 static uint32_t parse_color(const char *color) {
 	if (color[0] == '#') {
@@ -97,6 +98,9 @@ static void destroy_surface(struct swaylock_surface *surface) {
 	if (surface->layer_surface != NULL) {
 		zwlr_layer_surface_v1_destroy(surface->layer_surface);
 	}
+	if (surface->ext_session_lock_surface_v1 != NULL) {
+		ext_session_lock_surface_v1_destroy(surface->ext_session_lock_surface_v1);
+	}
 	if (surface->surface != NULL) {
 		wl_surface_destroy(surface->surface);
 	}
@@ -109,6 +113,7 @@ static void destroy_surface(struct swaylock_surface *surface) {
 }
 
 static const struct zwlr_layer_surface_v1_listener layer_surface_listener;
+static const struct ext_session_lock_surface_v1_listener ext_session_lock_surface_v1_listener;
 
 static cairo_surface_t *select_image(struct swaylock_state *state,
 		struct swaylock_surface *surface);
@@ -120,7 +125,7 @@ static bool surface_is_opaque(struct swaylock_surface *surface) {
 	return (surface->state->args.colors.background & 0xff) == 0xff;
 }
 
-static void create_layer_surface(struct swaylock_surface *surface) {
+static void create_surface(struct swaylock_surface *surface) {
 	struct swaylock_state *state = surface->state;
 
 	surface->image = select_image(state, surface);
@@ -134,22 +139,28 @@ static void create_layer_surface(struct swaylock_surface *surface) {
 	assert(surface->subsurface);
 	wl_subsurface_set_sync(surface->subsurface);
 
-	surface->layer_surface = zwlr_layer_shell_v1_get_layer_surface(
-			state->layer_shell, surface->surface, surface->output,
-			ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY, "lockscreen");
-	assert(surface->layer_surface);
+	if (state->ext_session_lock_v1) {
+		surface->ext_session_lock_surface_v1 = ext_session_lock_v1_get_lock_surface(
+				state->ext_session_lock_v1, surface->surface, surface->output);
+		ext_session_lock_surface_v1_add_listener(surface->ext_session_lock_surface_v1,
+				&ext_session_lock_surface_v1_listener, surface);
+	} else {
+		surface->layer_surface = zwlr_layer_shell_v1_get_layer_surface(
+				state->layer_shell, surface->surface, surface->output,
+				ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY, "lockscreen");
 
-	zwlr_layer_surface_v1_set_size(surface->layer_surface, 0, 0);
-	zwlr_layer_surface_v1_set_anchor(surface->layer_surface,
-			ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP |
-			ZWLR_LAYER_SURFACE_V1_ANCHOR_RIGHT |
-			ZWLR_LAYER_SURFACE_V1_ANCHOR_BOTTOM |
-			ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT);
-	zwlr_layer_surface_v1_set_exclusive_zone(surface->layer_surface, -1);
-	zwlr_layer_surface_v1_set_keyboard_interactivity(
-			surface->layer_surface, true);
-	zwlr_layer_surface_v1_add_listener(surface->layer_surface,
-			&layer_surface_listener, surface);
+		zwlr_layer_surface_v1_set_size(surface->layer_surface, 0, 0);
+		zwlr_layer_surface_v1_set_anchor(surface->layer_surface,
+				ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP |
+				ZWLR_LAYER_SURFACE_V1_ANCHOR_RIGHT |
+				ZWLR_LAYER_SURFACE_V1_ANCHOR_BOTTOM |
+				ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT);
+		zwlr_layer_surface_v1_set_exclusive_zone(surface->layer_surface, -1);
+		zwlr_layer_surface_v1_set_keyboard_interactivity(
+				surface->layer_surface, true);
+		zwlr_layer_surface_v1_add_listener(surface->layer_surface,
+				&layer_surface_listener, surface);
+	}
 
 	if (surface_is_opaque(surface) &&
 			surface->state->args.mode != BACKGROUND_MODE_CENTER &&
@@ -161,7 +172,9 @@ static void create_layer_surface(struct swaylock_surface *surface) {
 		wl_region_destroy(region);
 	}
 
-	wl_surface_commit(surface->surface);
+	if (!state->ext_session_lock_v1) {
+		wl_surface_commit(surface->surface);
+	}
 }
 
 static void layer_surface_configure(void *data,
@@ -186,6 +199,23 @@ static void layer_surface_closed(void *data,
 static const struct zwlr_layer_surface_v1_listener layer_surface_listener = {
 	.configure = layer_surface_configure,
 	.closed = layer_surface_closed,
+};
+
+static void ext_session_lock_surface_v1_handle_configure(void *data,
+		struct ext_session_lock_surface_v1 *lock_surface, uint32_t serial,
+		uint32_t width, uint32_t height) {
+	struct swaylock_surface *surface = data;
+	surface->width = width;
+	surface->height = height;
+	surface->indicator_width = 0;
+	surface->indicator_height = 0;
+	ext_session_lock_surface_v1_ack_configure(lock_surface, serial);
+	render_frame_background(surface);
+	render_frame(surface);
+}
+
+static const struct ext_session_lock_surface_v1_listener ext_session_lock_surface_v1_listener = {
+	.configure = ext_session_lock_surface_v1_handle_configure,
 };
 
 static const struct wl_callback_listener surface_frame_listener;
@@ -302,6 +332,21 @@ struct zxdg_output_v1_listener _xdg_output_listener = {
 	.description = handle_xdg_output_description,
 };
 
+static void ext_session_lock_v1_handle_locked(void *data, struct ext_session_lock_v1 *lock) {
+	// Who cares
+}
+
+static void ext_session_lock_v1_handle_finished(void *data, struct ext_session_lock_v1 *lock) {
+	swaylock_log(LOG_ERROR, "Failed to lock session -- "
+			"is another lockscreen running?");
+	exit(2);
+}
+
+static const struct ext_session_lock_v1_listener ext_session_lock_v1_listener = {
+	.locked = ext_session_lock_v1_handle_locked,
+	.finished = ext_session_lock_v1_handle_finished,
+};
+
 static void handle_global(void *data, struct wl_registry *registry,
 		uint32_t name, const char *interface, uint32_t version) {
 	struct swaylock_state *state = data;
@@ -341,9 +386,12 @@ static void handle_global(void *data, struct wl_registry *registry,
 		wl_list_insert(&state->surfaces, &surface->link);
 
 		if (state->run_display) {
-			create_layer_surface(surface);
+			create_surface(surface);
 			wl_display_roundtrip(state->display);
 		}
+	} else if (strcmp(interface, ext_session_lock_manager_v1_interface.name) == 0) {
+		state->ext_session_lock_manager_v1 = wl_registry_bind(registry, name,
+				&ext_session_lock_manager_v1_interface, 1);
 	}
 }
 
@@ -1182,20 +1230,34 @@ int main(int argc, char **argv) {
 	struct wl_registry *registry = wl_display_get_registry(state.display);
 	wl_registry_add_listener(registry, &registry_listener, &state);
 	wl_display_roundtrip(state.display);
-	assert(state.compositor && state.layer_shell && state.shm);
-	if (!state.input_inhibit_manager) {
-		free(state.args.font);
-		swaylock_log(LOG_ERROR, "Compositor does not support the input "
-				"inhibitor protocol, refusing to run insecurely");
+
+	if (!state.compositor || !state.shm) {
+		swaylock_log(LOG_ERROR, "Missing wl_compositor or wl_shm");
 		return 1;
 	}
 
-	zwlr_input_inhibit_manager_v1_get_inhibitor(state.input_inhibit_manager);
+	if (state.ext_session_lock_manager_v1) {
+		swaylock_log(LOG_DEBUG, "Using ext-session-lock-v1");
+		state.ext_session_lock_v1 = ext_session_lock_manager_v1_lock(state.ext_session_lock_manager_v1);
+		ext_session_lock_v1_add_listener(state.ext_session_lock_v1,
+				&ext_session_lock_v1_listener, &state);
+	} else if (state.layer_shell && state.input_inhibit_manager) {
+		swaylock_log(LOG_DEBUG, "Using wlr-layer-shell + wlr-input-inhibitor");
+		zwlr_input_inhibit_manager_v1_get_inhibitor(state.input_inhibit_manager);
+	} else {
+		swaylock_log(LOG_ERROR, "Missing ext-session-lock-v1, wlr-layer-shell "
+				"and wlr-input-inhibitor");
+		return 1;
+	}
+
 	if (wl_display_roundtrip(state.display) == -1) {
 		free(state.args.font);
-		swaylock_log(LOG_ERROR, "Exiting - failed to inhibit input:"
-				" is another lockscreen already running?");
-		return 2;
+		if (state.input_inhibit_manager) {
+			swaylock_log(LOG_ERROR, "Exiting - failed to inhibit input:"
+					" is another lockscreen already running?");
+			return 2;
+		}
+		return 1;
 	}
 
 	if (state.zxdg_output_manager) {
@@ -1214,7 +1276,7 @@ int main(int argc, char **argv) {
 
 	struct swaylock_surface *surface;
 	wl_list_for_each(surface, &state.surfaces, link) {
-		create_layer_surface(surface);
+		create_surface(surface);
 	}
 
 	if (state.args.daemonize) {
@@ -1235,6 +1297,11 @@ int main(int argc, char **argv) {
 			break;
 		}
 		loop_poll(state.eventloop);
+	}
+
+	if (state.ext_session_lock_v1) {
+		ext_session_lock_v1_unlock_and_destroy(state.ext_session_lock_v1);
+		wl_display_flush(state.display);
 	}
 
 	free(state.args.font);
