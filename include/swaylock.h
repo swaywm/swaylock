@@ -89,6 +89,8 @@ struct swaylock_state {
 	int failed_attempts;
 	bool run_display;
 	struct zxdg_output_manager_v1 *zxdg_output_manager;
+	struct ext_session_lock_manager_v1 *ext_session_lock_manager_v1;
+	struct ext_session_lock_v1 *ext_session_lock_v1;
 };
 
 struct swaylock_surface {
@@ -101,6 +103,7 @@ struct swaylock_surface {
 	struct wl_surface *child; // surface made into subsurface
 	struct wl_subsurface *subsurface;
 	struct zwlr_layer_surface_v1 *layer_surface;
+	struct ext_session_lock_surface_v1 *ext_session_lock_surface_v1;
 	struct pool_buffer buffers[2];
 	struct pool_buffer indicator_buffers[2];
 	struct pool_buffer *current_buffer;

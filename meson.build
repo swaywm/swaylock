@@ -36,7 +36,7 @@ if is_freebsd
 endif
 
 wayland_client = dependency('wayland-client')
-wayland_protos = dependency('wayland-protocols', version: '>=1.14', fallback: 'wayland-protocols')
+wayland_protos = dependency('wayland-protocols', version: '>=1.25', fallback: 'wayland-protocols')
 xkbcommon      = dependency('xkbcommon')
 cairo          = dependency('cairo')
 gdk_pixbuf     = dependency('gdk-pixbuf-2.0', required: get_option('gdk-pixbuf'))
@@ -86,6 +86,7 @@ client_protos_headers = []
 client_protocols = [
 	[wl_protocol_dir, 'stable/xdg-shell/xdg-shell.xml'],
 	[wl_protocol_dir, 'unstable/xdg-output/xdg-output-unstable-v1.xml'],
+	[wl_protocol_dir, 'staging/ext-session-lock/ext-session-lock-v1.xml'],
 	['wlr-layer-shell-unstable-v1.xml'],
 	['wlr-input-inhibitor-unstable-v1.xml'],
 ]
