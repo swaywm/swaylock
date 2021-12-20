@@ -36,7 +36,7 @@ if is_freebsd
 endif
 
 wayland_client = dependency('wayland-client')
-wayland_protos = dependency('wayland-protocols', version: '>=1.14')
+wayland_protos = dependency('wayland-protocols', version: '>=1.14', fallback: 'wayland-protocols')
 xkbcommon      = dependency('xkbcommon')
 cairo          = dependency('cairo')
 gdk_pixbuf     = dependency('gdk-pixbuf-2.0', required: get_option('gdk-pixbuf'))
