@@ -57,12 +57,3 @@ void _swaylock_log(enum log_importance verbosity, const char *fmt, ...) {
 
 	va_end(args);
 }
-
-const char *_swaylock_strip_path(const char *filepath) {
-	if (*filepath == '.') {
-		while (*filepath == '.' || *filepath == '/') {
-			++filepath;
-		}
-	}
-	return filepath;
-}

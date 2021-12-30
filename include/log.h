@@ -24,11 +24,15 @@ void swaylock_log_init(enum log_importance verbosity);
 void _swaylock_log(enum log_importance verbosity, const char *format, ...)
 	_ATTRIB_PRINTF(2, 3);
 
-const char *_swaylock_strip_path(const char *filepath);
+#ifdef SWAYLOCK_REL_SRC_DIR
+// strip prefix from __FILE__, leaving the path relative to the project root
+#define _SWAYLOCK_FILENAME ((const char *)__FILE__ + sizeof(SWAYLOCK_REL_SRC_DIR) - 1)
+#else
+#define _SWAYLOCK_FILENAME __FILE__
+#endif
 
 #define swaylock_log(verb, fmt, ...) \
-	_swaylock_log(verb, "[%s:%d] " fmt, _swaylock_strip_path(__FILE__), \
-			__LINE__, ##__VA_ARGS__)
+	_swaylock_log(verb, "[%s:%d] " fmt, _SWAYLOCK_FILENAME, __LINE__, ##__VA_ARGS__)
 
 #define swaylock_log_errno(verb, fmt, ...) \
 	swaylock_log(verb, fmt ": %s", ##__VA_ARGS__, strerror(errno))
