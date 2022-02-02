@@ -3,7 +3,7 @@ project(
 	'c',
 	version: '1.6',
 	license: 'MIT',
-	meson_version: '>=0.58.0',
+	meson_version: '>=0.59.0',
 	default_options: [
 		'c_std=c11',
 		'warning_level=2',
@@ -157,7 +157,6 @@ install_data(
 )
 
 if scdoc.found()
-	sh = find_program('sh')
 	mandir = get_option('mandir')
 	man_files = [
 		'swaylock.1.scd',
@@ -171,9 +170,9 @@ if scdoc.found()
 			output,
 			input: filename,
 			output: output,
-			command: [
-				sh, '-c', '@0@ < @INPUT@ > @1@'.format(scdoc.full_path(), output)
-			],
+			command: scdoc,
+			feed: true,
+			capture: true,
 			install: true,
 			install_dir: '@0@/man@1@'.format(mandir, section)
 		)
