@@ -5,7 +5,6 @@ with any Wayland compositor which implements the following Wayland protocols:
 
 - wlr-layer-shell + wlr-input-inhibitor, or ext-session-lock-v1
 - xdg-output
-- xdg-shell
 
 See the man page, `swaylock(1)`, for instructions on using swaylock.
 
