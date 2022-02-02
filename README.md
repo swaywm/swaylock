@@ -22,9 +22,6 @@ releases are managed independently of sway releases.
 Swaylock is available in many distributions. Try installing the "swaylock"
 package for yours.
 
-If you're interested in packaging swaylock for your distribution, stop by the
-IRC channel or shoot an email to sir@cmpwn.com for advice.
-
 ### Compiling from Source
 
 Install dependencies:
