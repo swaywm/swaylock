@@ -38,6 +38,7 @@ endif
 
 wayland_client = dependency('wayland-client')
 wayland_protos = dependency('wayland-protocols', version: '>=1.25', fallback: 'wayland-protocols')
+wayland_scanner = dependency('wayland-scanner', version: '>=1.15.0')
 xkbcommon = dependency('xkbcommon')
 cairo = dependency('cairo')
 gdk_pixbuf = dependency('gdk-pixbuf-2.0', required: get_option('gdk-pixbuf'))
@@ -49,7 +50,7 @@ math = cc.find_library('m')
 
 git = find_program('git', required: false)
 scdoc = find_program('scdoc', required: get_option('man-pages'))
-wayland_scanner = find_program('wayland-scanner')
+wayland_scanner_prog = find_program(wayland_scanner.get_variable('wayland_scanner'))
 
 version = '"@0@"'.format(meson.project_version())
 if git.found()
@@ -63,20 +64,14 @@ add_project_arguments('-DSWAYLOCK_VERSION=@0@'.format(version), language: 'c')
 
 wl_protocol_dir = wayland_protos.get_variable('pkgdatadir')
 
-if wayland_client.version().version_compare('>=1.14.91')
-	code_type = 'private-code'
-else
-	code_type = 'code'
-endif
-
 wayland_scanner_code = generator(
-	wayland_scanner,
+	wayland_scanner_prog,
 	output: '@BASENAME@-protocol.c',
-	arguments: [code_type, '@INPUT@', '@OUTPUT@'],
+	arguments: ['private-code', '@INPUT@', '@OUTPUT@'],
 )
 
 wayland_scanner_client = generator(
-	wayland_scanner,
+	wayland_scanner_prog,
 	output: '@BASENAME@-client-protocol.h',
 	arguments: ['client-header', '@INPUT@', '@OUTPUT@'],
 )
