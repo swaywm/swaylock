@@ -88,7 +88,6 @@ struct swaylock_state {
 	enum auth_state auth_state;
 	int failed_attempts;
 	bool run_display;
-	struct zxdg_output_manager_v1 *zxdg_output_manager;
 	struct ext_session_lock_manager_v1 *ext_session_lock_manager_v1;
 	struct ext_session_lock_v1 *ext_session_lock_v1;
 };
@@ -98,7 +97,6 @@ struct swaylock_surface {
 	struct swaylock_state *state;
 	struct wl_output *output;
 	uint32_t output_global_name;
-	struct zxdg_output_v1 *xdg_output;
 	struct wl_surface *surface;
 	struct wl_surface *child; // surface made into subsurface
 	struct wl_subsurface *subsurface;
