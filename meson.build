@@ -29,7 +29,8 @@ is_freebsd = host_machine.system().startswith('freebsd')
 
 add_project_arguments(
 	'-DSYSCONFDIR="/@0@"'.format(join_paths(prefix, sysconfdir)),
-	language : 'c')
+	language : 'c',
+)
 
 if is_freebsd
 	add_project_arguments('-D_C11_SOURCE', language: 'c')
@@ -37,14 +38,14 @@ endif
 
 wayland_client = dependency('wayland-client')
 wayland_protos = dependency('wayland-protocols', version: '>=1.25', fallback: 'wayland-protocols')
-xkbcommon      = dependency('xkbcommon')
-cairo          = dependency('cairo')
-gdk_pixbuf     = dependency('gdk-pixbuf-2.0', required: get_option('gdk-pixbuf'))
-bash_comp      = dependency('bash-completion', required: false)
-fish_comp      = dependency('fish', required: false)
-libpam         = cc.find_library('pam', required: get_option('pam'))
-crypt          = cc.find_library('crypt', required: not libpam.found())
-math           = cc.find_library('m')
+xkbcommon = dependency('xkbcommon')
+cairo = dependency('cairo')
+gdk_pixbuf = dependency('gdk-pixbuf-2.0', required: get_option('gdk-pixbuf'))
+bash_comp = dependency('bash-completion', required: false)
+fish_comp = dependency('fish', required: false)
+libpam = cc.find_library('pam', required: get_option('pam'))
+crypt = cc.find_library('crypt', required: not libpam.found())
+math = cc.find_library('m')
 
 git = find_program('git', required: false)
 scdoc = find_program('scdoc', required: get_option('man-pages'))
