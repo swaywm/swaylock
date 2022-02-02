@@ -39,9 +39,8 @@ Install dependencies:
 * [scdoc](https://git.sr.ht/~sircmpwn/scdoc) (optional: man pages) \*
 * git \*
 
-_\*Compile-time dep_
-
-_\*\*optional: required for background images other than PNG_
+_\* Compile-time dep_  
+_\*\* Optional: required for background images other than PNG_
 
 Run these commands:
 
