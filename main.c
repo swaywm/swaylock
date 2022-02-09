@@ -243,6 +243,11 @@ static const struct wl_callback_listener surface_frame_listener = {
 };
 
 void damage_surface(struct swaylock_surface *surface) {
+	if (surface->width == 0 || surface->height == 0) {
+		// Not yet configured
+		return;
+	}
+
 	surface->dirty = true;
 	if (surface->frame_pending) {
 		return;
