@@ -4,10 +4,21 @@
 #include "cairo.h"
 #include "background-image.h"
 #include "swaylock.h"
+#include "log.h"
+
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 #define M_PI 3.14159265358979323846
 const float TYPE_INDICATOR_RANGE = M_PI / 3.0f;
 const float TYPE_INDICATOR_BORDER_THICKNESS = M_PI / 128.0f;
+
+/// Fork and continue in a child process.
+/// This pauses the main thread of execution until the child process exits.
+/// Use this to protect the main process from crashes that could occur while rendering.
+/// Returns 1 if now in the child process, zero otherwise.
+static int continue_in_child_proc();
 
 static void set_color_for_state(cairo_t *cairo, struct swaylock_state *state,
 		struct swaylock_colorset *colorset) {
@@ -32,20 +43,12 @@ static void set_color_for_state(cairo_t *cairo, struct swaylock_state *state,
 	}
 }
 
-void render_frame_background(struct swaylock_surface *surface) {
+static void render_frame_background_internal(struct swaylock_surface *surface) {
 	struct swaylock_state *state = surface->state;
 
 	int buffer_width = surface->width * surface->scale;
 	int buffer_height = surface->height * surface->scale;
-	if (buffer_width == 0 || buffer_height == 0) {
-		return; // not yet configured
-	}
 
-	surface->current_buffer = get_next_buffer(state->shm,
-			surface->buffers, buffer_width, buffer_height);
-	if (surface->current_buffer == NULL) {
-		return;
-	}
 
 	cairo_t *cairo = surface->current_buffer->cairo;
 	cairo_set_antialias(cairo, CAIRO_ANTIALIAS_BEST);
@@ -61,14 +64,9 @@ void render_frame_background(struct swaylock_surface *surface) {
 	}
 	cairo_restore(cairo);
 	cairo_identity_matrix(cairo);
-
-	wl_surface_set_buffer_scale(surface->surface, surface->scale);
-	wl_surface_attach(surface->surface, surface->current_buffer->buffer, 0, 0);
-	wl_surface_damage_buffer(surface->surface, 0, 0, INT32_MAX, INT32_MAX);
-	wl_surface_commit(surface->surface);
 }
 
-void render_frame(struct swaylock_surface *surface) {
+static void render_frame_internal(struct swaylock_surface *surface) {
 	struct swaylock_state *state = surface->state;
 
 	int arc_radius = state->args.radius * surface->scale;
@@ -76,41 +74,8 @@ void render_frame(struct swaylock_surface *surface) {
 	int buffer_diameter = (arc_radius + arc_thickness) * 2;
 
 	int buffer_width = surface->indicator_width;
-	int buffer_height = surface->indicator_height;
 	int new_width = buffer_diameter;
 	int new_height = buffer_diameter;
-
-	int subsurf_xpos;
-	int subsurf_ypos;
-
-	// Center the indicator unless overridden by the user
-	if (state->args.override_indicator_x_position) {
-		subsurf_xpos = state->args.indicator_x_position -
-			buffer_width / (2 * surface->scale) + 2 / surface->scale;
-	} else {
-		subsurf_xpos = surface->width / 2 -
-			buffer_width / (2 * surface->scale) + 2 / surface->scale;
-	}
-
-	if (state->args.override_indicator_y_position) {
-		subsurf_ypos = state->args.indicator_y_position -
-			(state->args.radius + state->args.thickness);
-	} else {
-		subsurf_ypos = surface->height / 2 -
-			(state->args.radius + state->args.thickness);
-	}
-
-	wl_subsurface_set_position(surface->subsurface, subsurf_xpos, subsurf_ypos);
-
-	surface->current_buffer = get_next_buffer(state->shm,
-			surface->indicator_buffers, buffer_width, buffer_height);
-	if (surface->current_buffer == NULL) {
-		return;
-	}
-
-	// Hide subsurface until we want it visible
-	wl_surface_attach(surface->child, NULL, 0, 0);
-	wl_surface_commit(surface->child);
 
 	cairo_t *cairo = surface->current_buffer->cairo;
 	cairo_set_antialias(cairo, CAIRO_ANTIALIAS_BEST);
@@ -311,6 +276,92 @@ void render_frame(struct swaylock_surface *surface) {
 			}
 		}
 	}
+}
+
+void render_frame_background(struct swaylock_surface* surface) {
+	struct swaylock_state *state = surface->state;
+
+	int buffer_width = surface->width * surface->scale;
+	int buffer_height = surface->height * surface->scale;
+
+	if (buffer_width == 0 || buffer_height == 0) {
+		return; // not yet configured
+	}
+
+	surface->current_buffer = get_next_buffer(state->shm,
+			surface->buffers, buffer_width, buffer_height);
+	if (surface->current_buffer == NULL) {
+		return;
+	}
+	// Protect against potential GUI-library errors
+	// (e.g. out of memory, etc).
+	if (continue_in_child_proc()) {
+		render_frame_background_internal(surface);
+
+		// Exit the child process.
+		exit(0);
+	}
+
+	wl_surface_set_buffer_scale(surface->surface, surface->scale);
+	wl_surface_attach(surface->surface, surface->current_buffer->buffer, 0, 0);
+	wl_surface_damage_buffer(surface->surface, 0, 0, INT32_MAX, INT32_MAX);
+	wl_surface_commit(surface->surface);
+}
+
+void render_frame(struct swaylock_surface* surface) {
+	struct swaylock_state *state = surface->state;
+
+	int arc_radius = state->args.radius * surface->scale;
+	int arc_thickness = state->args.thickness * surface->scale;
+	int buffer_diameter = (arc_radius + arc_thickness) * 2;
+
+	int buffer_width = surface->indicator_width;
+	int buffer_height = surface->indicator_height;
+	int new_width = buffer_diameter;
+	int new_height = buffer_diameter;
+
+	int subsurf_xpos;
+	int subsurf_ypos;
+
+	// Center the indicator unless overridden by the user
+	if (state->args.override_indicator_x_position) {
+		subsurf_xpos = state->args.indicator_x_position -
+			buffer_width / (2 * surface->scale) + 2 / surface->scale;
+	} else {
+		subsurf_xpos = surface->width / 2 -
+			buffer_width / (2 * surface->scale) + 2 / surface->scale;
+	}
+
+	if (state->args.override_indicator_y_position) {
+		subsurf_ypos = state->args.indicator_y_position -
+			(state->args.radius + state->args.thickness);
+	} else {
+		subsurf_ypos = surface->height / 2 -
+			(state->args.radius + state->args.thickness);
+	}
+
+	wl_subsurface_set_position(surface->subsurface, subsurf_xpos, subsurf_ypos);
+
+	surface->current_buffer = get_next_buffer(state->shm,
+			surface->indicator_buffers, buffer_width, buffer_height);
+	if (surface->current_buffer == NULL) {
+		return;
+	}
+
+	// Hide subsurface until we want it visible
+	wl_surface_attach(surface->child, NULL, 0, 0);
+	wl_surface_commit(surface->child);
+
+	int parent_proc_rand = rand();
+
+	// Protect cairo-related code.
+	if (continue_in_child_proc()) {
+		// Don't reset random with a new child process!
+		srand(parent_proc_rand);
+
+		render_frame_internal(surface);
+		exit(0);
+	}
 
 	// Ensure buffer size is multiple of buffer scale - required by protocol
 	new_height += surface->scale - (new_height % surface->scale);
@@ -335,6 +386,36 @@ void render_frame(struct swaylock_surface *surface) {
 void render_frames(struct swaylock_state *state) {
 	struct swaylock_surface *surface;
 	wl_list_for_each(surface, &state->surfaces, link) {
-		render_frame(surface);
+		render_frame_internal(surface);
 	}
 }
+
+int continue_in_child_proc() {
+	pid_t child_pid = fork();
+	int child_status = 0, err = 0;
+
+	if (child_pid == -1) {
+		swaylock_log(LOG_ERROR, "Failed to fork to create rendering subprocess.");
+		return 0;
+	}
+
+	if (child_pid == 0) {
+		return 1;
+	}
+
+	do {
+		err = waitpid(child_pid, &child_status, 0);
+	} while (err == -1 && errno == EINTR);
+
+	int successful_exit = WIFEXITED(child_status);
+	if (!successful_exit) {
+		swaylock_log(LOG_ERROR,
+				"Danger! Render process exited abnormally. "
+				"Exit status was %d. "
+				"Skipping rendering...", child_status);
+	}
+
+	return 0;
+}
+
+
