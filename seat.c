@@ -86,6 +86,10 @@ static void keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard,
 		uint32_t mods_locked, uint32_t group) {
 	struct swaylock_seat *seat = data;
 	struct swaylock_state *state = seat->state;
+	if (state->xkb.state == NULL) {
+		return;
+	}
+
 	int layout_same = xkb_state_layout_index_is_active(state->xkb.state,
 		group, XKB_STATE_LAYOUT_EFFECTIVE);
 	if (!layout_same) {
