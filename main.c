@@ -181,6 +181,9 @@ static void layer_surface_configure(void *data,
 		struct zwlr_layer_surface_v1 *layer_surface,
 		uint32_t serial, uint32_t width, uint32_t height) {
 	struct swaylock_surface *surface = data;
+	if (surface->width == width && surface->height == height) {
+		return;
+	}
 	surface->width = width;
 	surface->height = height;
 	surface->indicator_width = 0;
