@@ -185,6 +185,7 @@ static void layer_surface_configure(void *data,
 	surface->height = height;
 	surface->indicator_width = 0;
 	surface->indicator_height = 0;
+	surface->cleat_text = "test";
 	zwlr_layer_surface_v1_ack_configure(layer_surface, serial);
 	render_frame_background(surface);
 	render_frame(surface);
@@ -648,6 +649,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"text-caps-lock-color", required_argument, NULL, LO_TEXT_CAPS_LOCK_COLOR},
 		{"text-ver-color", required_argument, NULL, LO_TEXT_VER_COLOR},
 		{"text-wrong-color", required_argument, NULL, LO_TEXT_WRONG_COLOR},
+		//{"text-clear", required_argument, NULL, LO_TEXT_CLEAR},
 		{0, 0, 0, 0}
 	};
 
@@ -1044,11 +1046,17 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 				state->args.colors.text.wrong = parse_color(optarg);
 			}
 			break;
+		/*case LO_TEXT_CLEAR:
+			if( state) {
+				state->args.text.clear = optarg;
+			}
+			break;*/
 		default:
 			fprintf(stderr, "%s", usage);
 			return 1;
 		}
 	}
+	state->args.text.clear = "test";
 
 	return 0;
 }

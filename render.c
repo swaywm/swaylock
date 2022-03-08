@@ -166,7 +166,7 @@ void render_frame(struct swaylock_surface *surface) {
 			text = "verifying";
 			break;
 		case AUTH_STATE_INVALID:
-			text = "wrong";
+			text = state->args.text.clear;
 			break;
 		case AUTH_STATE_CLEAR:
 			text = "cleared";
