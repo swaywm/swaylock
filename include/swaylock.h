@@ -43,8 +43,16 @@ struct swaylock_colors {
 	struct swaylock_colorset text;
 };
 
+struct swaylock_texts {
+	char clear[10];
+	char caps_lock[10];
+	char verifying[10];
+	char wrong[10];
+};
+
 struct swaylock_args {
 	struct swaylock_colors colors;
+	struct swaylock_texts texts;
 	enum background_mode mode;
 	char *font;
 	uint32_t font_size;
