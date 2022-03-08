@@ -185,7 +185,6 @@ static void layer_surface_configure(void *data,
 	surface->height = height;
 	surface->indicator_width = 0;
 	surface->indicator_height = 0;
-	//surface->clear_text = "test";
 	zwlr_layer_surface_v1_ack_configure(layer_surface, serial);
 	render_frame_background(surface);
 	render_frame(surface);
@@ -540,13 +539,6 @@ static void set_default_colors(struct swaylock_colors *colors) {
 		.verifying = 0x3300FFFF,
 		.wrong = 0x7D3300FF,
 	};
-	colors->text = (struct swaylock_colorset){
-		.input = 0xE5A445FF,
-		.cleared = 0x000000FF,
-		.caps_lock = 0xE5A445FF,
-		.verifying = 0x000000FF,
-		.wrong = 0x000000FF,
-	};
 }
 
 static void set_default_texts(struct swaylock_texts *texts) {
@@ -600,6 +592,10 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_TEXT_CAPS_LOCK_COLOR,
 		LO_TEXT_VER_COLOR,
 		LO_TEXT_WRONG_COLOR,
+		LO_TEXT_CLEAR,
+		LO_TEXT_CAPS_LOCK,
+		LO_TEXT_VER,
+		LO_TEXT_WRONG,
 	};
 
 	static struct option long_options[] = {
@@ -656,6 +652,10 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"text-caps-lock-color", required_argument, NULL, LO_TEXT_CAPS_LOCK_COLOR},
 		{"text-ver-color", required_argument, NULL, LO_TEXT_VER_COLOR},
 		{"text-wrong-color", required_argument, NULL, LO_TEXT_WRONG_COLOR},
+		{"text-clear", required_argument, NULL, LO_TEXT_CLEAR},
+		{"text-caps-lock", required_argument, NULL, LO_TEXT_CAPS_LOCK},
+		{"text-ver", required_argument, NULL, LO_TEXT_VER},
+		{"text-wrong", required_argument, NULL, LO_TEXT_WRONG},
 		{0, 0, 0, 0}
 	};
 
@@ -776,6 +776,14 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Sets the color of the text when verifying.\n"
 		"  --text-wrong-color <color>       "
 			"Sets the color of the text when invalid.\n"
+		"  --text-clear <text>              "
+		    "Sets the text when cleared.\n"
+		"  --text-caps-lock <text>          "
+		    "Sets the text when Caps Lock is active.\n"
+		"  --text-ver <text>                "
+		    "Sets the text when verifying.\n"
+		"  --text-wrong <text>              "
+		    "Sets the text when invalid.\n"
 		"\n"
 		"All <color> options are of the form <rrggbb[aa]>.\n";
 
@@ -1050,6 +1058,26 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		case LO_TEXT_WRONG_COLOR:
 			if (state) {
 				state->args.colors.text.wrong = parse_color(optarg);
+			}
+			break;
+		case LO_TEXT_CLEAR:
+			if (state) {
+				state->args.texts.clear = optarg;
+			}
+			break;
+		case LO_TEXT_CAPS_LOCK:
+			if (state) {
+				state->args.texts.caps_lock = optarg;
+			}
+			break;
+		case LO_TEXT_VER:
+			if (state) {
+				state->args.texts.verifying = optarg;
+			}
+			break;
+		case LO_TEXT_WRONG:
+			if (state) {
+				state->args.texts.wrong = optarg;
 			}
 			break;
 		default:

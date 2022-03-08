@@ -44,10 +44,10 @@ struct swaylock_colors {
 };
 
 struct swaylock_texts {
-	char clear[10];
-	char caps_lock[10];
-	char verifying[10];
-	char wrong[10];
+	char *clear;
+	char *caps_lock;
+	char *verifying;
+	char *wrong;
 };
 
 struct swaylock_args {

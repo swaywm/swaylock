@@ -163,20 +163,20 @@ void render_frame(struct swaylock_surface *surface) {
 		}
 		switch (state->auth_state) {
 		case AUTH_STATE_VALIDATING:
-			text = "verifying";
+			text = state->args.texts.verifying;
 			break;
 		case AUTH_STATE_INVALID:
-			text = state->args.text.clear;
+			text = state->args.texts.wrong;
 			break;
 		case AUTH_STATE_CLEAR:
-			text = "cleared";
+			text = state->args.texts.clear;
 			break;
 		case AUTH_STATE_INPUT:
 		case AUTH_STATE_INPUT_NOP:
 		case AUTH_STATE_BACKSPACE:
 			// Caps Lock has higher priority
 			if (state->xkb.caps_lock && state->args.show_caps_lock_text) {
-				text = "Caps Lock";
+				text = state->args.texts.caps_lock;
 			} else if (state->args.show_failed_attempts &&
 					state->failed_attempts > 0) {
 				if (state->failed_attempts > 999) {
