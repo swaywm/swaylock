@@ -539,6 +539,13 @@ static void set_default_colors(struct swaylock_colors *colors) {
 		.verifying = 0x3300FFFF,
 		.wrong = 0x7D3300FF,
 	};
+	colors->text = (struct swaylock_colorset){
+		.input = 0xE5A445FF,
+		.cleared = 0x000000FF,
+		.caps_lock = 0xE5A445FF,
+		.verifying = 0x000000FF,
+		.wrong = 0x000000FF,
+	};
 }
 
 static void set_default_texts(struct swaylock_texts *texts) {

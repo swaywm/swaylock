@@ -55,5 +55,9 @@ _arguments -s \
 	'(--text-color)'--text-color'[Sets the color of the text]:color:' \
 	'(--text-ver-color)'--text-ver-color'[Sets the color of the text when verifying]:color:' \
 	'(--text-wrong-color)'--text-wrong-color'[Sets the color of the text when invalid]:color:' \
+	'(--text-clear)'--text-clear'[Sets the text when cleared]:text:' \
+	'(--text-caps-lock)'--text-caps-lock'[Sets the text when Caps Lock is active]:text:' \
+	'(--text-ver)'--text-ver'[Sets the text when verifying]:text:' \
+	'(--text-wrong)'--text-wrong'[Sets the text when invalid]:text:' \
 	'(--tiling -t)'{--tiling,-t}'[Same as --scaling=tile]' \
 	'(--version -v)'{--version,-v}'[Show the version number and quit]'
