@@ -126,7 +126,6 @@ void swaylock_handle_key(struct swaylock_state *state,
 		xkb_keysym_t keysym, uint32_t codepoint);
 void render_frame_background(struct swaylock_surface *surface);
 void render_frame(struct swaylock_surface *surface);
-void render_frames(struct swaylock_state *state);
 void damage_surface(struct swaylock_surface *surface);
 void damage_state(struct swaylock_state *state);
 void clear_password_buffer(struct swaylock_password *pw);
