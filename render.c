@@ -331,10 +331,3 @@ void render_frame(struct swaylock_surface *surface) {
 
 	wl_surface_commit(surface->surface);
 }
-
-void render_frames(struct swaylock_state *state) {
-	struct swaylock_surface *surface;
-	wl_list_for_each(surface, &state->surfaces, link) {
-		render_frame(surface);
-	}
-}
