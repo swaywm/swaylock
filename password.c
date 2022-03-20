@@ -28,7 +28,8 @@ void clear_password_buffer(struct swaylock_password *pw) {
 
 static bool backspace(struct swaylock_password *pw) {
 	if (pw->len != 0) {
-		pw->buffer[--pw->len] = 0;
+		pw->len -= utf8_last_size(pw->buffer);
+		pw->buffer[pw->len] = 0;
 		return true;
 	}
 	return false;
