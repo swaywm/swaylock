@@ -10,6 +10,14 @@
 #define UTF8_INVALID 0x80
 
 /**
+ * Gets the size in bytes of the last utf8 character in a NULL terminated string
+ * This function does not validate that the buffer contains correct utf8 data;
+ * it merely looks for the first byte that correctly denotes the beginning of a
+ * utf8 character.
+ */
+int utf8_last_size(const char *str);
+
+/**
  * Grabs the next UTF-8 character and advances the string pointer
  */
 uint32_t utf8_decode(const char **str);

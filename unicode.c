@@ -1,6 +1,19 @@
 #include <stdint.h>
 #include <stddef.h>
+#include <string.h>
 #include "unicode.h"
+
+int utf8_last_size(const char *str) {
+	int len = 0;
+	char *pos = strchr(str, '\0');
+	while (pos > str) {
+		--pos; ++len;
+		if ((*pos & 0xc0) != 0x80) {
+			return len;
+		}
+	}
+	return 0;
+}
 
 size_t utf8_chsize(uint32_t ch) {
 	if (ch < 0x80) {
