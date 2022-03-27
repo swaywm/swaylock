@@ -2,7 +2,7 @@
 
 _swaylock()
 {
-  local cur prev
+  local cur prev short long scaling
   _get_comp_words_by_ref -n : cur prev
 
   short=(
