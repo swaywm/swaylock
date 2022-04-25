@@ -38,7 +38,9 @@ endif
 
 wayland_client = dependency('wayland-client', version: '>=1.20.0')
 wayland_protos = dependency('wayland-protocols', version: '>=1.25', fallback: 'wayland-protocols')
-wayland_scanner = dependency('wayland-scanner', version: '>=1.15.0')
+# use native version of wayland-scanner when cross-compiling
+# meson does this too: https://github.com/mesonbuild/meson/blob/c649a2b8c59c9f49affca9bd89c126bfa0f54449/mesonbuild/modules/unstable_wayland.py#L48-L53
+wayland_scanner = dependency('wayland-scanner', version: '>=1.15.0', native: true)
 xkbcommon = dependency('xkbcommon')
 cairo = dependency('cairo')
 gdk_pixbuf = dependency('gdk-pixbuf-2.0', required: get_option('gdk-pixbuf'))
