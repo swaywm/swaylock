@@ -82,7 +82,7 @@ void loop_poll(struct loop *loop) {
 	}
 
 	int ret = poll(loop->fds, loop->fd_length, ms);
-	if (ret < 0) {
+	if (ret < 0 && errno != EINTR) {
 		swaylock_log_errno(LOG_ERROR, "poll failed");
 		exit(1);
 	}
