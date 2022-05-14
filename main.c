@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <getopt.h>
 #include <poll.h>
+#include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -391,6 +392,12 @@ static const struct wl_registry_listener registry_listener = {
 	.global = handle_global,
 	.global_remove = handle_global_remove,
 };
+
+static int sigusr_fds[2] = {-1, -1};
+
+void do_sigusr(int sig) {
+	(void)write(sigusr_fds[1], "1", 1);
+}
 
 static cairo_surface_t *select_image(struct swaylock_state *state,
 		struct swaylock_surface *surface) {
@@ -1124,6 +1131,10 @@ static void comm_in(int fd, short mask, void *data) {
 	}
 }
 
+static void term_in(int fd, short mask, void *data) {
+	state.run_display = false;
+}
+
 int main(int argc, char **argv) {
 	swaylock_log_init(LOG_ERROR);
 	initialize_pw_backend(argc, argv);
@@ -1195,6 +1206,11 @@ int main(int argc, char **argv) {
 		return EXIT_FAILURE;
 	}
 
+	if (pipe(sigusr_fds) != 0) {
+		swaylock_log(LOG_ERROR, "Failed to pipe");
+		return 1;
+	}
+
 	wl_list_init(&state.surfaces);
 	state.xkb.context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 	state.display = wl_display_connect(NULL);
@@ -1254,6 +1270,9 @@ int main(int argc, char **argv) {
 			display_in, NULL);
 
 	loop_add_fd(state.eventloop, get_comm_reply_fd(), POLLIN, comm_in, NULL);
+
+	loop_add_fd(state.eventloop, sigusr_fds[0], POLLIN, term_in, NULL);
+	signal(SIGUSR1, do_sigusr);
 
 	state.run_display = true;
 	while (state.run_display) {

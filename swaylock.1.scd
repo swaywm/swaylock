@@ -189,6 +189,11 @@ Locks your Wayland session.
 *--text-wrong-color* <rrggbb[aa]>
 	Sets the color of the text when invalid.
 
+# SIGNALS
+
+*SIGUSR1*
+	Unlock the screen and exit.
+
 # AUTHORS
 
 Maintained by Drew DeVault <sir@cmpwn.com>, who is assisted by other open
