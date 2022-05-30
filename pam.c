@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include "comm.h"
 #include "log.h"
+#include "password-buffer.h"
 #include "swaylock.h"
 
 static char *pw_buf = NULL;
@@ -96,6 +97,9 @@ void run_pw_backend_child(void) {
 		}
 
 		int pam_status = pam_authenticate(auth_handle, 0);
+		password_buffer_destroy(pw_buf, size);
+		pw_buf = NULL;
+
 		bool success = pam_status == PAM_SUCCESS;
 		if (!success) {
 			swaylock_log(LOG_ERROR, "pam_authenticate failed: %s",
@@ -103,13 +107,8 @@ void run_pw_backend_child(void) {
 		}
 
 		if (!write_comm_reply(success)) {
-			clear_buffer(pw_buf, size);
 			exit(EXIT_FAILURE);
 		}
-
-		clear_buffer(pw_buf, size);
-		free(pw_buf);
-		pw_buf = NULL;
 	}
 
 	pam_setcred(auth_handle, PAM_REFRESH_CRED);

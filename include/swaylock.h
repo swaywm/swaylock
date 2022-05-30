@@ -67,7 +67,8 @@ struct swaylock_args {
 
 struct swaylock_password {
 	size_t len;
-	char buffer[1024];
+	size_t buffer_len;
+	char *buffer;
 };
 
 struct swaylock_state {
