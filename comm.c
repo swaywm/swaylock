@@ -5,6 +5,7 @@
 #include "comm.h"
 #include "log.h"
 #include "swaylock.h"
+#include "password-buffer.h"
 
 static int comm[2][2] = {{-1, -1}, {-1, -1}};
 
@@ -19,9 +20,8 @@ ssize_t read_comm_request(char **buf_ptr) {
 		return -1;
 	}
 	swaylock_log(LOG_DEBUG, "received pw check request");
-	char *buf = malloc(size);
+	char *buf = password_buffer_create(size);
 	if (!buf) {
-		swaylock_log_errno(LOG_ERROR, "failed to malloc pw buffer");
 		return -1;
 	}
 	size_t offs = 0;

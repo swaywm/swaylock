@@ -20,6 +20,7 @@
 #include "comm.h"
 #include "log.h"
 #include "loop.h"
+#include "password-buffer.h"
 #include "pool-buffer.h"
 #include "seat.h"
 #include "swaylock.h"
@@ -1187,13 +1188,12 @@ int main(int argc, char **argv) {
 		state.args.colors.line = state.args.colors.ring;
 	}
 
-#ifdef __linux__
-	// Most non-linux platforms require root to mlock()
-	if (mlock(state.password.buffer, sizeof(state.password.buffer)) != 0) {
-		swaylock_log(LOG_ERROR, "Unable to mlock() password memory.");
+	state.password.len = 0;
+	state.password.buffer_len = 1024;
+	state.password.buffer = password_buffer_create(state.password.buffer_len);
+	if (!state.password.buffer) {
 		return EXIT_FAILURE;
 	}
-#endif
 
 	wl_list_init(&state.surfaces);
 	state.xkb.context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
