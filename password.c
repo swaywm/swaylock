@@ -95,10 +95,6 @@ static void submit_password(struct swaylock_state *state) {
 
 void swaylock_handle_key(struct swaylock_state *state,
 		xkb_keysym_t keysym, uint32_t codepoint) {
-	// Ignore input events if validating
-	if (state->auth_state == AUTH_STATE_VALIDATING) {
-		return;
-	}
 
 	switch (keysym) {
 	case XKB_KEY_KP_Enter: /* fallthrough */
