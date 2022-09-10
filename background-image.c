@@ -100,9 +100,14 @@ void render_background_image(cairo_t *cairo, cairo_surface_t *image,
 		break;
 	}
 	case BACKGROUND_MODE_CENTER:
+		/*
+		 * Align the unscaled image to integer pixel boundaries
+		 * in order to prevent loss of clarity (this only matters
+		 * for odd-sized images).
+		 */
 		cairo_set_source_surface(cairo, image,
-				(double)buffer_width / 2 - width / 2,
-				(double)buffer_height / 2 - height / 2);
+				(int)((double)buffer_width / 2 - width / 2),
+				(int)((double)buffer_height / 2 - height / 2));
 		break;
 	case BACKGROUND_MODE_TILE: {
 		cairo_pattern_t *pattern = cairo_pattern_create_for_surface(image);
