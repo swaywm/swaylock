@@ -41,6 +41,26 @@ void render_frame_background(struct swaylock_surface *surface) {
 		return; // not yet configured
 	}
 
+	if (surface->viewport && state->background_buffer &&
+			(!surface->image || state->args.mode == BACKGROUND_MODE_SOLID_COLOR)) {
+		// no need to carry around shm buffers if we are going to use the single
+		// pixel buffer
+		destroy_buffer(&surface->buffers[0]);
+		destroy_buffer(&surface->buffers[1]);
+
+		wl_surface_set_buffer_scale(surface->surface, 1);
+		wl_surface_attach(surface->surface, state->background_buffer, 0, 0);
+		wl_surface_damage_buffer(surface->surface, 0, 0, INT32_MAX, INT32_MAX);
+		wp_viewport_set_destination(surface->viewport, surface->width, surface->height);
+
+		wl_surface_commit(surface->surface);
+		return;
+	}
+
+	if (surface->viewport) {
+		wp_viewport_set_destination(surface->viewport, -1, -1);
+	}
+
 	struct pool_buffer *buffer = get_next_buffer(state->shm,
 			surface->buffers, buffer_width, buffer_height);
 	if (buffer == NULL) {

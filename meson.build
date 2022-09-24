@@ -37,7 +37,7 @@ if is_freebsd
 endif
 
 wayland_client = dependency('wayland-client', version: '>=1.20.0')
-wayland_protos = dependency('wayland-protocols', version: '>=1.25', fallback: 'wayland-protocols')
+wayland_protos = dependency('wayland-protocols', version: '>=1.26', fallback: 'wayland-protocols')
 # use native version of wayland-scanner when cross-compiling
 # meson does this too: https://github.com/mesonbuild/meson/blob/c649a2b8c59c9f49affca9bd89c126bfa0f54449/mesonbuild/modules/unstable_wayland.py#L48-L53
 wayland_scanner = dependency('wayland-scanner', version: '>=1.15.0', native: true)
@@ -84,6 +84,8 @@ client_protos_headers = []
 client_protocols = [
 	wl_protocol_dir / 'stable/xdg-shell/xdg-shell.xml',
 	wl_protocol_dir / 'staging/ext-session-lock/ext-session-lock-v1.xml',
+	wl_protocol_dir / 'stable/viewporter/viewporter.xml',
+	wl_protocol_dir / 'staging/single-pixel-buffer/single-pixel-buffer-v1.xml',
 	'wlr-layer-shell-unstable-v1.xml',
 	'wlr-input-inhibitor-unstable-v1.xml',
 ]

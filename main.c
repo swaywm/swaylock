@@ -109,6 +109,7 @@ static void destroy_surface(struct swaylock_surface *surface) {
 	destroy_buffer(&surface->buffers[1]);
 	destroy_buffer(&surface->indicator_buffers[0]);
 	destroy_buffer(&surface->indicator_buffers[1]);
+	wp_viewport_destroy(surface->viewport);
 	wl_output_destroy(surface->output);
 	free(surface);
 }
@@ -171,6 +172,11 @@ static void create_surface(struct swaylock_surface *surface) {
 		wl_region_add(region, 0, 0, INT32_MAX, INT32_MAX);
 		wl_surface_set_opaque_region(surface->surface, region);
 		wl_region_destroy(region);
+	}
+
+	if (state->viewporter) {
+		surface->viewport = wp_viewporter_get_viewport(
+			state->viewporter, surface->surface);
 	}
 
 	if (!state->ext_session_lock_v1) {
@@ -373,6 +379,13 @@ static void handle_global(void *data, struct wl_registry *registry,
 	} else if (strcmp(interface, ext_session_lock_manager_v1_interface.name) == 0) {
 		state->ext_session_lock_manager_v1 = wl_registry_bind(registry, name,
 				&ext_session_lock_manager_v1_interface, 1);
+	} else if (strcmp(interface, wp_viewporter_interface.name) == 0) {
+		state->viewporter = wl_registry_bind(registry, name,
+			&wp_viewporter_interface, 1);
+	} else if (strcmp(interface,
+			wp_single_pixel_buffer_manager_v1_interface.name) == 0) {
+		state->single_pixel_buffer_manager = wl_registry_bind(registry, name,
+			&wp_single_pixel_buffer_manager_v1_interface, 1);
 	}
 }
 
@@ -1265,6 +1278,20 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
+	if (state.single_pixel_buffer_manager && state.viewporter) {
+		uint8_t r8 = (state.args.colors.background >> 24) & 0xFF;
+		uint8_t g8 = (state.args.colors.background >> 16) & 0xFF;
+		uint8_t b8 = (state.args.colors.background >> 8) & 0xFF;
+		uint8_t a8 = (state.args.colors.background >> 0) & 0xFF;
+		uint32_t f = 0xFFFFFFFF / 0xFF; // division result is an integer
+		uint32_t r32 = r8 * f;
+		uint32_t g32 = g8 * f;
+		uint32_t b32 = b8 * f;
+		uint32_t a32 = a8 * f;
+		state.background_buffer = wp_single_pixel_buffer_manager_v1_create_u32_rgba_buffer(
+			state.single_pixel_buffer_manager, r32, g32, b32, a32);
+	}
+
 	struct swaylock_surface *surface;
 	wl_list_for_each(surface, &state.surfaces, link) {
 		create_surface(surface);
@@ -1298,6 +1325,7 @@ int main(int argc, char **argv) {
 		wl_display_flush(state.display);
 	}
 
+	wl_buffer_destroy(state.background_buffer);
 	free(state.args.font);
 	return 0;
 }
