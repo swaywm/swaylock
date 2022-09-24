@@ -82,14 +82,13 @@ client_protos_src = []
 client_protos_headers = []
 
 client_protocols = [
-	[wl_protocol_dir, 'stable/xdg-shell/xdg-shell.xml'],
-	[wl_protocol_dir, 'staging/ext-session-lock/ext-session-lock-v1.xml'],
-	['wlr-layer-shell-unstable-v1.xml'],
-	['wlr-input-inhibitor-unstable-v1.xml'],
+	wl_protocol_dir / 'stable/xdg-shell/xdg-shell.xml',
+	wl_protocol_dir / 'staging/ext-session-lock/ext-session-lock-v1.xml',
+	'wlr-layer-shell-unstable-v1.xml',
+	'wlr-input-inhibitor-unstable-v1.xml',
 ]
 
-foreach p : client_protocols
-	xml = join_paths(p)
+foreach xml : client_protocols
 	client_protos_src += wayland_scanner_code.process(xml)
 	client_protos_headers += wayland_scanner_client.process(xml)
 endforeach
