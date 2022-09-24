@@ -1226,8 +1226,18 @@ int main(int argc, char **argv) {
 	wl_registry_add_listener(registry, &registry_listener, &state);
 	wl_display_roundtrip(state.display);
 
-	if (!state.compositor || !state.shm) {
-		swaylock_log(LOG_ERROR, "Missing wl_compositor or wl_shm");
+	if (!state.compositor) {
+		swaylock_log(LOG_ERROR, "Missing wl_compositor");
+		return 1;
+	}
+
+	if (!state.subcompositor) {
+		swaylock_log(LOG_ERROR, "Missing wl_subcompositor");
+		return 1;
+	}
+
+	if (!state.shm) {
+		swaylock_log(LOG_ERROR, "Missing wl_shm");
 		return 1;
 	}
 
