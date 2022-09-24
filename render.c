@@ -41,13 +41,13 @@ void render_frame_background(struct swaylock_surface *surface) {
 		return; // not yet configured
 	}
 
-	surface->current_buffer = get_next_buffer(state->shm,
+	struct pool_buffer *buffer = get_next_buffer(state->shm,
 			surface->buffers, buffer_width, buffer_height);
-	if (surface->current_buffer == NULL) {
+	if (buffer == NULL) {
 		return;
 	}
 
-	cairo_t *cairo = surface->current_buffer->cairo;
+	cairo_t *cairo = buffer->cairo;
 	cairo_set_antialias(cairo, CAIRO_ANTIALIAS_BEST);
 
 	cairo_save(cairo);
@@ -63,7 +63,7 @@ void render_frame_background(struct swaylock_surface *surface) {
 	cairo_identity_matrix(cairo);
 
 	wl_surface_set_buffer_scale(surface->surface, surface->scale);
-	wl_surface_attach(surface->surface, surface->current_buffer->buffer, 0, 0);
+	wl_surface_attach(surface->surface, buffer->buffer, 0, 0);
 	wl_surface_damage_buffer(surface->surface, 0, 0, INT32_MAX, INT32_MAX);
 	wl_surface_commit(surface->surface);
 }
@@ -102,9 +102,9 @@ void render_frame(struct swaylock_surface *surface) {
 
 	wl_subsurface_set_position(surface->subsurface, subsurf_xpos, subsurf_ypos);
 
-	surface->current_buffer = get_next_buffer(state->shm,
+	struct pool_buffer *buffer = get_next_buffer(state->shm,
 			surface->indicator_buffers, buffer_width, buffer_height);
-	if (surface->current_buffer == NULL) {
+	if (buffer == NULL) {
 		return;
 	}
 
@@ -112,7 +112,7 @@ void render_frame(struct swaylock_surface *surface) {
 	wl_surface_attach(surface->child, NULL, 0, 0);
 	wl_surface_commit(surface->child);
 
-	cairo_t *cairo = surface->current_buffer->cairo;
+	cairo_t *cairo = buffer->cairo;
 	cairo_set_antialias(cairo, CAIRO_ANTIALIAS_BEST);
 	cairo_font_options_t *fo = cairo_font_options_create();
 	cairo_font_options_set_hint_style(fo, CAIRO_HINT_STYLE_FULL);
@@ -317,7 +317,7 @@ void render_frame(struct swaylock_surface *surface) {
 	new_width += surface->scale - (new_width % surface->scale);
 
 	if (buffer_width != new_width || buffer_height != new_height) {
-		destroy_buffer(surface->current_buffer);
+		destroy_buffer(buffer);
 		surface->indicator_width = new_width;
 		surface->indicator_height = new_height;
 		render_frame(surface);
@@ -325,7 +325,7 @@ void render_frame(struct swaylock_surface *surface) {
 	}
 
 	wl_surface_set_buffer_scale(surface->child, surface->scale);
-	wl_surface_attach(surface->child, surface->current_buffer->buffer, 0, 0);
+	wl_surface_attach(surface->child, buffer->buffer, 0, 0);
 	wl_surface_damage_buffer(surface->child, 0, 0, INT32_MAX, INT32_MAX);
 	wl_surface_commit(surface->child);
 
