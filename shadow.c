@@ -81,7 +81,7 @@ void run_pw_backend_child(void) {
 			break;
 		}
 
-		char *c = crypt(buf, encpw);
+		const char *c = crypt(buf, encpw);
 		password_buffer_destroy(buf, size);
 		buf = NULL;
 
