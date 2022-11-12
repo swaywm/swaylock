@@ -1285,7 +1285,7 @@ int main(int argc, char **argv) {
 
 	if (state.ext_session_lock_v1) {
 		ext_session_lock_v1_unlock_and_destroy(state.ext_session_lock_v1);
-		wl_display_flush(state.display);
+		wl_display_roundtrip(state.display);
 	}
 
 	free(state.args.font);
