@@ -8,6 +8,8 @@
 #include "pool-buffer.h"
 #include "seat.h"
 #include "wlr-layer-shell-unstable-v1-client-protocol.h"
+#include "viewporter-client-protocol.h"
+#include "single-pixel-buffer-v1-client-protocol.h"
 
 enum auth_state {
 	AUTH_STATE_IDLE,
@@ -78,6 +80,9 @@ struct swaylock_state {
 	struct wl_display *display;
 	struct wl_compositor *compositor;
 	struct wl_subcompositor *subcompositor;
+	struct wp_viewporter *viewporter;
+	struct wl_buffer *background_buffer;
+	struct wp_single_pixel_buffer_manager_v1 *single_pixel_buffer_manager;
 	struct zwlr_layer_shell_v1 *layer_shell;
 	struct zwlr_input_inhibit_manager_v1 *input_inhibit_manager;
 	struct wl_shm *shm;
@@ -100,12 +105,13 @@ struct swaylock_surface {
 	uint32_t output_global_name;
 	struct wl_surface *surface;
 	struct wl_surface *child; // surface made into subsurface
+	struct wp_viewport *viewport;
 	struct wl_subsurface *subsurface;
 	struct zwlr_layer_surface_v1 *layer_surface;
 	struct ext_session_lock_surface_v1 *ext_session_lock_surface_v1;
 	struct pool_buffer buffers[2];
 	struct pool_buffer indicator_buffers[2];
-	struct pool_buffer *current_buffer;
+	struct wl_buffer *backgound_buffer;
 	bool frame_pending, dirty;
 	uint32_t width, height;
 	uint32_t indicator_width, indicator_height;
