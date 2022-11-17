@@ -1135,8 +1135,34 @@ static void term_in(int fd, short mask, void *data) {
 	state.run_display = false;
 }
 
-int main(int argc, char **argv) {
+// Check for --debug 'early' we also apply the correct loglevel
+// to the forked child, without having to first proces all of the
+// configuration (including from file) before forking and (in the
+// case of the shadow backend) dropping privileges
+void log_init(int argc, char **argv) {
+	static struct option long_options[] = {
+		{"debug", no_argument, NULL, 'd'},
+        {0, 0, 0, 0}
+    };
+    int c;
+	optind = 1;
+    while (1) {
+		int opt_idx = 0;
+		c = getopt_long(argc, argv, "d", long_options, &opt_idx);
+		if (c == -1) {
+			break;
+		}
+		switch (c) {
+		case 'd':
+			swaylock_log_init(LOG_DEBUG);
+			return;
+		}
+	}
 	swaylock_log_init(LOG_ERROR);
+}
+
+int main(int argc, char **argv) {
+	log_init(argc, argv);
 	initialize_pw_backend(argc, argv);
 	srand(time(NULL));
 
