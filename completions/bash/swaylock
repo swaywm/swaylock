@@ -78,6 +78,10 @@ _swaylock()
     --text-color
     --text-ver-color
     --text-wrong-color
+    --text-clear
+    --text-caps-lock
+    --text-ver
+    --text-wrong
     --tiling
     --version
   )
