@@ -47,6 +47,7 @@ fish_comp = dependency('fish', required: false)
 libpam = cc.find_library('pam', required: get_option('pam'))
 crypt = cc.find_library('crypt', required: not libpam.found())
 math = cc.find_library('m')
+rt = cc.find_library('rt')
 
 git = find_program('git', required: false)
 scdoc = find_program('scdoc', required: get_option('man-pages'))
@@ -112,6 +113,7 @@ dependencies = [
 	client_protos,
 	gdk_pixbuf,
 	math,
+	rt,
 	xkbcommon,
 	wayland_client,
 ]
