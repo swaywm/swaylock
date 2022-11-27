@@ -68,10 +68,7 @@ wayland_scanner_client = generator(
 )
 
 client_protocols = [
-	wl_protocol_dir / 'stable/xdg-shell/xdg-shell.xml',
 	wl_protocol_dir / 'staging/ext-session-lock/ext-session-lock-v1.xml',
-	'wlr-layer-shell-unstable-v1.xml',
-	'wlr-input-inhibitor-unstable-v1.xml',
 ]
 
 protos_src = []
