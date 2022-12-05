@@ -75,9 +75,6 @@ wayland_scanner_client = generator(
 	arguments: ['client-header', '@INPUT@', '@OUTPUT@'],
 )
 
-client_protos_src = []
-client_protos_headers = []
-
 client_protocols = [
 	wl_protocol_dir / 'stable/xdg-shell/xdg-shell.xml',
 	wl_protocol_dir / 'staging/ext-session-lock/ext-session-lock-v1.xml',
@@ -85,21 +82,11 @@ client_protocols = [
 	'wlr-input-inhibitor-unstable-v1.xml',
 ]
 
+protos_src = []
 foreach xml : client_protocols
-	client_protos_src += wayland_scanner_code.process(xml)
-	client_protos_headers += wayland_scanner_client.process(xml)
+	protos_src += wayland_scanner_code.process(xml)
+	protos_src += wayland_scanner_client.process(xml)
 endforeach
-
-lib_client_protos = static_library(
-	'client_protos',
-	client_protos_src + client_protos_headers,
-	dependencies: [wayland_client]
-) # for the include directory
-
-client_protos = declare_dependency(
-	link_with: lib_client_protos,
-	sources: client_protos_headers,
-)
 
 conf_data = configuration_data()
 conf_data.set10('HAVE_GDK_PIXBUF', gdk_pixbuf.found())
@@ -108,7 +95,6 @@ subdir('include')
 
 dependencies = [
 	cairo,
-	client_protos,
 	gdk_pixbuf,
 	math,
 	rt,
@@ -144,7 +130,7 @@ endif
 swaylock_inc = include_directories('include')
 
 executable('swaylock',
-	sources,
+	sources + protos_src,
 	include_directories: [swaylock_inc],
 	dependencies: dependencies,
 	install: true
