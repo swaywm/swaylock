@@ -23,14 +23,7 @@ add_project_arguments(
 
 cc = meson.get_compiler('c')
 
-sysconfdir = get_option('sysconfdir')
-prefix = get_option('prefix')
 is_freebsd = host_machine.system().startswith('freebsd')
-
-add_project_arguments(
-	'-DSYSCONFDIR="/@0@"'.format(join_paths(prefix, sysconfdir)),
-	language : 'c',
-)
 
 if is_freebsd
 	add_project_arguments('-D_C11_SOURCE', language: 'c')
@@ -51,15 +44,14 @@ git = find_program('git', required: false)
 scdoc = find_program('scdoc', required: get_option('man-pages'))
 wayland_scanner_prog = find_program(wayland_scanner.get_variable('wayland_scanner'), native: true)
 
-version = '"@0@"'.format(meson.project_version())
+version = meson.project_version()
 if git.found()
 	git_commit_hash = run_command([git, 'describe', '--always', '--tags'], check: false)
 	git_branch = run_command([git, 'rev-parse', '--abbrev-ref', 'HEAD'], check: false)
 	if git_commit_hash.returncode() == 0 and git_branch.returncode() == 0
-		version = '"@0@ (" __DATE__ ", branch \'@1@\')"'.format(git_commit_hash.stdout().strip(), git_branch.stdout().strip())
+		version = '@0@ (" __DATE__ ", branch \'@1@\')'.format(git_commit_hash.stdout().strip(), git_branch.stdout().strip())
 	endif
 endif
-add_project_arguments('-DSWAYLOCK_VERSION=@0@'.format(version), language: 'c')
 
 wl_protocol_dir = wayland_protos.get_variable('pkgdatadir')
 
@@ -89,6 +81,8 @@ foreach xml : client_protocols
 endforeach
 
 conf_data = configuration_data()
+conf_data.set_quoted('SYSCONFDIR', get_option('prefix') / get_option('sysconfdir'))
+conf_data.set_quoted('SWAYLOCK_VERSION', version)
 conf_data.set10('HAVE_GDK_PIXBUF', gdk_pixbuf.found())
 
 subdir('include')
@@ -138,7 +132,7 @@ executable('swaylock',
 
 install_data(
 	'pam/swaylock',
-	install_dir: sysconfdir + '/pam.d/'
+	install_dir: get_option('sysconfdir') / 'pam.d'
 )
 
 if scdoc.found()
