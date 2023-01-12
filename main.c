@@ -61,11 +61,12 @@ int lenient_strcmp(char *a, char *b) {
 
 static void daemonize(void) {
 	int fds[2];
+	int pid;
 	if (pipe(fds) != 0) {
 		swaylock_log(LOG_ERROR, "Failed to pipe");
 		exit(1);
 	}
-	if (fork() == 0) {
+	if ((pid = fork()) == 0) {
 		setsid();
 		close(fds[0]);
 		int devnull = open("/dev/null", O_RDWR);
@@ -83,6 +84,7 @@ static void daemonize(void) {
 		}
 		close(fds[1]);
 	} else {
+		swaylock_log(LOG_INFO, "Child process created with pid %d", pid);
 		close(fds[1]);
 		uint8_t success;
 		if (read(fds[0], &success, 1) != 1 || !success) {
@@ -1158,7 +1160,7 @@ void log_init(int argc, char **argv) {
 			return;
 		}
 	}
-	swaylock_log_init(LOG_ERROR);
+	swaylock_log_init(LOG_INFO);
 }
 
 int main(int argc, char **argv) {
