@@ -184,8 +184,6 @@ static void layer_surface_configure(void *data,
 	struct swaylock_surface *surface = data;
 	surface->width = width;
 	surface->height = height;
-	surface->indicator_width = 0;
-	surface->indicator_height = 0;
 	zwlr_layer_surface_v1_ack_configure(layer_surface, serial);
 	render_frame_background(surface);
 	render_frame(surface);
@@ -208,8 +206,6 @@ static void ext_session_lock_surface_v1_handle_configure(void *data,
 	struct swaylock_surface *surface = data;
 	surface->width = width;
 	surface->height = height;
-	surface->indicator_width = 0;
-	surface->indicator_height = 0;
 	ext_session_lock_surface_v1_ack_configure(lock_surface, serial);
 	render_frame_background(surface);
 	render_frame(surface);
