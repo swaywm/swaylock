@@ -71,9 +71,11 @@ void render_frame_background(struct swaylock_surface *surface) {
 void render_frame(struct swaylock_surface *surface) {
 	struct swaylock_state *state = surface->state;
 
+	double border_width = 2.0 * surface->scale;
+
 	int arc_radius = state->args.radius * surface->scale;
 	int arc_thickness = state->args.thickness * surface->scale;
-	int buffer_diameter = (arc_radius + arc_thickness) * 2;
+	int buffer_diameter = arc_radius * 2 + arc_thickness + border_width;
 
 	int buffer_width = surface->indicator_width;
 	int buffer_height = surface->indicator_height;
@@ -267,7 +269,7 @@ void render_frame(struct swaylock_surface *surface) {
 
 		// Draw inner + outer border of the circle
 		set_color_for_state(cairo, state, &state->args.colors.line);
-		cairo_set_line_width(cairo, 2.0 * surface->scale);
+		cairo_set_line_width(cairo, border_width);
 		cairo_arc(cairo, buffer_width / 2, buffer_diameter / 2,
 				arc_radius - arc_thickness / 2, 0, 2 * M_PI);
 		cairo_stroke(cairo);
