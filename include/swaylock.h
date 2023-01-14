@@ -86,6 +86,8 @@ struct swaylock_state {
 	struct swaylock_args args;
 	struct swaylock_password password;
 	struct swaylock_xkb xkb;
+	cairo_surface_t *test_surface;
+	cairo_t *test_cairo; // used to estimate font/text sizes
 	enum auth_state auth_state;
 	int failed_attempts;
 	bool run_display;
