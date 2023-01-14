@@ -108,10 +108,6 @@ void render_frame(struct swaylock_surface *surface) {
 		return;
 	}
 
-	// Hide subsurface until we want it visible
-	wl_surface_attach(surface->child, NULL, 0, 0);
-	wl_surface_commit(surface->child);
-
 	cairo_t *cairo = buffer->cairo;
 	cairo_set_antialias(cairo, CAIRO_ANTIALIAS_BEST);
 	cairo_font_options_t *fo = cairo_font_options_create();
