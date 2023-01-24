@@ -184,9 +184,6 @@ start_verify (FprintDBusDevice *dev)
      * after it returns.
      */
 
-    g_signal_connect (dev, "g-signal", G_CALLBACK (proxy_signal_cb),
-                      &verify_state);
-
     fprint_dbus_device_call_verify_start (dev, "any", NULL,
                                           verify_started_cb,
                                           &verify_state);
@@ -232,13 +229,17 @@ void fingerprint_init ( void )
     if(device == NULL) {
         return;
     }
-
+    g_signal_connect (device, "g-signal", G_CALLBACK (proxy_signal_cb),
+                      &verify_state);
     start_verify(device);
 }
 
 void fingerprint_deinit ( void ) {
     if(device) {
+        g_signal_handlers_disconnect_by_func (device, proxy_signal_cb,
+                                              &verify_state);
         release_device (device);
+        device = NULL;
     }
 }
 
@@ -254,15 +255,12 @@ int fingerprint_verify ( void ) {
     }
 
     if(!verify_state.match) {
-        g_signal_handlers_disconnect_by_func (device, proxy_signal_cb,
-                                              &verify_state);
         verify_state.completed = 0;
         verify_state.match = 0;
         start_verify(device);
         return false;
     }
 
-    release_device (device);
-    device = NULL;
+    fingerprint_deinit();
     return true;
 }
