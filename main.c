@@ -28,6 +28,7 @@
 #include "wlr-input-inhibitor-unstable-v1-client-protocol.h"
 #include "wlr-layer-shell-unstable-v1-client-protocol.h"
 #include "ext-session-lock-v1-client-protocol.h"
+#include "fingerprint/fingerprint.h"
 
 static uint32_t parse_color(const char *color) {
 	if (color[0] == '#') {
@@ -1291,6 +1292,8 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
+        fingerprint_init();
+
 	struct swaylock_surface *surface;
 	wl_list_for_each(surface, &state.surfaces, link) {
 		create_surface(surface);
@@ -1317,6 +1320,9 @@ int main(int argc, char **argv) {
 			break;
 		}
 		loop_poll(state.eventloop);
+                if(fingerprint_verify()) {
+                    do_sigusr(1);
+                }
 	}
 
 	if (state.ext_session_lock_v1) {
@@ -1324,6 +1330,7 @@ int main(int argc, char **argv) {
 		wl_display_roundtrip(state.display);
 	}
 
+        fingerprint_deinit();
 	free(state.args.font);
 	return 0;
 }
