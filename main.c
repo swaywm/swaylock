@@ -1162,6 +1162,14 @@ void log_init(int argc, char **argv) {
 	swaylock_log_init(LOG_ERROR);
 }
 
+static void check_fingerprint(void *d) {
+    if(fingerprint_verify()) {
+        do_sigusr(1);
+    }
+
+    loop_add_timer(state.eventloop, 100, check_fingerprint, NULL);
+}
+
 int main(int argc, char **argv) {
 	log_init(argc, argv);
 	initialize_pw_backend(argc, argv);
@@ -1311,6 +1319,7 @@ int main(int argc, char **argv) {
 	loop_add_fd(state.eventloop, get_comm_reply_fd(), POLLIN, comm_in, NULL);
 
 	loop_add_fd(state.eventloop, sigusr_fds[0], POLLIN, term_in, NULL);
+        loop_add_timer(state.eventloop, 100, check_fingerprint, NULL);
 	signal(SIGUSR1, do_sigusr);
 
 	state.run_display = true;
@@ -1320,9 +1329,6 @@ int main(int argc, char **argv) {
 			break;
 		}
 		loop_poll(state.eventloop);
-                if(fingerprint_verify()) {
-                    do_sigusr(1);
-                }
 	}
 
 	if (state.ext_session_lock_v1) {

@@ -111,12 +111,12 @@ verify_result (GObject *object, const char *result, gboolean done, void *user_da
     verify_state->match = g_str_equal (result, "verify-match");
 
     if (done != FALSE) {
-        verify_state->completed = TRUE;
         g_autoptr(GError) error = NULL;
         if (!fprint_dbus_device_call_verify_stop_sync (device, NULL, &error))
         {
             g_print ("VerifyStop failed: %s\n", error->message);
         }
+        verify_state->completed = TRUE;
     }
 }
 
@@ -253,8 +253,15 @@ int fingerprint_verify ( void ) {
         return false;
     }
 
-    g_signal_handlers_disconnect_by_func (device, proxy_signal_cb,
-                                          &verify_state);
+    if(!verify_state.match) {
+        g_signal_handlers_disconnect_by_func (device, proxy_signal_cb,
+                                              &verify_state);
+        verify_state.completed = 0;
+        verify_state.match = 0;
+        start_verify(device);
+        return false;
+    }
+
     release_device (device);
     device = NULL;
     return true;
