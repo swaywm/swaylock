@@ -1148,7 +1148,7 @@ void log_init(int argc, char **argv) {
 	optind = 1;
     while (1) {
 		int opt_idx = 0;
-		c = getopt_long(argc, argv, "d", long_options, &opt_idx);
+		c = getopt_long(argc, argv, "-:d", long_options, &opt_idx);
 		if (c == -1) {
 			break;
 		}
