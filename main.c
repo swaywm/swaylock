@@ -313,7 +313,8 @@ struct wl_output_listener _wl_output_listener = {
 };
 
 static void ext_session_lock_v1_handle_locked(void *data, struct ext_session_lock_v1 *lock) {
-	// Who cares
+	struct swaylock_state *state = data;
+	state->locked = true;
 }
 
 static void ext_session_lock_v1_handle_finished(void *data, struct ext_session_lock_v1 *lock) {
@@ -1295,8 +1296,22 @@ int main(int argc, char **argv) {
 		create_surface(surface);
 	}
 
+	if (state.ext_session_lock_manager_v1) {
+		while (!state.locked) {
+			if (wl_display_dispatch(state.display) < 0) {
+				swaylock_log(LOG_ERROR, "wl_display_dispatch() failed");
+				return 2;
+			}
+		}
+	} else {
+		if (wl_display_roundtrip(state.display) < 0) {
+			swaylock_log(LOG_ERROR, "wl_display_roundtrip() failed");
+			return 2;
+		}
+		state.locked = true;
+	}
+
 	if (state.args.daemonize) {
-		wl_display_roundtrip(state.display);
 		daemonize();
 	}
 
