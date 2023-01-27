@@ -28,6 +28,7 @@
 #include "wlr-input-inhibitor-unstable-v1-client-protocol.h"
 #include "wlr-layer-shell-unstable-v1-client-protocol.h"
 #include "ext-session-lock-v1-client-protocol.h"
+#include "surface-invalidation-v1-client-protocol.h"
 
 static uint32_t parse_color(const char *color) {
 	if (color[0] == '#') {
@@ -126,6 +127,38 @@ static bool surface_is_opaque(struct swaylock_surface *surface) {
 	return (surface->state->args.colors.background & 0xff) == 0xff;
 }
 
+static void surface_invalidation_handle_invalidated(void *data,
+		struct wp_surface_invalidation_v1 *wp_surface_invalidation_v1, uint32_t serial) {
+	struct swaylock_surface *surface = data;
+	wp_surface_invalidation_v1_ack(wp_surface_invalidation_v1, serial);
+
+	if (wp_surface_invalidation_v1 == surface->surface_inval_surface) {
+		render_frame_background(surface);
+	} else if (wp_surface_invalidation_v1 == surface->surface_inval_child) {
+		render_frame(surface);
+	} else {
+		assert(false);
+	}
+}
+
+static struct wp_surface_invalidation_v1_listener surface_invalidation_listener = {
+	.invalidated = surface_invalidation_handle_invalidated,
+};
+
+struct wp_surface_invalidation_v1 *attach_surface_invalidation(
+		struct swaylock_surface *surface, struct wl_surface *wl_surface) {
+	if (!surface->state->surface_invalidation_manager_v1) {
+		return NULL;
+	}
+
+	struct wp_surface_invalidation_v1 *surface_inval =
+		wp_surface_invalidation_manager_v1_get_surface_invalidation(
+			surface->state->surface_invalidation_manager_v1, wl_surface);
+	wp_surface_invalidation_v1_add_listener(surface_inval,
+		&surface_invalidation_listener, surface);
+	return surface_inval;
+}
+
 static void create_surface(struct swaylock_surface *surface) {
 	struct swaylock_state *state = surface->state;
 
@@ -139,6 +172,11 @@ static void create_surface(struct swaylock_surface *surface) {
 	surface->subsurface = wl_subcompositor_get_subsurface(state->subcompositor, surface->child, surface->surface);
 	assert(surface->subsurface);
 	wl_subsurface_set_sync(surface->subsurface);
+
+	surface->surface_inval_surface =
+		attach_surface_invalidation(surface, surface->surface);
+	surface->surface_inval_child =
+		attach_surface_invalidation(surface, surface->child);
 
 	if (state->ext_session_lock_v1) {
 		surface->ext_session_lock_surface_v1 = ext_session_lock_v1_get_lock_surface(
@@ -373,6 +411,9 @@ static void handle_global(void *data, struct wl_registry *registry,
 	} else if (strcmp(interface, ext_session_lock_manager_v1_interface.name) == 0) {
 		state->ext_session_lock_manager_v1 = wl_registry_bind(registry, name,
 				&ext_session_lock_manager_v1_interface, 1);
+	} else if (strcmp(interface, wp_surface_invalidation_manager_v1_interface.name) == 0) {
+		state->surface_invalidation_manager_v1 = wl_registry_bind(registry, name,
+				&wp_surface_invalidation_manager_v1_interface, 1);
 	}
 }
 

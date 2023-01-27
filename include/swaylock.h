@@ -91,6 +91,7 @@ struct swaylock_state {
 	bool run_display;
 	struct ext_session_lock_manager_v1 *ext_session_lock_manager_v1;
 	struct ext_session_lock_v1 *ext_session_lock_v1;
+	struct wp_surface_invalidation_manager_v1 *surface_invalidation_manager_v1;
 };
 
 struct swaylock_surface {
@@ -103,6 +104,8 @@ struct swaylock_surface {
 	struct wl_subsurface *subsurface;
 	struct zwlr_layer_surface_v1 *layer_surface;
 	struct ext_session_lock_surface_v1 *ext_session_lock_surface_v1;
+	struct wp_surface_invalidation_v1 *surface_inval_surface;
+	struct wp_surface_invalidation_v1 *surface_inval_child;
 	struct pool_buffer buffers[2];
 	struct pool_buffer indicator_buffers[2];
 	bool frame_pending, dirty;
