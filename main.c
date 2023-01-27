@@ -579,6 +579,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"debug", no_argument, NULL, 'd'},
 		{"ignore-empty-password", no_argument, NULL, 'e'},
 		{"daemonize", no_argument, NULL, 'f'},
+		{"ready-fd", required_argument, NULL, 'R'},
 		{"help", no_argument, NULL, 'h'},
 		{"image", required_argument, NULL, 'i'},
 		{"disable-caps-lock-text", no_argument, NULL, 'L'},
@@ -645,6 +646,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Show current count of failed authentication attempts.\n"
 		"  -f, --daemonize                  "
 			"Detach from the controlling terminal after locking.\n"
+		"  -R, --ready-fd <fd>              "
+			"File descriptor to send readiness notifications to.\n"
 		"  -h, --help                       "
 			"Show help message and quit.\n"
 		"  -i, --image [[<output>]:]<path>  "
@@ -754,7 +757,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 	optind = 1;
 	while (1) {
 		int opt_idx = 0;
-		c = getopt_long(argc, argv, "c:deFfhi:kKLlnrs:tuvC:", long_options,
+		c = getopt_long(argc, argv, "c:deFfhi:kKLlnrs:tuvC:R:", long_options,
 				&opt_idx);
 		if (c == -1) {
 			break;
@@ -786,6 +789,11 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		case 'f':
 			if (state) {
 				state->args.daemonize = true;
+			}
+			break;
+		case 'R':
+			if (state) {
+				state->args.ready_fd = strtol(optarg, NULL, 10);
 			}
 			break;
 		case 'i':
@@ -1182,7 +1190,8 @@ int main(int argc, char **argv) {
 		.show_keyboard_layout = false,
 		.hide_keyboard_layout = false,
 		.show_failed_attempts = false,
-		.indicator_idle_visible = false
+		.indicator_idle_visible = false,
+		.ready_fd = -1,
 	};
 	wl_list_init(&state.images);
 	set_default_colors(&state.args.colors);
@@ -1311,6 +1320,17 @@ int main(int argc, char **argv) {
 		state.locked = true;
 	}
 
+	if (state.args.ready_fd >= 0) {
+		// s6 wants a newline and ignores any text before that, systemd wants
+		// READY=1, so use the least common denominator
+		const char ready_str[] = "READY=1\n";
+		if (write(state.args.ready_fd, ready_str, strlen(ready_str)) != strlen(ready_str)) {
+			swaylock_log(LOG_ERROR, "Failed to send readiness notification");
+			return 2;
+		}
+		close(state.args.ready_fd);
+		state.args.ready_fd = -1;
+	}
 	if (state.args.daemonize) {
 		daemonize();
 	}
