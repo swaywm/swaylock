@@ -32,6 +32,8 @@ static void set_color_for_state(cairo_t *cairo, struct swaylock_state *state,
 	}
 }
 
+char * get_fp_string();
+
 void render_frame_background(struct swaylock_surface *surface) {
 	struct swaylock_state *state = surface->state;
 
@@ -165,6 +167,9 @@ void render_frame(struct swaylock_surface *surface) {
 		case AUTH_STATE_VALIDATING:
 			text = "Verifying";
 			break;
+                case AUTH_STATE_FINGERPRINT:
+			text = state->fingerprint_msg;
+			break;
 		case AUTH_STATE_INVALID:
 			text = "Wrong";
 			break;
@@ -221,6 +226,22 @@ void render_frame(struct swaylock_surface *surface) {
 			cairo_show_text(cairo, text);
 			cairo_close_path(cairo);
 			cairo_new_sub_path(cairo);
+
+
+                        set_color_for_state(cairo, state, &state->args.colors.ring);
+                        char *a = get_fp_string();
+                        if(a) {
+                            cairo_text_extents(cairo, a, &extents);
+                            cairo_font_extents(cairo, &fe);
+                            x = (buffer_width / 2) -
+				(extents.width / 2 + extents.x_bearing + arc_radius);
+                            y = (buffer_diameter / 2) -
+				(arc_radius);
+                            cairo_move_to(cairo, x, y);
+                            cairo_show_text(cairo, a);
+                            cairo_close_path(cairo);
+                            cairo_new_sub_path(cairo);
+                        }
 
 			if (new_width < extents.width) {
 				new_width = extents.width;

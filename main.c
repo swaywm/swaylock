@@ -1163,11 +1163,13 @@ void log_init(int argc, char **argv) {
 }
 
 static void check_fingerprint(void *d) {
-    if(fingerprint_verify()) {
+    if(fingerprint_verify(&state)) {
         do_sigusr(1);
+    } else {
+        (void)write(sigusr_fds[1], NULL, 0);
     }
 
-    loop_add_timer(state.eventloop, 100, check_fingerprint, NULL);
+    loop_add_timer(state.eventloop, 300, check_fingerprint, NULL);
 }
 
 int main(int argc, char **argv) {
@@ -1300,8 +1302,6 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-        fingerprint_init();
-
 	struct swaylock_surface *surface;
 	wl_list_for_each(surface, &state.surfaces, link) {
 		create_surface(surface);
@@ -1321,6 +1321,7 @@ int main(int argc, char **argv) {
 	loop_add_fd(state.eventloop, sigusr_fds[0], POLLIN, term_in, NULL);
         loop_add_timer(state.eventloop, 100, check_fingerprint, NULL);
 	signal(SIGUSR1, do_sigusr);
+        fingerprint_init(&state);
 
 	state.run_display = true;
 	while (state.run_display) {

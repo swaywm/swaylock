@@ -17,6 +17,7 @@ enum auth_state {
 	AUTH_STATE_BACKSPACE,
 	AUTH_STATE_VALIDATING,
 	AUTH_STATE_INVALID,
+        AUTH_STATE_FINGERPRINT,
 };
 
 struct swaylock_colorset {
@@ -91,6 +92,7 @@ struct swaylock_state {
 	bool run_display;
 	struct ext_session_lock_manager_v1 *ext_session_lock_manager_v1;
 	struct ext_session_lock_v1 *ext_session_lock_v1;
+        char *fingerprint_msg;
 };
 
 struct swaylock_surface {
