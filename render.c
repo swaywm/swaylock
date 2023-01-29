@@ -226,6 +226,10 @@ void render_frame(struct swaylock_surface *surface) {
 			cairo_show_text(cairo, text);
 			cairo_close_path(cairo);
 			cairo_new_sub_path(cairo);
+
+			if (new_width < extents.width) {
+				new_width = extents.width;
+			}
 		}
 
 		// Typing indicator: Highlight random part on keypress
