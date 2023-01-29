@@ -1163,13 +1163,14 @@ void log_init(int argc, char **argv) {
 }
 
 static void check_fingerprint(void *d) {
-    if(fingerprint_verify(&state)) {
+    struct FingerprintState *fingerprint_state = d;
+    if (fingerprint_verify(fingerprint_state)) {
         do_sigusr(1);
     } else {
         (void)write(sigusr_fds[1], NULL, 0);
     }
 
-    loop_add_timer(state.eventloop, 300, check_fingerprint, NULL);
+    loop_add_timer(state.eventloop, 300, check_fingerprint, fingerprint_state);
 }
 
 int main(int argc, char **argv) {
@@ -1319,9 +1320,10 @@ int main(int argc, char **argv) {
 	loop_add_fd(state.eventloop, get_comm_reply_fd(), POLLIN, comm_in, NULL);
 
 	loop_add_fd(state.eventloop, sigusr_fds[0], POLLIN, term_in, NULL);
-        loop_add_timer(state.eventloop, 100, check_fingerprint, NULL);
+        struct FingerprintState fingerprint_state;
+        fingerprint_init(&fingerprint_state, &state);
+        loop_add_timer(state.eventloop, 100, check_fingerprint, &fingerprint_state);
 	signal(SIGUSR1, do_sigusr);
-        fingerprint_init(&state);
 
 	state.run_display = true;
 	while (state.run_display) {
@@ -1337,7 +1339,7 @@ int main(int argc, char **argv) {
 		wl_display_roundtrip(state.display);
 	}
 
-        fingerprint_deinit();
+        fingerprint_deinit(&fingerprint_state);
 	free(state.args.font);
 	return 0;
 }

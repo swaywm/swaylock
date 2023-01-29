@@ -226,26 +226,6 @@ void render_frame(struct swaylock_surface *surface) {
 			cairo_show_text(cairo, text);
 			cairo_close_path(cairo);
 			cairo_new_sub_path(cairo);
-
-
-                        set_color_for_state(cairo, state, &state->args.colors.ring);
-                        char *a = get_fp_string();
-                        if(a) {
-                            cairo_text_extents(cairo, a, &extents);
-                            cairo_font_extents(cairo, &fe);
-                            x = (buffer_width / 2) -
-				(extents.width / 2 + extents.x_bearing + arc_radius);
-                            y = (buffer_diameter / 2) -
-				(arc_radius);
-                            cairo_move_to(cairo, x, y);
-                            cairo_show_text(cairo, a);
-                            cairo_close_path(cairo);
-                            cairo_new_sub_path(cairo);
-                        }
-
-			if (new_width < extents.width) {
-				new_width = extents.width;
-			}
 		}
 
 		// Typing indicator: Highlight random part on keypress
