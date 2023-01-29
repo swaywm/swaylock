@@ -23,17 +23,17 @@
 #include "fingerprint/fprintd-dbus.h"
 
 struct FingerprintState {
-    GError  *error;
-    gboolean started;
-    gboolean completed;
-    gboolean match;
+	GError	*error;
+	gboolean started;
+	gboolean completed;
+	gboolean match;
 
-    char status[128];
+	char status[128];
 
-    FprintDBusManager *manager;
-    GDBusConnection *connection;
-    FprintDBusDevice *device;
-    struct swaylock_state *sw_state;
+	FprintDBusManager *manager;
+	GDBusConnection *connection;
+	FprintDBusDevice *device;
+	struct swaylock_state *sw_state;
 };
 
 void fingerprint_init(struct FingerprintState *fingerprint_state, struct swaylock_state *state);
