@@ -32,8 +32,6 @@ static void set_color_for_state(cairo_t *cairo, struct swaylock_state *state,
 	}
 }
 
-char * get_fp_string();
-
 void render_frame_background(struct swaylock_surface *surface) {
 	struct swaylock_state *state = surface->state;
 
