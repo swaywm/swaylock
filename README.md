@@ -1,11 +1,8 @@
 # swaylock
 
 swaylock is a screen locking utility for Wayland compositors. It is compatible
-with any Wayland compositor which implements one of the following Wayland
-protocols:
-
-- ext-session-lock-v1, or
-- wlr-layer-shell and wlr-input-inhibitor
+with any Wayland compositor which implements the ext-session-lock-v1 Wayland
+protocol.
 
 See the man page, `swaylock(1)`, for instructions on using swaylock.
 
