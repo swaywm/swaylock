@@ -61,9 +61,11 @@ static void create_manager(struct FingerprintState *state) {
 		display_message(state, "Fingerprint error");
 		return;
 	}
+
+	swaylock_log(LOG_DEBUG, "FPrint manager created");
 }
 
-static void open_device(struct FingerprintState *state, const char *username) {
+static void open_device(struct FingerprintState *state) {
 	state->device = NULL;
 	g_autoptr(FprintDBusDevice) dev = NULL;
 	g_autoptr(GError) error = NULL;
@@ -86,12 +88,13 @@ static void open_device(struct FingerprintState *state, const char *username) {
 		return;
 	}
 
-	if (!fprint_dbus_device_call_claim_sync(dev, username, NULL, &error)) {
-		swaylock_log(LOG_ERROR, "failed to claim the device: %s", error->message);
-		display_message(state, "Fingerprint error");
+	if (!fprint_dbus_device_call_claim_sync(dev, "", NULL, &error)) {
+		// we need to wait while device can be claimed
+		swaylock_log(LOG_DEBUG, "failed to claim the device: %s(%d)", error->message, error->code);
 		return;
 	}
 
+	swaylock_log(LOG_DEBUG, "FPrint device opened %s", path);
 	state->device = g_steal_pointer (&dev);
 }
 
@@ -199,24 +202,28 @@ void fingerprint_init(struct FingerprintState *fingerprint_state,
 	if(fingerprint_state->manager == NULL || fingerprint_state->connection == NULL) {
 		return;
 	}
-	open_device(fingerprint_state, "");
-	if(fingerprint_state->device == NULL) {
-		return;
-	}
-
-	g_signal_connect (fingerprint_state->device, "g-signal", G_CALLBACK (proxy_signal_cb),
-					  fingerprint_state);
-	start_verify(fingerprint_state);
 }
 
 int fingerprint_verify(struct FingerprintState *fingerprint_state) {
 	/* VerifyStatus signals are processing, do not wait for completion. */
 	g_main_context_iteration (NULL, FALSE);
 	if (fingerprint_state->manager == NULL ||
-		fingerprint_state->connection == NULL ||
-		fingerprint_state->device == NULL) {
+		fingerprint_state->connection == NULL) {
 		return false;
 	}
+
+	if (fingerprint_state->device == NULL) {
+		open_device(fingerprint_state);
+		if (fingerprint_state->device == NULL) {
+			return false;
+		}
+
+		g_signal_connect (fingerprint_state->device, "g-signal", G_CALLBACK (proxy_signal_cb),
+						  fingerprint_state);
+		start_verify(fingerprint_state);
+	}
+
+
 
 	if (!fingerprint_state->completed) {
 		return false;
