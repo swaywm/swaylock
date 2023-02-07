@@ -92,6 +92,9 @@ Locks your Wayland session.
 *--font-size* <size>
 	Sets a fixed font size for the indicator text.
 
+*--font-bold*
+	Use bold font weight for the indicator text
+
 *--indicator-idle-visible*
 	Sets the indicator to show even if idle.
 
