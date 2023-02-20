@@ -12,6 +12,8 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <dirent.h>
+#include <limits.h>
 #include <time.h>
 #include <unistd.h>
 #include <wayland-client.h>
@@ -418,6 +420,51 @@ static void load_image(char *arg, struct swaylock_state *state) {
 		free(image->path);
 		image->path = join_args(p.we_wordv, p.we_wordc);
 		wordfree(&p);
+	}
+
+
+	// If path is pointing to a directory, choose random image from it.
+	DIR *dir = opendir(image->path);
+	if (dir != NULL) {
+		struct dirent *entry;
+		size_t file_count = 0;
+
+		// Get the number of files in the directory.
+		struct stat stat_buffer;
+		// Paths can be longer than PATH_MAX, so this might fail.
+		char path_buffer[PATH_MAX];
+		while ((entry = readdir(dir)) != NULL) {
+			snprintf(path_buffer, PATH_MAX, "%s/%s", image->path, entry->d_name);
+			if (stat(path_buffer, &stat_buffer) == -1) {
+				continue;
+			}
+			if (S_ISREG(stat_buffer.st_mode)) {
+				// Only count regular files, excluding directories etc.
+				++file_count;
+			}
+		}
+
+		// Select random file.
+		size_t selected_file = rand() % file_count;
+		rewinddir(dir);
+		size_t i = 0;
+		while ((entry = readdir(dir)) != NULL) {
+			snprintf(path_buffer, PATH_MAX, "%s/%s", image->path, entry->d_name);
+			if (stat(path_buffer, &stat_buffer) == -1) {
+				continue;
+			}
+			if (S_ISREG(stat_buffer.st_mode)) {
+				if (i == selected_file) {
+					char *path = malloc(strlen(path_buffer)+1);
+					strcpy(path, path_buffer);
+					free(image->path);
+					image->path = path;
+					break;
+				}
+				++i;
+			}
+		}
+		closedir(dir);
 	}
 
 	// Load the actual image
