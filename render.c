@@ -4,6 +4,7 @@
 #include "cairo.h"
 #include "background-image.h"
 #include "swaylock.h"
+#include "log.h"
 
 #define M_PI 3.14159265358979323846
 const float TYPE_INDICATOR_RANGE = M_PI / 3.0f;
@@ -41,30 +42,40 @@ void render_frame_background(struct swaylock_surface *surface) {
 		return; // not yet configured
 	}
 
-	struct pool_buffer *buffer = get_next_buffer(state->shm,
-			surface->buffers, buffer_width, buffer_height);
-	if (buffer == NULL) {
-		return;
-	}
+	if (buffer_width != surface->last_buffer_width ||
+			buffer_height != surface->last_buffer_height) {
+		struct pool_buffer buffer;
+		if (!create_buffer(state->shm, &buffer, buffer_width, buffer_height,
+				WL_SHM_FORMAT_ARGB8888)) {
+			swaylock_log(LOG_ERROR,
+				"Failed to create new buffer for frame background.");
+			return;
+		}
 
-	cairo_t *cairo = buffer->cairo;
-	cairo_set_antialias(cairo, CAIRO_ANTIALIAS_BEST);
+		cairo_t *cairo = buffer.cairo;
+		cairo_set_antialias(cairo, CAIRO_ANTIALIAS_BEST);
 
-	cairo_save(cairo);
-	cairo_set_operator(cairo, CAIRO_OPERATOR_SOURCE);
-	cairo_set_source_u32(cairo, state->args.colors.background);
-	cairo_paint(cairo);
-	if (surface->image && state->args.mode != BACKGROUND_MODE_SOLID_COLOR) {
-		cairo_set_operator(cairo, CAIRO_OPERATOR_OVER);
-		render_background_image(cairo, surface->image,
-			state->args.mode, buffer_width, buffer_height);
+		cairo_save(cairo);
+		cairo_set_operator(cairo, CAIRO_OPERATOR_SOURCE);
+		cairo_set_source_u32(cairo, state->args.colors.background);
+		cairo_paint(cairo);
+		if (surface->image && state->args.mode != BACKGROUND_MODE_SOLID_COLOR) {
+			cairo_set_operator(cairo, CAIRO_OPERATOR_OVER);
+			render_background_image(cairo, surface->image,
+				state->args.mode, buffer_width, buffer_height);
+		}
+		cairo_restore(cairo);
+		cairo_identity_matrix(cairo);
+
+		wl_surface_attach(surface->surface, buffer.buffer, 0, 0);
+		wl_surface_damage_buffer(surface->surface, 0, 0, INT32_MAX, INT32_MAX);
+		destroy_buffer(&buffer);
+
+		surface->last_buffer_width = buffer_width;
+		surface->last_buffer_height = buffer_height;
 	}
-	cairo_restore(cairo);
-	cairo_identity_matrix(cairo);
 
 	wl_surface_set_buffer_scale(surface->surface, surface->scale);
-	wl_surface_attach(surface->surface, buffer->buffer, 0, 0);
-	wl_surface_damage_buffer(surface->surface, 0, 0, INT32_MAX, INT32_MAX);
 	wl_surface_commit(surface->surface);
 }
 
