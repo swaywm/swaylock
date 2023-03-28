@@ -271,9 +271,7 @@ void render_frame(struct swaylock_surface *surface) {
 		// Typing indicator: Highlight random part on keypress
 		if (state->auth_state == AUTH_STATE_INPUT
 				|| state->auth_state == AUTH_STATE_BACKSPACE) {
-			static double highlight_start = 0;
-			highlight_start +=
-				(rand() % (int)(M_PI * 100)) / 100.0 + M_PI * 0.5;
+			double highlight_start = state->highlight_start * (M_PI / 1024.0);
 			cairo_arc(cairo, buffer_width / 2, buffer_diameter / 2,
 					arc_radius, highlight_start,
 					highlight_start + TYPE_INDICATOR_RANGE);

@@ -87,6 +87,7 @@ struct swaylock_state {
 	cairo_surface_t *test_surface;
 	cairo_t *test_cairo; // used to estimate font/text sizes
 	enum auth_state auth_state;
+	uint32_t highlight_start; // position of highlight; 2048 = 1 full turn
 	int failed_attempts;
 	bool run_display, locked;
 	struct ext_session_lock_manager_v1 *ext_session_lock_manager_v1;
