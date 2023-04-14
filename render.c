@@ -112,6 +112,9 @@ void render_frame(struct swaylock_surface *surface) {
 		case AUTH_STATE_VALIDATING:
 			text = "Verifying";
 			break;
+                case AUTH_STATE_FINGERPRINT:
+			text = state->fingerprint_msg;
+			break;
 		case AUTH_STATE_INVALID:
 			text = "Wrong";
 			break;
