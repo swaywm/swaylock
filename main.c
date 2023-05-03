@@ -1072,7 +1072,7 @@ static void comm_in(int fd, short mask, void *data) {
 		state.run_display = false;
 	} else {
 		state.auth_state = AUTH_STATE_INVALID;
-		schedule_indicator_clear(&state);
+		schedule_auth_idle(&state);
 		++state.failed_attempts;
 		damage_state(&state);
 	}

@@ -12,12 +12,12 @@ const float TYPE_INDICATOR_BORDER_THICKNESS = M_PI / 128.0f;
 
 static void set_color_for_state(cairo_t *cairo, struct swaylock_state *state,
 		struct swaylock_colorset *colorset) {
-	if (state->auth_state == AUTH_STATE_VALIDATING) {
+	if (state->input_state == INPUT_STATE_CLEAR) {
+		cairo_set_source_u32(cairo, colorset->cleared);
+	} else if (state->auth_state == AUTH_STATE_VALIDATING) {
 		cairo_set_source_u32(cairo, colorset->verifying);
 	} else if (state->auth_state == AUTH_STATE_INVALID) {
 		cairo_set_source_u32(cairo, colorset->wrong);
-	} else if (state->auth_state == AUTH_STATE_CLEAR) {
-		cairo_set_source_u32(cairo, colorset->cleared);
 	} else {
 		if (state->xkb.caps_lock && state->args.show_caps_lock_indicator) {
 			cairo_set_source_u32(cairo, colorset->caps_lock);
@@ -107,20 +107,20 @@ void render_frame(struct swaylock_surface *surface) {
 	char *text = NULL;
 	const char *layout_text = NULL;
 
-	if (state->args.show_indicator) {
-		switch (state->auth_state) {
-		case AUTH_STATE_VALIDATING:
-			text = "Verifying";
-			break;
-		case AUTH_STATE_INVALID:
-			text = "Wrong";
-			break;
-		case AUTH_STATE_CLEAR:
+	bool draw_indicator = state->args.show_indicator &&
+		(state->auth_state != AUTH_STATE_IDLE ||
+			state->input_state != INPUT_STATE_IDLE ||
+			state->args.indicator_idle_visible);
+
+	if (draw_indicator) {
+		if (state->input_state == INPUT_STATE_CLEAR) {
+			// This message has highest priority
 			text = "Cleared";
-			break;
-		case AUTH_STATE_INPUT:
-		case AUTH_STATE_INPUT_NOP:
-		case AUTH_STATE_BACKSPACE:
+		} else if (state->auth_state == AUTH_STATE_VALIDATING) {
+			text = "Verifying";
+		} else if (state->auth_state == AUTH_STATE_INVALID) {
+			text = "Wrong";
+		} else {
 			// Caps Lock has higher priority
 			if (state->xkb.caps_lock && state->args.show_caps_lock_text) {
 				text = "Caps Lock";
@@ -148,9 +148,6 @@ void render_frame(struct swaylock_surface *surface) {
 				// will handle invalid index if none are active
 				layout_text = xkb_keymap_layout_get_name(state->xkb.keymap, curr_layout);
 			}
-			break;
-		default:
-			break;
 		}
 	}
 
@@ -230,8 +227,7 @@ void render_frame(struct swaylock_surface *surface) {
 	float type_indicator_border_thickness =
 		TYPE_INDICATOR_BORDER_THICKNESS * surface->scale;
 
-	if (state->args.show_indicator && (state->auth_state != AUTH_STATE_IDLE ||
-			state->args.indicator_idle_visible)) {
+	if (draw_indicator) {
 		// Fill inner circle
 		cairo_set_line_width(cairo, 0);
 		cairo_arc(cairo, buffer_width / 2, buffer_diameter / 2,
@@ -269,13 +265,13 @@ void render_frame(struct swaylock_surface *surface) {
 		}
 
 		// Typing indicator: Highlight random part on keypress
-		if (state->auth_state == AUTH_STATE_INPUT
-				|| state->auth_state == AUTH_STATE_BACKSPACE) {
+		if (state->input_state == INPUT_STATE_LETTER ||
+				state->input_state == INPUT_STATE_BACKSPACE) {
 			double highlight_start = state->highlight_start * (M_PI / 1024.0);
 			cairo_arc(cairo, buffer_width / 2, buffer_diameter / 2,
 					arc_radius, highlight_start,
 					highlight_start + TYPE_INDICATOR_RANGE);
-			if (state->auth_state == AUTH_STATE_INPUT) {
+			if (state->input_state == INPUT_STATE_LETTER) {
 				if (state->xkb.caps_lock && state->args.show_caps_lock_indicator) {
 					cairo_set_source_u32(cairo, state->args.colors.caps_lock_key_highlight);
 				} else {
