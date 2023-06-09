@@ -42,6 +42,8 @@ void render_frame_background(struct swaylock_surface *surface) {
 		return; // not yet configured
 	}
 
+	wl_surface_set_buffer_scale(surface->surface, surface->scale);
+
 	if (buffer_width != surface->last_buffer_width ||
 			buffer_height != surface->last_buffer_height) {
 		struct pool_buffer buffer;
@@ -69,14 +71,14 @@ void render_frame_background(struct swaylock_surface *surface) {
 
 		wl_surface_attach(surface->surface, buffer.buffer, 0, 0);
 		wl_surface_damage_buffer(surface->surface, 0, 0, INT32_MAX, INT32_MAX);
+		wl_surface_commit(surface->surface);
 		destroy_buffer(&buffer);
 
 		surface->last_buffer_width = buffer_width;
 		surface->last_buffer_height = buffer_height;
+	} else {
+		wl_surface_commit(surface->surface);
 	}
-
-	wl_surface_set_buffer_scale(surface->surface, surface->scale);
-	wl_surface_commit(surface->surface);
 }
 
 static void configure_font_drawing(cairo_t *cairo, struct swaylock_state *state,
