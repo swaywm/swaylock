@@ -146,7 +146,7 @@ void swaylock_handle_key(struct swaylock_state *state,
 			state->input_state = INPUT_STATE_CLEAR;
 			cancel_password_clear(state);
 		} else {
-			if (backspace(&state->password)) {
+			if (backspace(&state->password) && state->password.len != 0) {
 				state->input_state = INPUT_STATE_BACKSPACE;
 				schedule_password_clear(state);
 				update_highlight(state);
