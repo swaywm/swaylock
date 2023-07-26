@@ -1,4 +1,5 @@
 #include <math.h>
+#include <time.h>
 #include <stdlib.h>
 #include <wayland-client.h>
 #include "cairo.h"
@@ -105,9 +106,10 @@ void render_frame(struct swaylock_surface *surface) {
 	// First, compute the text that will be drawn, if any, since this
 	// determines the size/positioning of the surface
 
-	char attempts[4]; // like i3lock: count no more than 999
-	char *text = NULL;
+	//char attempts[4]; // like i3lock: count no more than 999
+	char text[100];
 	const char *layout_text = NULL;
+	strcpy(text, state->clock_time_str);
 
 	bool draw_indicator = state->args.show_indicator &&
 		(state->auth_state != AUTH_STATE_IDLE ||
@@ -117,30 +119,29 @@ void render_frame(struct swaylock_surface *surface) {
 	if (draw_indicator) {
 		if (state->input_state == INPUT_STATE_CLEAR) {
 			// This message has highest priority
-			text = "Cleared";
+			strcpy(text,"Cleared");
 		} else if (state->auth_state == AUTH_STATE_VALIDATING) {
-			text = "Verifying";
+			strcpy(text,"Verifying");
 		} else if (state->auth_state == AUTH_STATE_INVALID) {
-			text = "Wrong";
+			strcpy(text,"Wrong");
 		} else {
 			// Caps Lock has higher priority
 			if (state->xkb.caps_lock && state->args.show_caps_lock_text) {
-				text = "Caps Lock";
+				strcpy(text, "Caps Lock");
 			} else if (state->args.show_failed_attempts &&
 					state->failed_attempts > 0) {
 				if (state->failed_attempts > 999) {
-					text = "999+";
-				} else {
-					snprintf(attempts, sizeof(attempts), "%d", state->failed_attempts);
-					text = attempts;
+					strcpy(text,"999+");
+				} else{	
+					strcpy(text, state->clock_time_str);
 				}
 			}
-
+	
 			xkb_layout_index_t num_layout = xkb_keymap_num_layouts(state->xkb.keymap);
 			if (!state->args.hide_keyboard_layout &&
 					(state->args.show_keyboard_layout || num_layout > 1)) {
 				xkb_layout_index_t curr_layout = 0;
-
+	
 				// advance to the first active layout (if any)
 				while (curr_layout < num_layout &&
 					xkb_state_layout_index_is_active(state->xkb.state,
@@ -160,17 +161,14 @@ void render_frame(struct swaylock_surface *surface) {
 	int buffer_width = buffer_diameter;
 	int buffer_height = buffer_diameter;
 
-	if (text || layout_text) {
 		cairo_set_antialias(state->test_cairo, CAIRO_ANTIALIAS_BEST);
 		configure_font_drawing(state->test_cairo, state, surface->subpixel, arc_radius);
 
-		if (text) {
 			cairo_text_extents_t extents;
 			cairo_text_extents(state->test_cairo, text, &extents);
 			if (buffer_width < extents.width) {
 				buffer_width = extents.width;
 			}
-		}
 		if (layout_text) {
 			cairo_text_extents_t extents;
 			cairo_font_extents_t fe;
@@ -182,7 +180,6 @@ void render_frame(struct swaylock_surface *surface) {
 				buffer_width = extents.width + 2 * box_padding;
 			}
 		}
-	}
 	// Ensure buffer size is multiple of buffer scale - required by protocol
 	buffer_height += surface->scale - (buffer_height % surface->scale);
 	buffer_width += surface->scale - (buffer_width % surface->scale);
@@ -249,7 +246,6 @@ void render_frame(struct swaylock_surface *surface) {
 		configure_font_drawing(cairo, state, surface->subpixel, arc_radius);
 		set_color_for_state(cairo, state, &state->args.colors.text);
 
-		if (text) {
 			cairo_text_extents_t extents;
 			cairo_font_extents_t fe;
 			double x, y;
@@ -264,7 +260,6 @@ void render_frame(struct swaylock_surface *surface) {
 			cairo_show_text(cairo, text);
 			cairo_close_path(cairo);
 			cairo_new_sub_path(cairo);
-		}
 
 		// Typing indicator: Highlight random part on keypress
 		if (state->input_state == INPUT_STATE_LETTER ||

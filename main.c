@@ -1082,6 +1082,17 @@ static void term_in(int fd, short mask, void *data) {
 	state.run_display = false;
 }
 
+static void redraw_time() {
+	time_t rawtime;
+	time( &rawtime );
+	char time_buf[80];
+	struct tm *info;
+	info = localtime( &rawtime );
+	strftime(time_buf,80,"%H:%M:%S", info);
+	strcpy(state.clock_time_str, time_buf);
+	damage_state(&state);
+}
+
 // Check for --debug 'early' we also apply the correct loglevel
 // to the forked child, without having to first proces all of the
 // configuration (including from file) before forking and (in the
@@ -1248,7 +1259,7 @@ int main(int argc, char **argv) {
 		// s6 wants a newline and ignores any text before that, systemd wants
 		// READY=1, so use the least common denominator
 		const char ready_str[] = "READY=1\n";
-		if (write(state.args.ready_fd, ready_str, strlen(ready_str)) != strlen(ready_str)) {
+		if (write(state.args.ready_fd, ready_str, strlen(ready_str)) != (long long)strlen(ready_str)) {
 			swaylock_log(LOG_ERROR, "Failed to send readiness notification");
 			return 2;
 		}
@@ -1260,6 +1271,7 @@ int main(int argc, char **argv) {
 	}
 
 	state.eventloop = loop_create();
+	loop_add_timer(state.eventloop, 0, redraw_time, NULL);
 	loop_add_fd(state.eventloop, wl_display_get_fd(state.display), POLLIN,
 			display_in, NULL);
 
@@ -1275,6 +1287,7 @@ int main(int argc, char **argv) {
 			break;
 		}
 		loop_poll(state.eventloop);
+	loop_add_timer(state.eventloop, 1000, redraw_time, NULL);
 	}
 
 	ext_session_lock_v1_unlock_and_destroy(state.ext_session_lock_v1);
