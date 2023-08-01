@@ -1090,6 +1090,7 @@ static void redraw_time() {
 	info = localtime( &rawtime );
 	strftime(time_buf,80,"%H:%M:%S", info);
 	strcpy(state.clock_time_str, time_buf);
+	loop_add_timer(state.eventloop, 1000, redraw_time, NULL);
 	damage_state(&state);
 }
 
@@ -1287,7 +1288,6 @@ int main(int argc, char **argv) {
 			break;
 		}
 		loop_poll(state.eventloop);
-	loop_add_timer(state.eventloop, 1000, redraw_time, NULL);
 	}
 
 	ext_session_lock_v1_unlock_and_destroy(state.ext_session_lock_v1);
