@@ -1088,6 +1088,13 @@ static void term_in(int fd, short mask, void *data) {
 	state.run_display = false;
 }
 
+static void wrong_ext_in() {
+	state.auth_state = AUTH_STATE_INVALID;
+	schedule_auth_idle(&state);
+	++state.failed_attempts;
+	damage_state(&state);
+}
+
 // Check for --debug 'early' we also apply the correct loglevel
 // to the forked child, without having to first proces all of the
 // configuration (including from file) before forking and (in the
@@ -1273,6 +1280,7 @@ int main(int argc, char **argv) {
 
 	loop_add_fd(state.eventloop, sigusr_fds[0], POLLIN, term_in, NULL);
 	signal(SIGUSR1, do_sigusr);
+	signal(SIGUSR2, wrong_ext_in);
 
 	state.run_display = true;
 	while (state.run_display) {
