@@ -1188,7 +1188,11 @@ int main(int argc, char **argv) {
 
 	if (pipe(sigusr_fds) != 0) {
 		swaylock_log(LOG_ERROR, "Failed to pipe");
-		return 1;
+		return EXIT_FAILURE;
+	}
+	if (fcntl(sigusr_fds[1], F_SETFL, O_NONBLOCK) == -1) {
+		swaylock_log(LOG_ERROR, "Failed to make pipe end nonblocking");
+		return EXIT_FAILURE;
 	}
 
 	wl_list_init(&state.surfaces);
