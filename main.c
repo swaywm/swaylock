@@ -966,6 +966,7 @@ static bool file_exists(const char *path) {
 }
 
 static char *get_config_path(void) {
+#if HAVE_WORDEXP
 	static const char *config_paths[] = {
 		"$HOME/.swaylock/config",
 		"$XDG_CONFIG_HOME/swaylock/config",
@@ -989,7 +990,50 @@ static char *get_config_path(void) {
 			free(path);
 		}
 	}
+#else
+	char *home = getenv("HOME");
+	char *path;
+	int n, len;
+	if (home) {
+		len = strlen(home) + strlen("/.swaylock/config") + 1;
+		path = malloc(len);
+		if (path == NULL)
+			return NULL;
+		n = snprintf(path, len, "%s/.swaylock/config", home);
+		if (n < len && file_exists(path))
+			return path;
+		free(path);
+		char *config_home = getenv("XDG_CONFIG_HOME");
+		if (!config_home || config_home[0] == '\0') {
+			len = strlen(home) + strlen("/.config/swaylock/config") + 1;
+			path = malloc(len);
+			if (path == NULL)
+				return NULL;
+			n = snprintf(path, len, "%s/.config/swaylock/config", home);
+			if (n < len && file_exists(path))
+				return path;
+			free(path);
+		} else {
+			len = strlen(config_home) + strlen("/swaylock/config") + 1;
+			path = malloc(len);
+			if (path == NULL)
+				return NULL;
+			n = snprintf(path, len, "%s/swaylock/config", config_home);
+			if (n < len && file_exists(path))
+				return path;
+			free(path);
+		}
+	}
+	len = strlen(SYSCONFDIR "/swaylock/config") + 1;
+	path = malloc(len);
+	if (path == NULL)
+		return NULL;
+	n = snprintf(path, len, "%s/swaylock/config", SYSCONFDIR);
+	if (n < len && file_exists(path))
+		return path;
+	free(path);
 
+#endif
 	return NULL;
 }
 
