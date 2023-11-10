@@ -15,9 +15,6 @@
 #include <unistd.h>
 #include <wayland-client.h>
 #include "config.h"
-#if HAVE_WORDEXP
-#include <wordexp.h>
-#endif
 #include "background-image.h"
 #include "cairo.h"
 #include "comm.h"
@@ -325,25 +322,6 @@ static cairo_surface_t *select_image(struct swaylock_state *state,
 	return default_image;
 }
 
-#if HAVE_WORDEXP
-static char *join_args(char **argv, int argc) {
-	assert(argc > 0);
-	int len = 0, i;
-	for (i = 0; i < argc; ++i) {
-		len += strlen(argv[i]) + 1;
-	}
-	char *res = malloc(len);
-	len = 0;
-	for (i = 0; i < argc; ++i) {
-		strcpy(res + len, argv[i]);
-		len += strlen(argv[i]);
-		res[len++] = ' ';
-	}
-	res[len - 1] = '\0';
-	return res;
-}
-#endif
-
 static void load_image(char *arg, struct swaylock_state *state) {
 	// [[<output>]:]<path>
 	struct swaylock_image *image = calloc(1, sizeof(struct swaylock_image));
@@ -380,22 +358,12 @@ static void load_image(char *arg, struct swaylock_state *state) {
 	// The shell will not expand ~ to the value of $HOME when an output name is
 	// given. Also, any image paths given in the config file need to have shell
 	// expansions performed
-#if HAVE_WORDEXP
-	wordexp_t p;
-#endif
 	while (strstr(image->path, "  ")) {
 		image->path = realloc(image->path, strlen(image->path) + 2);
 		char *ptr = strstr(image->path, "  ") + 1;
 		memmove(ptr + 1, ptr, strlen(ptr) + 1);
 		*ptr = '\\';
 	}
-#if HAVE_WORDEXP
-	if (wordexp(image->path, &p, 0) == 0) {
-		free(image->path);
-		image->path = join_args(p.we_wordv, p.we_wordc);
-		wordfree(&p);
-	}
-#endif
 
 	// Load the actual image
 	image->cairo_surface = load_background_image(image->path);
@@ -965,76 +933,57 @@ static bool file_exists(const char *path) {
 	return path && access(path, R_OK) != -1;
 }
 
+static char *config_path(const char *prefix, const char *config_folder) {
+	if (!prefix || !prefix[0] || !config_folder || !config_folder[0]) {
+		return NULL;
+	}
+
+	const char *filename = "config";
+
+	size_t size = 3 + strlen(prefix) + strlen(config_folder) + strlen(filename);
+	char *path = calloc(size, sizeof(char));
+	snprintf(path, size, "%s/%s/%s", prefix, config_folder, filename);
+	return path;
+}
+
 static char *get_config_path(void) {
-#if HAVE_WORDEXP
-	static const char *config_paths[] = {
-		"$HOME/.swaylock/config",
-		"$XDG_CONFIG_HOME/swaylock/config",
-		SYSCONFDIR "/swaylock/config",
+	char *path = NULL;
+	const char *home = getenv("HOME");
+	size_t size_fallback = 1 + strlen(home) + strlen("/.config");
+	char *config_home_fallback = calloc(size_fallback, sizeof(char));
+	snprintf(config_home_fallback, size_fallback, "%s/.config", home);
+
+	const char *config_home = getenv("XDG_CONFIG_HOME");
+	if (config_home == NULL || config_home[0] == '\0') {
+		config_home = config_home_fallback;
+	}
+
+	struct config_path {
+		const char *prefix;
+		const char *config_folder;
 	};
 
-	char *config_home = getenv("XDG_CONFIG_HOME");
-	if (!config_home || config_home[0] == '\0') {
-		config_paths[1] = "$HOME/.config/swaylock/config";
-	}
+	struct config_path config_paths[] = {
+		{ .prefix = home, .config_folder = ".swaylock"},
+		{ .prefix = config_home, .config_folder = "swaylock"},
+		{ .prefix = SYSCONFDIR, .config_folder = "swaylock"},
+	};
 
-	wordexp_t p;
-	char *path;
-	for (size_t i = 0; i < sizeof(config_paths) / sizeof(char *); ++i) {
-		if (wordexp(config_paths[i], &p, 0) == 0) {
-			path = strdup(p.we_wordv[0]);
-			wordfree(&p);
-			if (file_exists(path)) {
-				return path;
-			}
-			free(path);
+	size_t num_config_paths = sizeof(config_paths)/sizeof(config_paths[0]);
+	for (size_t i = 0; i < num_config_paths; i++) {
+		path = config_path(config_paths[i].prefix, config_paths[i].config_folder);
+		if (!path) {
+			continue;
 		}
-	}
-#else
-	char *home = getenv("HOME");
-	char *path;
-	int n, len;
-	if (home) {
-		len = strlen(home) + strlen("/.swaylock/config") + 1;
-		path = malloc(len);
-		if (path == NULL)
-			return NULL;
-		n = snprintf(path, len, "%s/.swaylock/config", home);
-		if (n < len && file_exists(path))
-			return path;
+		if (file_exists(path)) {
+			break;
+		}
 		free(path);
-		char *config_home = getenv("XDG_CONFIG_HOME");
-		if (!config_home || config_home[0] == '\0') {
-			len = strlen(home) + strlen("/.config/swaylock/config") + 1;
-			path = malloc(len);
-			if (path == NULL)
-				return NULL;
-			n = snprintf(path, len, "%s/.config/swaylock/config", home);
-			if (n < len && file_exists(path))
-				return path;
-			free(path);
-		} else {
-			len = strlen(config_home) + strlen("/swaylock/config") + 1;
-			path = malloc(len);
-			if (path == NULL)
-				return NULL;
-			n = snprintf(path, len, "%s/swaylock/config", config_home);
-			if (n < len && file_exists(path))
-				return path;
-			free(path);
-		}
+		path = NULL;
 	}
-	len = strlen(SYSCONFDIR "/swaylock/config") + 1;
-	path = malloc(len);
-	if (path == NULL)
-		return NULL;
-	n = snprintf(path, len, "%s/swaylock/config", SYSCONFDIR);
-	if (n < len && file_exists(path))
-		return path;
-	free(path);
 
-#endif
-	return NULL;
+	free(config_home_fallback);
+	return path;
 }
 
 static int load_config(char *path, struct swaylock_state *state,
