@@ -110,6 +110,10 @@ sources = [
 if libpam.found()
 	sources += ['pam.c']
 	dependencies += [libpam, rt]
+elif is_openbsd
+	warning('The swaylock binary must be setgid when compiled with bsd auth')
+	warning('You must do this manually post-install: chgrp auth /path/to/swaylock ; chmod g+s /path/to/swaylock')
+	sources += ['bsdauth.c']
 else
 	warning('The swaylock binary often needs to be setuid when compiled without libpam')
 	warning('You must do this manually post-install: chmod a+s /path/to/swaylock')
