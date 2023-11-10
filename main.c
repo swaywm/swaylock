@@ -14,7 +14,10 @@
 #include <time.h>
 #include <unistd.h>
 #include <wayland-client.h>
+#include "config.h"
+#if HAVE_WORDEXP
 #include <wordexp.h>
+#endif
 #include "background-image.h"
 #include "cairo.h"
 #include "comm.h"
@@ -322,6 +325,7 @@ static cairo_surface_t *select_image(struct swaylock_state *state,
 	return default_image;
 }
 
+#if HAVE_WORDEXP
 static char *join_args(char **argv, int argc) {
 	assert(argc > 0);
 	int len = 0, i;
@@ -338,6 +342,7 @@ static char *join_args(char **argv, int argc) {
 	res[len - 1] = '\0';
 	return res;
 }
+#endif
 
 static void load_image(char *arg, struct swaylock_state *state) {
 	// [[<output>]:]<path>
@@ -375,18 +380,22 @@ static void load_image(char *arg, struct swaylock_state *state) {
 	// The shell will not expand ~ to the value of $HOME when an output name is
 	// given. Also, any image paths given in the config file need to have shell
 	// expansions performed
+#if HAVE_WORDEXP
 	wordexp_t p;
+#endif
 	while (strstr(image->path, "  ")) {
 		image->path = realloc(image->path, strlen(image->path) + 2);
 		char *ptr = strstr(image->path, "  ") + 1;
 		memmove(ptr + 1, ptr, strlen(ptr) + 1);
 		*ptr = '\\';
 	}
+#if HAVE_WORDEXP
 	if (wordexp(image->path, &p, 0) == 0) {
 		free(image->path);
 		image->path = join_args(p.we_wordv, p.we_wordc);
 		wordfree(&p);
 	}
+#endif
 
 	// Load the actual image
 	image->cairo_surface = load_background_image(image->path);

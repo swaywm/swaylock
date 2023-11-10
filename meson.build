@@ -79,6 +79,7 @@ conf_data = configuration_data()
 conf_data.set_quoted('SYSCONFDIR', get_option('prefix') / get_option('sysconfdir'))
 conf_data.set_quoted('SWAYLOCK_VERSION', version)
 conf_data.set10('HAVE_GDK_PIXBUF', gdk_pixbuf.found())
+conf_data.set10('HAVE_WORDEXP', cc.check_header('wordexp.h'))
 
 subdir('include')
 
