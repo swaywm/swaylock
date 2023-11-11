@@ -40,6 +40,7 @@ void run_pw_backend_child(void) {
 			break;
 		}
 		bool success = auth_userokay((char *)pwent->pw_name, NULL, "swaylock", buf);
+		explicit_bzero(buf, strlen(buf));
 		if (!write_comm_reply(success)) {
 			exit(EXIT_FAILURE);
 		}
