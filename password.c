@@ -141,13 +141,19 @@ void swaylock_handle_key(struct swaylock_state *state,
 		break;
 	case XKB_KEY_Delete:
 	case XKB_KEY_BackSpace:
-		if (backspace(&state->password)) {
-			state->input_state = INPUT_STATE_BACKSPACE;
-			schedule_password_clear(state);
-			update_highlight(state);
-		} else {
+		if (state->xkb.control) {
+			clear_password_buffer(&state->password);
 			state->input_state = INPUT_STATE_CLEAR;
 			cancel_password_clear(state);
+		} else {
+			if (backspace(&state->password)) {
+				state->input_state = INPUT_STATE_BACKSPACE;
+				schedule_password_clear(state);
+				update_highlight(state);
+			} else {
+				state->input_state = INPUT_STATE_CLEAR;
+				cancel_password_clear(state);
+			}
 		}
 		schedule_input_idle(state);
 		damage_state(state);
