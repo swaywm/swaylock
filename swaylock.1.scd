@@ -35,6 +35,13 @@ Locks your Wayland session.
 
 	Note: this is the default behavior of i3lock.
 
+*-R, --ready-fd* <fd>
+	File descriptor to send readiness notifications to.
+
+	When the session has been locked, a single newline is written to the FD.
+	At this point, the compositor guarantees that no security sensitive content
+	is visible on-screen.
+
 *-h, --help*
 	Show help message and quit.
 
