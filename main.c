@@ -239,7 +239,6 @@ static void handle_wl_output_done(void *data, struct wl_output *output) {
 	struct swaylock_surface *surface = data;
 	if (!surface->created && surface->state->run_display) {
 		create_surface(surface);
-		wl_display_roundtrip(surface->state->display);
 	}
 }
 
