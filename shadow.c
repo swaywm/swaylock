@@ -33,9 +33,9 @@ void initialize_pw_backend(int argc, char **argv) {
 		swaylock_log_errno(LOG_ERROR, "Unable to drop root");
 		exit(EXIT_FAILURE);
 	}
-	if (setuid(0) != -1) {
+	if (setuid(0) != -1 || setgid(0) != -1) {
 		swaylock_log_errno(LOG_ERROR, "Unable to drop root (we shouldn't be "
-			"able to restore it after setuid)");
+			"able to restore it after setuid/setgid)");
 		exit(EXIT_FAILURE);
 	}
 }
