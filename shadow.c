@@ -1,4 +1,5 @@
 #define _XOPEN_SOURCE // for crypt
+#include <assert.h>
 #include <pwd.h>
 #include <shadow.h>
 #include <stdlib.h>
@@ -14,15 +15,23 @@
 #include "password-buffer.h"
 #include "swaylock.h"
 
+char *encpw = NULL;
+
 void initialize_pw_backend(int argc, char **argv) {
-	if (geteuid() != 0) {
-		swaylock_log(LOG_ERROR,
-				"swaylock needs to be setuid to read /etc/shadow");
+	/* This code runs as root */
+	struct passwd *pwent = getpwuid(getuid());
+	if (!pwent) {
+		swaylock_log_errno(LOG_ERROR, "failed to getpwuid");
 		exit(EXIT_FAILURE);
 	}
-
-	if (!spawn_comm_child()) {
-		exit(EXIT_FAILURE);
+	encpw = pwent->pw_passwd;
+	if (strcmp(encpw, "x") == 0) {
+		struct spwd *swent = getspnam(pwent->pw_name);
+		if (!swent) {
+			swaylock_log_errno(LOG_ERROR, "failed to getspnam");
+			exit(EXIT_FAILURE);
+		}
+		encpw = swent->sp_pwdp;
 	}
 
 	if (setgid(getgid()) != 0) {
@@ -38,40 +47,21 @@ void initialize_pw_backend(int argc, char **argv) {
 			"able to restore it after setuid/setgid)");
 		exit(EXIT_FAILURE);
 	}
-}
-
-void run_pw_backend_child(void) {
-	/* This code runs as root */
-	struct passwd *pwent = getpwuid(getuid());
-	if (!pwent) {
-		swaylock_log_errno(LOG_ERROR, "failed to getpwuid");
-		exit(EXIT_FAILURE);
-	}
-	char *encpw = pwent->pw_passwd;
-	if (strcmp(encpw, "x") == 0) {
-		struct spwd *swent = getspnam(pwent->pw_name);
-		if (!swent) {
-			swaylock_log_errno(LOG_ERROR, "failed to getspnam");
-			exit(EXIT_FAILURE);
-		}
-		encpw = swent->sp_pwdp;
-	}
-
-	/* We don't need any additional logging here because the parent process will
-	 * also fail here and will handle logging for us. */
-	if (setgid(getgid()) != 0) {
-		exit(EXIT_FAILURE);
-	}
-	if (setuid(getuid()) != 0) {
-		exit(EXIT_FAILURE);
-	}
-	if (setuid(0) != -1) {
-		exit(EXIT_FAILURE);
-	}
 
 	/* This code does not run as root */
 	swaylock_log(LOG_DEBUG, "Prepared to authorize user %s", pwent->pw_name);
 
+	if (!spawn_comm_child()) {
+		exit(EXIT_FAILURE);
+	}
+
+	/* Buffer is only used by the child */
+	clear_buffer(encpw, strlen(encpw));
+	encpw = NULL;
+}
+
+void run_pw_backend_child(void) {
+	assert(encpw != NULL);
 	while (1) {
 		char *buf;
 		ssize_t size = read_comm_request(&buf);
