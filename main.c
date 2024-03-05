@@ -1020,6 +1020,19 @@ static char *get_config_path(void) {
 	return NULL;
 }
 
+static void trim_end(char *str) {
+	if (strlen(str) == 0) {
+		return;
+	}
+
+	char* end = str + strlen(str) - 1;
+	while (end > str && isspace((unsigned char)*end)) {
+		end--;
+	}
+
+	*(end + 1) = '\0';
+}
+
 static int load_config(char *path, struct swaylock_state *state,
 		enum line_mode *line_mode) {
 	FILE *config = fopen(path, "r");
@@ -1042,6 +1055,8 @@ static int load_config(char *path, struct swaylock_state *state,
 		if (!*line || line[0] == '#') {
 			continue;
 		}
+
+		trim_end(line);
 
 		swaylock_log(LOG_DEBUG, "Config Line #%d: %s", line_number, line);
 		char *flag = malloc(nread + 3);
