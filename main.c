@@ -277,9 +277,14 @@ static void ext_session_lock_v1_handle_locked(void *data, struct ext_session_loc
 }
 
 static void ext_session_lock_v1_handle_finished(void *data, struct ext_session_lock_v1 *lock) {
-	swaylock_log(LOG_ERROR, "Failed to lock session -- "
-			"is another lockscreen running?");
-	exit(2);
+	struct swaylock_state *state = data;
+	if (state->locked) {
+		exit(0);
+	} else {
+		swaylock_log(LOG_ERROR, "Failed to lock session -- "
+				"is another lockscreen running?");
+		exit(2);
+	}
 }
 
 static const struct ext_session_lock_v1_listener ext_session_lock_v1_listener = {
