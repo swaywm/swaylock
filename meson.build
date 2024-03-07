@@ -24,6 +24,7 @@ add_project_arguments(
 cc = meson.get_compiler('c')
 
 is_freebsd = host_machine.system().startswith('freebsd')
+is_openbsd = host_machine.system().startswith('openbsd')
 
 if is_freebsd
 	add_project_arguments('-D_C11_SOURCE', language: 'c')
@@ -36,9 +37,9 @@ xkbcommon = dependency('xkbcommon')
 cairo = dependency('cairo')
 gdk_pixbuf = dependency('gdk-pixbuf-2.0', required: get_option('gdk-pixbuf'))
 libpam = cc.find_library('pam', required: get_option('pam'))
-crypt = cc.find_library('crypt', required: not libpam.found())
+crypt = cc.find_library('crypt', required: not libpam.found() and not is_openbsd)
 math = cc.find_library('m')
-rt = cc.find_library('rt')
+rt = cc.find_library('rt', required: not is_openbsd)
 
 git = find_program('git', required: false)
 scdoc = find_program('scdoc', required: get_option('man-pages'))
@@ -88,7 +89,6 @@ dependencies = [
 	cairo,
 	gdk_pixbuf,
 	math,
-	rt,
 	xkbcommon,
 	wayland_client,
 ]
@@ -110,12 +110,16 @@ sources = [
 
 if libpam.found()
 	sources += ['pam.c']
-	dependencies += [libpam]
+	dependencies += [libpam, rt]
+elif is_openbsd
+	warning('The swaylock binary must be setgid when compiled with bsd auth')
+	warning('You must do this manually post-install: chgrp auth /path/to/swaylock ; chmod g+s /path/to/swaylock')
+	sources += ['bsdauth.c']
 else
 	warning('The swaylock binary must be setuid when compiled without libpam')
 	warning('You must do this manually post-install: chmod a+s /path/to/swaylock')
 	sources += ['shadow.c']
-	dependencies += [crypt]
+	dependencies += [crypt, rt]
 endif
 
 swaylock_inc = include_directories('include')
