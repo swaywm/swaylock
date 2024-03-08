@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200809L
+#include <signal.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -62,6 +64,12 @@ bool spawn_comm_child(void) {
 	} else if (child == 0) {
 		close(comm[0][1]);
 		close(comm[1][0]);
+		struct sigaction sa;
+		sa.sa_handler = SIG_IGN;
+		sigemptyset(&sa.sa_mask);
+		sa.sa_flags = 0;
+		sigaction(SIGUSR1, &sa, NULL);
+		sigaction(SIGUSR2, &sa, NULL);
 		run_pw_backend_child();
 	}
 	close(comm[0][0]);
