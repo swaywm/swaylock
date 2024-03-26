@@ -519,6 +519,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_TEXT_CAPS_LOCK_COLOR,
 		LO_TEXT_VER_COLOR,
 		LO_TEXT_WRONG_COLOR,
+		LO_LOCK_CMD,
 	};
 
 	static struct option long_options[] = {
@@ -576,6 +577,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"text-caps-lock-color", required_argument, NULL, LO_TEXT_CAPS_LOCK_COLOR},
 		{"text-ver-color", required_argument, NULL, LO_TEXT_VER_COLOR},
 		{"text-wrong-color", required_argument, NULL, LO_TEXT_WRONG_COLOR},
+		{"lock-cmd", required_argument, NULL, LO_LOCK_CMD},
 		{0, 0, 0, 0}
 	};
 
@@ -614,6 +616,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Same as --scaling=tile.\n"
 		"  -u, --no-unlock-indicator        "
 			"Disable the unlock indicator.\n"
+		"  --lock-cmd <cmdline>             "
+			"Command that will run while locked and be terminated when unlocking.\n"
 		"  -v, --version                    "
 			"Show the version number and quit.\n"
 		"  --bs-hl-color <color>            "
@@ -800,6 +804,12 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		case 'v':
 			fprintf(stdout, "swaylock version " SWAYLOCK_VERSION "\n");
 			exit(EXIT_SUCCESS);
+			break;
+		case LO_LOCK_CMD:
+			if (state) {
+				free(state->args.lock_cmd);
+				state->args.lock_cmd = strdup(optarg);
+			}
 			break;
 		case LO_BS_HL_COLOR:
 			if (state) {
@@ -1270,6 +1280,16 @@ int main(int argc, char **argv) {
 		daemonize();
 	}
 
+	pid_t lock_process = -1;
+	if (state.args.lock_cmd) {
+		lock_process = fork();
+		if (lock_process == 0) {
+			execl("/bin/sh", "/bin/sh", "-c", state.args.lock_cmd, NULL);
+		} else if (lock_process == -1) {
+			swaylock_log(LOG_ERROR, "Unable to fork: %s", strerror(errno));
+		}
+	}
+
 	loop_add_fd(state.eventloop, wl_display_get_fd(state.display), POLLIN,
 			display_in, NULL);
 
@@ -1294,6 +1314,10 @@ int main(int argc, char **argv) {
 
 	ext_session_lock_v1_unlock_and_destroy(state.ext_session_lock_v1);
 	wl_display_roundtrip(state.display);
+
+	if (lock_process > 0) {
+		kill(lock_process, SIGTERM);
+	}
 
 	free(state.args.font);
 	cairo_destroy(state.test_cairo);

@@ -42,6 +42,14 @@ Locks your Wayland session.
 	At this point, the compositor guarantees that no security sensitive content
 	is visible on-screen.
 
+*--lock-cmd* <cmdline>
+	Command-line to execute while swaylock is locked, and terminated by
+	SIGTERM once swaylock terminates.
+
+	This can be useful to run a dedicated swayidle instance during the
+	screenlock to manage screen timeout at different intervals than the
+	active session.
+
 *-h, --help*
 	Show help message and quit.
 
