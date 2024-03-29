@@ -40,6 +40,15 @@ crypt = cc.find_library('crypt', required: not libpam.found())
 math = cc.find_library('m')
 rt = cc.find_library('rt')
 
+have_explicit_bzero = cc.has_function(
+	'explicit_bzero',
+	args: ['-D_BSD_SOURCE'],
+	prefix: '#include <string.h>'
+)
+if not have_explicit_bzero
+	warning('Your system does not support explicit_bzero(3), using precarious fallback function to clear passwords')
+endif
+
 git = find_program('git', required: false)
 scdoc = find_program('scdoc', required: get_option('man-pages'))
 wayland_scanner_prog = find_program(wayland_scanner.get_variable('wayland_scanner'), native: true)
@@ -81,6 +90,7 @@ conf_data = configuration_data()
 conf_data.set_quoted('SYSCONFDIR', get_option('prefix') / get_option('sysconfdir'))
 conf_data.set_quoted('SWAYLOCK_VERSION', version)
 conf_data.set10('HAVE_GDK_PIXBUF', gdk_pixbuf.found())
+conf_data.set10('HAVE_EXPLICIT_BZERO', have_explicit_bzero)
 
 subdir('include')
 
