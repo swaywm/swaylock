@@ -38,7 +38,7 @@ static void display_message(struct FingerprintState *state, const char *fmt, ...
 	state->sw_state->auth_state = AUTH_STATE_FINGERPRINT;
 	state->sw_state->fingerprint_msg = state->status;
 	damage_state(state->sw_state);
-	schedule_indicator_clear(state->sw_state);
+	schedule_auth_idle(state->sw_state);
 }
 
 static void create_manager(struct FingerprintState *state) {

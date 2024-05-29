@@ -98,14 +98,18 @@ static void destroy_surface(struct swaylock_surface *surface) {
 	if (surface->ext_session_lock_surface_v1 != NULL) {
 		ext_session_lock_surface_v1_destroy(surface->ext_session_lock_surface_v1);
 	}
+	if (surface->subsurface) {
+		wl_subsurface_destroy(surface->subsurface);
+	}
+	if (surface->child) {
+		wl_surface_destroy(surface->child);
+	}
 	if (surface->surface != NULL) {
 		wl_surface_destroy(surface->surface);
 	}
-	destroy_buffer(&surface->buffers[0]);
-	destroy_buffer(&surface->buffers[1]);
 	destroy_buffer(&surface->indicator_buffers[0]);
 	destroy_buffer(&surface->indicator_buffers[1]);
-	wl_output_destroy(surface->output);
+	wl_output_release(surface->output);
 	free(surface);
 }
 
@@ -149,6 +153,8 @@ static void create_surface(struct swaylock_surface *surface) {
 		wl_surface_set_opaque_region(surface->surface, region);
 		wl_region_destroy(region);
 	}
+
+	surface->created = true;
 }
 
 static void ext_session_lock_surface_v1_handle_configure(void *data,
@@ -231,7 +237,10 @@ static void handle_wl_output_mode(void *data, struct wl_output *output,
 }
 
 static void handle_wl_output_done(void *data, struct wl_output *output) {
-	// Who cares
+	struct swaylock_surface *surface = data;
+	if (!surface->created && surface->state->run_display) {
+		create_surface(surface);
+	}
 }
 
 static void handle_wl_output_scale(void *data, struct wl_output *output,
@@ -307,11 +316,6 @@ static void handle_global(void *data, struct wl_registry *registry,
 		surface->output_global_name = name;
 		wl_output_add_listener(surface->output, &_wl_output_listener, surface);
 		wl_list_insert(&state->surfaces, &surface->link);
-
-		if (state->run_display) {
-			create_surface(surface);
-			wl_display_roundtrip(state->display);
-		}
 	} else if (strcmp(interface, ext_session_lock_manager_v1_interface.name) == 0) {
 		state->ext_session_lock_manager_v1 = wl_registry_bind(registry, name,
 				&ext_session_lock_manager_v1_interface, 1);
@@ -1083,7 +1087,7 @@ static void comm_in(int fd, short mask, void *data) {
 		state.run_display = false;
 	} else {
 		state.auth_state = AUTH_STATE_INVALID;
-		schedule_indicator_clear(&state);
+		schedule_auth_idle(&state);
 		++state.failed_attempts;
 		damage_state(&state);
 	}
@@ -1205,7 +1209,11 @@ int main(int argc, char **argv) {
 
 	if (pipe(sigusr_fds) != 0) {
 		swaylock_log(LOG_ERROR, "Failed to pipe");
-		return 1;
+		return EXIT_FAILURE;
+	}
+	if (fcntl(sigusr_fds[1], F_SETFL, O_NONBLOCK) == -1) {
+		swaylock_log(LOG_ERROR, "Failed to make pipe end nonblocking");
+		return EXIT_FAILURE;
 	}
 
 	wl_list_init(&state.surfaces);
@@ -1218,10 +1226,14 @@ int main(int argc, char **argv) {
 				"WAYLAND_DISPLAY environment variable.");
 		return EXIT_FAILURE;
 	}
+	state.eventloop = loop_create();
 
 	struct wl_registry *registry = wl_display_get_registry(state.display);
 	wl_registry_add_listener(registry, &registry_listener, &state);
-	wl_display_roundtrip(state.display);
+	if (wl_display_roundtrip(state.display) == -1) {
+		swaylock_log(LOG_ERROR, "wl_display_roundtrip() failed");
+		return EXIT_FAILURE;
+	}
 
 	if (!state.compositor) {
 		swaylock_log(LOG_ERROR, "Missing wl_compositor");
@@ -1268,10 +1280,7 @@ int main(int argc, char **argv) {
 	}
 
 	if (state.args.ready_fd >= 0) {
-		// s6 wants a newline and ignores any text before that, systemd wants
-		// READY=1, so use the least common denominator
-		const char ready_str[] = "READY=1\n";
-		if (write(state.args.ready_fd, ready_str, strlen(ready_str)) != strlen(ready_str)) {
+		if (write(state.args.ready_fd, "\n", 1) != 1) {
 			swaylock_log(LOG_ERROR, "Failed to send readiness notification");
 			return 2;
 		}
@@ -1282,14 +1291,18 @@ int main(int argc, char **argv) {
 		daemonize();
 	}
 
-	state.eventloop = loop_create();
 	loop_add_fd(state.eventloop, wl_display_get_fd(state.display), POLLIN,
 			display_in, NULL);
 
 	loop_add_fd(state.eventloop, get_comm_reply_fd(), POLLIN, comm_in, NULL);
 
 	loop_add_fd(state.eventloop, sigusr_fds[0], POLLIN, term_in, NULL);
-	signal(SIGUSR1, do_sigusr);
+
+	struct sigaction sa;
+	sa.sa_handler = do_sigusr;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_RESTART;
+	sigaction(SIGUSR1, &sa, NULL);
 
 	struct FingerprintState fingerprint_state;
 	if(state.args.fingerprint) {
