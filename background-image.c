@@ -31,8 +31,12 @@ cairo_surface_t *load_background_image(const char *path) {
 				err->message);
 		return NULL;
 	}
-	image = gdk_cairo_image_surface_create_from_pixbuf(pixbuf);
+	// Correct for embedded image orientation; typical images are not
+	// rotated and will be handled efficiently
+	GdkPixbuf *oriented = gdk_pixbuf_apply_embedded_orientation(pixbuf);
 	g_object_unref(pixbuf);
+	image = gdk_cairo_image_surface_create_from_pixbuf(oriented);
+	g_object_unref(oriented);
 #else
 	image = cairo_image_surface_create_from_png(path);
 #endif // HAVE_GDK_PIXBUF
