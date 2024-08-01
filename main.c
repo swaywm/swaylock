@@ -259,7 +259,19 @@ static void handle_wl_output_name(void *data, struct wl_output *output,
 
 static void handle_wl_output_description(void *data, struct wl_output *output,
 		const char *description) {
-	// Who cares
+	swaylock_log(LOG_DEBUG, "handle_wl_output_description %s ", description);
+
+	struct swaylock_surface *surface = data;
+
+	// The output description will be in the format "<make> <model> <serial> (<output>)" like Dell Inc. DELL U3223QE G76Y9P3 (DP-5)
+	// so cutting it at the last space
+	char *separator = strrchr(description, ' ');
+	if (separator) {
+		*separator = '\0';
+		surface->output_description  = strdup(description);
+	}
+
+	swaylock_log(LOG_DEBUG, "set _%s_", surface->output_description );
 }
 
 struct wl_output_listener _wl_output_listener = {
@@ -349,7 +361,7 @@ static cairo_surface_t *select_image(struct swaylock_state *state,
 	struct swaylock_image *image;
 	cairo_surface_t *default_image = NULL;
 	wl_list_for_each(image, &state->images, link) {
-		if (lenient_strcmp(image->output_name, surface->output_name) == 0) {
+		if (lenient_strcmp(image->output_name, surface->output_name) == 0 || lenient_strcmp(image->output_name, surface->output_description) == 0) {
 			return image->cairo_surface;
 		} else if (!image->output_name) {
 			default_image = image->cairo_surface;
