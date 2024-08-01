@@ -259,8 +259,6 @@ static void handle_wl_output_name(void *data, struct wl_output *output,
 
 static void handle_wl_output_description(void *data, struct wl_output *output,
 		const char *description) {
-	swaylock_log(LOG_DEBUG, "handle_wl_output_description %s ", description);
-
 	struct swaylock_surface *surface = data;
 
 	// The output description will be in the format "<make> <model> <serial> (<output>)" like Dell Inc. DELL U3223QE G76Y9P3 (DP-5)
@@ -270,8 +268,6 @@ static void handle_wl_output_description(void *data, struct wl_output *output,
 		*separator = '\0';
 		surface->output_description  = strdup(description);
 	}
-
-	swaylock_log(LOG_DEBUG, "set _%s_", surface->output_description );
 }
 
 struct wl_output_listener _wl_output_listener = {

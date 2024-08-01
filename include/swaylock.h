@@ -128,7 +128,6 @@ struct swaylock_surface {
 struct swaylock_image {
 	char *path;
 	char *output_name;
-	char *output_id;
 	cairo_surface_t *cairo_surface;
 	struct wl_list link;
 };
