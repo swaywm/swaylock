@@ -224,16 +224,26 @@ static bool render_frame(struct swaylock_surface *surface) {
 
 	// Center the indicator unless overridden by the user
 	if (state->args.override_indicator_x_position) {
-		subsurf_xpos = state->args.indicator_x_position -
-			buffer_width / (2 * surface->scale) + 2 / surface->scale;
+		if (state->args.indicator_x_position < 0) {
+			subsurf_xpos =  surface->width + state->args.indicator_x_position -
+				buffer_width / (2 * surface->scale) + 2 / surface->scale;
+		} else {
+			subsurf_xpos = state->args.indicator_x_position -
+				buffer_width / (2 * surface->scale) + 2 / surface->scale;
+		}
 	} else {
 		subsurf_xpos = surface->width / 2 -
 			buffer_width / (2 * surface->scale) + 2 / surface->scale;
 	}
 
 	if (state->args.override_indicator_y_position) {
-		subsurf_ypos = state->args.indicator_y_position -
-			(state->args.radius + state->args.thickness);
+		if (state->args.indicator_y_position < 0) {
+			subsurf_ypos = surface->height + state->args.indicator_y_position -
+				(state->args.radius + state->args.thickness);
+		} else {
+			subsurf_ypos = state->args.indicator_y_position -
+				(state->args.radius + state->args.thickness);
+		}
 	} else {
 		subsurf_ypos = surface->height / 2 -
 			(state->args.radius + state->args.thickness);
