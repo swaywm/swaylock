@@ -113,12 +113,13 @@ struct swaylock_surface {
 	struct ext_session_lock_surface_v1 *ext_session_lock_surface_v1;
 	struct pool_buffer indicator_buffers[2];
 	bool created;
-	bool frame_pending, dirty;
+	bool dirty;
 	uint32_t width, height;
 	int32_t scale;
 	enum wl_output_subpixel subpixel;
 	char *output_name;
 	struct wl_list link;
+	struct wl_callback *frame;
 	// Dimensions of last wl_buffer committed to background surface
 	int last_buffer_width, last_buffer_height;
 };
@@ -133,9 +134,8 @@ struct swaylock_image {
 
 void swaylock_handle_key(struct swaylock_state *state,
 		xkb_keysym_t keysym, uint32_t codepoint);
-void render_frame_background(struct swaylock_surface *surface);
-void render_frame(struct swaylock_surface *surface);
-void damage_surface(struct swaylock_surface *surface);
+
+void render(struct swaylock_surface *surface);
 void damage_state(struct swaylock_state *state);
 void clear_password_buffer(struct swaylock_password *pw);
 void schedule_auth_idle(struct swaylock_state *state);
