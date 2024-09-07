@@ -11,6 +11,7 @@ _arguments -s \
 	'(--config -C)'{--config,-C}'[Path to the config file]:filename:_files' \
 	'(--daemonize -f)'{--daemonize,-f}'[Detach from the controlling terminal after locking]' \
 	'(--debug -d)'{--debug,-d}'[Enable debugging output]' \
+	'(--default-text)'--default-text'[Show text when no other (Caps Lock, attempt count, etc.) is shown]:text:' \
 	'(--disable-caps-lock-text -L)'{--disable-caps-lock-text,-L}'[Disable the Caps Lock text]' \
 	'(--font)'--font'[Sets the font of the text]:font:' \
 	'(--font-size)'--font-size'[Sets a fixed font size for the indicator text]' \
