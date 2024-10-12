@@ -109,6 +109,12 @@ void run_pw_backend_child(void) {
 		if (!write_comm_reply(success)) {
 			exit(EXIT_FAILURE);
 		}
+
+		if (success) {
+			/* Unsuccessful requests may be queued after a successful one;
+			 * do not process them. */
+			break;
+		}
 	}
 
 	pam_setcred(auth_handle, PAM_REFRESH_CRED);
