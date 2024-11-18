@@ -17,9 +17,11 @@ Locks your Wayland session.
 	_$HOME/.swaylock/config_, _$XDG\_CONFIG\_HOME/swaylock/config_, and
 	_SYSCONFDIR/swaylock/config_. All flags aside from this one are valid
 	options in the configuration file using the format _long-option=value_.
-	For options such as _ignore-empty-password_, just supply the _long-option_.
-	All leading dashes should be omitted and the equals sign is required for
-	flags that take an argument.
+	For options such as _ignore-empty-password_, just supply
+	the _long-option_.
+
+	All leading dashes should be omitted and the equals sign is required
+	for flags that take an argument.
 
 *-d, --debug*
 	Enable debugging output.
@@ -39,8 +41,8 @@ Locks your Wayland session.
 	File descriptor to send readiness notifications to.
 
 	When the session has been locked, a single newline is written to the FD.
-	At this point, the compositor guarantees that no security sensitive content
-	is visible on-screen.
+	At this point, the compositor guarantees that no security sensitive
+	content is visible on-screen.
 
 *-h, --help*
 	Show help message and quit.
@@ -54,16 +56,17 @@ Locks your Wayland session.
 	Disable the unlock indicator.
 
 *-i, --image* [[<output>]:]<path>
-	Display the given image, optionally only on the given output. Use -c to set
-	a background color. If the path potentially contains a ':', prefix it with another
-	':' to prevent interpreting part of it as <output>.
+	Display the given image, optionally only on the given output.
+	Use -c to set a background color.
+	If the path potentially contains a ':', prefix it with another ':'
+	to prevent interpreting part of it as <output>.
 
 *-k, --show-keyboard-layout*
 	Display the current xkb layout while typing.
 
 *-K, --hide-keyboard-layout*
-	Force hiding the current xkb layout while typing, even if more than one layout
-	is configured or the show-keyboard-layout option is set.
+	Force hiding the current xkb layout while typing, even if more than one
+	layout is configured or the show-keyboard-layout option is set.
 
 *-L, --disable-caps-lock-text*
 	Disable the Caps Lock text.
@@ -73,16 +76,16 @@ Locks your Wayland session.
 
 *-s, --scaling*
 	Image scaling mode: _stretch_, _fill_, _fit_, _center_, _tile_,
-	_solid\_color_. Use _solid\_color_ to display only the background color, even
-	if a background image is specified.
+	_solid\_color_. Use _solid\_color_ to display only the background
+	color, even if a background image is specified.
 
 *-t, --tiling*
 	Same as --scaling=tile.
 
 *-c, --color* <rrggbb[aa]>
-	Turn the screen into the given color instead of white. If -i is used, this
-	sets the background of the image to the given color. Defaults to white
-	(FFFFFF).
+	Turn the screen into the given color instead of white. If -i is used,
+	this sets the background of the image to the given color.
+	Defaults to white (FFFFFF).
 
 *--bs-hl-color* <rrggbb[aa]>
 	Sets the color of backspace highlight segments.
@@ -91,7 +94,8 @@ Locks your Wayland session.
 	Sets the color of backspace highlight segments when Caps Lock is active.
 
 *--caps-lock-key-hl-color* <rrggbb[aa]>
-	Sets the color of the key press highlight segments when Caps Lock is active.
+	Sets the color of the key press highlight segments when Caps Lock is
+	active.
 
 *--font* <font>
 	Sets the font of the text.
@@ -148,8 +152,8 @@ Locks your Wayland session.
 	Sets the color of the line between the inside and ring when cleared.
 
 *--line-caps-lock-color* <rrggbb[aa]>
-	Sets the color of the line between the inside and ring when Caps Lock is
-	active.
+	Sets the color of the line between the inside and ring when Caps Lock
+	is active.
 
 *--line-ver-color* <rrggbb[aa]>
 	Sets the color of the line between the inside and ring when verifying.
