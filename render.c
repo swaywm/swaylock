@@ -6,7 +6,9 @@
 #include "swaylock.h"
 #include "log.h"
 
+#ifndef M_PI
 #define M_PI 3.14159265358979323846
+#endif
 const float TYPE_INDICATOR_RANGE = M_PI / 3.0f;
 const float TYPE_INDICATOR_BORDER_THICKNESS = M_PI / 128.0f;
 
