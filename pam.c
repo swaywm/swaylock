@@ -35,6 +35,7 @@ static int handle_conversation(int num_msg, const struct pam_message **msg,
 	}
 	*resp = pam_reply;
 	for (int i = 0; i < num_msg; ++i) {
+		swaylock_log(LOG_DEBUG, "PAM message %d: %s", i, msg[i]->msg);
 		switch (msg[i]->msg_style) {
 		case PAM_PROMPT_ECHO_OFF:
 		case PAM_PROMPT_ECHO_ON:
