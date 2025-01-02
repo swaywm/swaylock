@@ -9,6 +9,26 @@
 
 static int comm[2][2] = {{-1, -1}, {-1, -1}};
 
+ssize_t write_string(int fd, const char * const *string, size_t len) {
+	size_t offs = 0;
+	if (write(fd, &len, sizeof(len)) < 0) {
+		swaylock_log_errno(LOG_ERROR, "Failed to write string size");
+		return -1;
+	}
+
+	do {
+		ssize_t amt = write(fd, string[offs], len - offs);
+		if (amt < 0) {
+			swaylock_log_errno(LOG_ERROR, "Failed to write string");
+			//TODO: different return value for different error?
+			return -1;
+		}
+		offs += amt;
+	} while (offs < len);
+
+	return (ssize_t) len;
+}
+
 ssize_t read_string(int fd, char *(*alloc)(size_t), char **output) {
 	size_t size;
 	ssize_t amt = read(fd, &size, sizeof(size));
@@ -82,26 +102,14 @@ bool spawn_comm_child(void) {
 
 bool write_comm_request(struct swaylock_password *pw) {
 	bool result = false;
+	ssize_t amt = write_string(comm[0][1], (const char * const *)&pw->buffer, pw->len + 1);
 
-	size_t len = pw->len + 1;
-	size_t offs = 0;
-	if (write(comm[0][1], &len, sizeof(len)) < 0) {
+	if (amt < 0) {
 		swaylock_log_errno(LOG_ERROR, "Failed to request pw check");
-		goto out;
+	} else {
+		result = true;
 	}
 
-	do {
-		ssize_t amt = write(comm[0][1], &pw->buffer[offs], len - offs);
-		if (amt < 0) {
-			swaylock_log_errno(LOG_ERROR, "Failed to write pw buffer");
-			goto out;
-		}
-		offs += amt;
-	} while (offs < len);
-
-	result = true;
-
-out:
 	clear_password_buffer(pw);
 	return result;
 }
