@@ -9,33 +9,44 @@
 
 static int comm[2][2] = {{-1, -1}, {-1, -1}};
 
-ssize_t read_comm_request(char **buf_ptr) {
+ssize_t read_string(int fd, char *(*alloc)(size_t), char **output) {
 	size_t size;
-	ssize_t amt;
-	amt = read(comm[0][0], &size, sizeof(size));
-	if (amt == 0) {
-		return 0;
-	} else if (amt < 0) {
-		swaylock_log_errno(LOG_ERROR, "read pw request");
-		return -1;
+	ssize_t amt = read(fd, &size, sizeof(size));
+	if (amt <= 0) {
+		swaylock_log_errno(LOG_ERROR, "Failed to read string size");
+		return amt;
 	}
-	swaylock_log(LOG_DEBUG, "received pw check request");
-	char *buf = password_buffer_create(size);
+	if (size == 0) {
+		return 0;
+	}
+	char *buf = alloc(size);
 	if (!buf) {
 		return -1;
 	}
 	size_t offs = 0;
 	do {
-		amt = read(comm[0][0], &buf[offs], size - offs);
+		ssize_t amt = read(fd, &buf[offs], size - offs);
 		if (amt <= 0) {
-			swaylock_log_errno(LOG_ERROR, "failed to read pw");
+			swaylock_log_errno(LOG_ERROR, "Failed to read string");
 			return -1;
 		}
 		offs += (size_t)amt;
 	} while (offs < size);
 
-	*buf_ptr = buf;
+	*output = buf;
 	return size;
+}
+
+ssize_t read_comm_request(char **buf_ptr) {
+	ssize_t amt = read_string(comm[0][0], password_buffer_create, buf_ptr);
+	swaylock_log(LOG_DEBUG, "received pw check request");
+	if (amt == 0) {
+		return 0;
+	} else if (amt < 0) {
+		swaylock_log(LOG_ERROR, "read pw request");
+		return -1;
+	}
+	return amt;
 }
 
 bool write_comm_reply(bool success) {
