@@ -69,12 +69,27 @@ ssize_t read_comm_prompt_response(char **buf_ptr) {
 	return amt;
 }
 
-bool write_comm_reply(bool success) {
-	if (write(comm[1][1], &success, sizeof(success)) != sizeof(success)) {
-		swaylock_log_errno(LOG_ERROR, "failed to write pw check result");
-		return false;
+ssize_t write_comm_text_message_from_backend(const char * const *msg) {
+	enum backend_message_type msg_type = BACKEND_MESSAGE_TYPE_TEXT;
+	if (write(comm[1][1], &msg_type, sizeof(msg_type)) != sizeof(msg_type)) {
+		swaylock_log_errno(LOG_ERROR, "failed to write message type");
+		return -1;
 	}
-	return true;
+	return write_string(comm[1][1], msg, strlen(*msg) + 1);
+}
+
+ssize_t write_comm_auth_result_from_backend(bool success) {
+	enum backend_message_type msg_type = BACKEND_MESSAGE_TYPE_AUTH_RESULT;
+	if (write(comm[1][1], &msg_type, sizeof(msg_type)) != sizeof(msg_type)) {
+		swaylock_log_errno(LOG_ERROR, "failed to write message type");
+		return -1;
+	}
+
+	if (write(comm[1][1], &success, sizeof(success)) != sizeof(success)) {
+		swaylock_log_errno(LOG_ERROR, "failed to write authentication result");
+		return -1;
+	}
+	return sizeof(success);
 }
 
 bool spawn_comm_child(void) {
@@ -114,15 +129,52 @@ bool write_comm_prompt_response(struct swaylock_password *pw) {
 	return result;
 }
 
-bool read_comm_reply(void) {
-	bool result = false;
-	if (read(comm[1][0], &result, sizeof(result)) != sizeof(result)) {
-		swaylock_log_errno(LOG_ERROR, "Failed to read pw result");
-		result = false;
+char *malloc_str(size_t size) {
+	char *res = (char *) malloc(size * sizeof(char));
+	if (!res) {
+		swaylock_log_errno(LOG_ERROR, "failed to allocate string");
+		return NULL;
 	}
-	return result;
+	return res;
 }
 
-int get_comm_reply_fd(void) {
+ssize_t read_comm_message_from_backend(enum backend_message_type *msg_type, void **data) {
+	enum backend_message_type read_type;
+	void *read_data;
+
+	if (read(comm[1][0], &read_type, sizeof(read_type)) != sizeof(read_type)) {
+		swaylock_log_errno(LOG_ERROR, "Failed to read message type from backend");
+		return -1;
+	}
+
+	ssize_t amt;
+	switch(read_type) {
+	case BACKEND_MESSAGE_TYPE_TEXT:
+		amt = read_string(comm[1][0], malloc_str, (char **) &read_data);
+		if (amt < 0) {
+			swaylock_log(LOG_ERROR, "Error reading string from backend");
+			return -1;
+		} else if (amt == 0) {
+			read_data = NULL; //TODO: good?
+		}
+		break;
+
+	case BACKEND_MESSAGE_TYPE_AUTH_RESULT:
+		read_data = malloc(sizeof(bool));
+		amt = read(comm[1][0], (bool *) read_data, sizeof(bool));
+		if (amt != sizeof(bool)) {
+			swaylock_log(LOG_ERROR, "Error reading boolean from backend");
+			return -1;
+		}
+		break;
+
+	}
+
+	*msg_type = read_type;
+	*data = read_data;
+	return amt;
+}
+
+int get_comm_backend_message_fd(void) {
 	return comm[1][0];
 }

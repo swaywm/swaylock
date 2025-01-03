@@ -112,7 +112,7 @@ void run_pw_backend_child(void) {
 				get_pam_auth_error(pam_status));
 		}
 
-		if (!write_comm_reply(success)) {
+		if (write_comm_auth_result_from_backend(success) < 0) {
 			exit(EXIT_FAILURE);
 		}
 

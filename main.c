@@ -1034,18 +1034,45 @@ static void display_in(int fd, short mask, void *data) {
 	}
 }
 
-static void comm_in(int fd, short mask, void *data) {
-	if (read_comm_reply()) {
+static void handle_backend_text_message(char *msg) {
+	//TODO: show message in UI
+	swaylock_log(LOG_DEBUG, "Received text message from backend: %s", msg);
+}
+
+static void handle_auth_result(bool success) {
+	if (success) {
 		// Authentication succeeded
 		state.run_display = false;
-	} else if (mask & (POLLHUP | POLLERR)) {
-		swaylock_log(LOG_ERROR,	"Password checking subprocess crashed; exiting.");
-		exit(EXIT_FAILURE);
 	} else {
 		state.auth_state = AUTH_STATE_INVALID;
 		schedule_auth_idle(&state);
 		++state.failed_attempts;
 		damage_state(&state);
+	}
+}
+
+static void comm_in(int fd, short mask, void *data) {
+	enum backend_message_type msg_type;
+	void *comm_data;
+	ssize_t amt = read_comm_message_from_backend(&msg_type, &comm_data);
+
+	if (amt < 0) {
+		swaylock_log(LOG_ERROR,	"Error reading message from backend; exiting.");
+		exit(EXIT_FAILURE);
+	} else if (mask & (POLLHUP | POLLERR)) {
+		swaylock_log(LOG_ERROR,	"Password checking subprocess crashed; exiting.");
+		exit(EXIT_FAILURE);
+	}
+
+	switch(msg_type){
+	case BACKEND_MESSAGE_TYPE_TEXT:
+		handle_backend_text_message((char *) comm_data);
+		//TODO: memory leak; where to free comm_data?
+		break;
+	case BACKEND_MESSAGE_TYPE_AUTH_RESULT:
+		handle_auth_result(*(bool *) comm_data);
+		free(comm_data);
+		break;
 	}
 }
 
@@ -1238,7 +1265,7 @@ int main(int argc, char **argv) {
 	loop_add_fd(state.eventloop, wl_display_get_fd(state.display), POLLIN,
 			display_in, NULL);
 
-	loop_add_fd(state.eventloop, get_comm_reply_fd(), POLLIN, comm_in, NULL);
+	loop_add_fd(state.eventloop, get_comm_backend_message_fd(), POLLIN, comm_in, NULL);
 
 	loop_add_fd(state.eventloop, sigusr_fds[0], POLLIN, term_in, NULL);
 
