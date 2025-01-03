@@ -117,7 +117,7 @@ static void submit_password(struct swaylock_state *state) {
 	cancel_password_clear(state);
 	cancel_input_idle(state);
 
-	if (!write_comm_request(&state->password)) {
+	if (!write_comm_prompt_response(&state->password)) {
 		state->auth_state = AUTH_STATE_INVALID;
 		schedule_auth_idle(state);
 	}

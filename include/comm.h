@@ -20,12 +20,15 @@ ssize_t write_string(int fd, const char * const *string, size_t len);
 // - the total number is the return value plus sizeof(size_t).
 ssize_t read_string(int fd, char *(*alloc)(size_t), char **output);
 
-ssize_t read_comm_request(char **buf_ptr);
 bool write_comm_reply(bool success);
-// Requests the provided password to be checked. The password is always cleared
-// when the function returns.
-bool write_comm_request(struct swaylock_password *pw);
 bool read_comm_reply(void);
+
+// Read / write the response typed by the user (password, PIN code, etc) to a
+// prompt sent by the backend. The password buffer is always cleared when the
+// function returns. //TODO: verify
+ssize_t read_comm_prompt_response(char **buf_ptr);
+bool write_comm_prompt_response(struct swaylock_password *pw);
+
 // FD to poll for password authentication replies.
 int get_comm_reply_fd(void);
 

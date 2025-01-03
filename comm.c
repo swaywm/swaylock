@@ -57,13 +57,13 @@ ssize_t read_string(int fd, char *(*alloc)(size_t), char **output) {
 	return size;
 }
 
-ssize_t read_comm_request(char **buf_ptr) {
+ssize_t read_comm_prompt_response(char **buf_ptr) {
 	ssize_t amt = read_string(comm[0][0], password_buffer_create, buf_ptr);
-	swaylock_log(LOG_DEBUG, "received pw check request");
+	swaylock_log(LOG_DEBUG, "received response to prompt");
 	if (amt == 0) {
 		return 0;
 	} else if (amt < 0) {
-		swaylock_log(LOG_ERROR, "read pw request");
+		swaylock_log(LOG_ERROR, "Error reading prompt response");
 		return -1;
 	}
 	return amt;
@@ -100,12 +100,12 @@ bool spawn_comm_child(void) {
 	return true;
 }
 
-bool write_comm_request(struct swaylock_password *pw) {
+bool write_comm_prompt_response(struct swaylock_password *pw) {
 	bool result = false;
 	ssize_t amt = write_string(comm[0][1], (const char * const *)&pw->buffer, pw->len + 1);
 
 	if (amt < 0) {
-		swaylock_log_errno(LOG_ERROR, "Failed to request pw check");
+		swaylock_log_errno(LOG_ERROR, "Failed to write prompt response");
 	} else {
 		result = true;
 	}

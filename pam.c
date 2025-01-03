@@ -95,7 +95,7 @@ void run_pw_backend_child(void) {
 
 	int pam_status = PAM_SUCCESS;
 	while (1) {
-		ssize_t size = read_comm_request(&pw_buf);
+		ssize_t size = read_comm_prompt_response(&pw_buf); //TODO: should be moved to handle_conversation
 		if (size < 0) {
 			exit(EXIT_FAILURE);
 		} else if (size == 0) {
