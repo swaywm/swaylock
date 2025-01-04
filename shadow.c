@@ -64,7 +64,7 @@ void run_pw_backend_child(void) {
 	assert(encpw != NULL);
 	while (1) {
 		char *buf;
-		ssize_t size = read_comm_request(&buf);
+		ssize_t size = read_comm_prompt_response(&buf);
 		if (size < 0) {
 			exit(EXIT_FAILURE);
 		} else if (size == 0) {
@@ -81,7 +81,7 @@ void run_pw_backend_child(void) {
 		}
 		bool success = strcmp(c, encpw) == 0;
 
-		if (!write_comm_reply(success)) {
+		if (write_comm_auth_result_from_backend(success) < 0) {
 			exit(EXIT_FAILURE);
 		}
 
