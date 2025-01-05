@@ -1034,9 +1034,24 @@ static void display_in(int fd, short mask, void *data) {
 	}
 }
 
+void add_backend_message(struct swaylock_state *state, char *msg) {
+	size_t n_max = state->backend_message_list.max_num_messages;
+	char **messages = state->backend_message_list.messages;
+	if (state->backend_message_list.num_messages == n_max) {
+		free(messages[n_max - 1]);
+	} else {
+		state->backend_message_list.num_messages += 1;
+	}
+	for (int i = n_max - 1; i > 0; i--) {
+		messages[i] = messages[i - 1];
+	}
+	messages[0] = strdup(msg);
+}
+
 static void handle_backend_text_message(char *msg) {
-	//TODO: show message in UI
-	swaylock_log(LOG_DEBUG, "Received text message from backend: %s", msg);
+	//TODO: schedule old messages to be hidden after a timeout?
+	add_backend_message(&state, msg);
+	damage_state(&state);
 }
 
 static void handle_auth_result(bool success) {
@@ -1067,7 +1082,7 @@ static void comm_in(int fd, short mask, void *data) {
 	switch(msg_type){
 	case BACKEND_MESSAGE_TYPE_TEXT:
 		handle_backend_text_message((char *) comm_data);
-		//TODO: memory leak; where to free comm_data?
+		free(comm_data);
 		break;
 	case BACKEND_MESSAGE_TYPE_AUTH_RESULT:
 		handle_auth_result(*(bool *) comm_data);
@@ -1176,6 +1191,16 @@ int main(int argc, char **argv) {
 	state.password.buffer = password_buffer_create(state.password.buffer_len);
 	if (!state.password.buffer) {
 		return EXIT_FAILURE;
+	}
+
+	state.backend_message_list = (struct swaylock_backend_message_list){
+		.num_messages = 0,
+		//TODO: make configurable?
+		.max_num_messages = 4,
+	};
+	state.backend_message_list.messages = malloc(state.backend_message_list.max_num_messages * sizeof(char *));
+	for (size_t i = 0; i < state.backend_message_list.max_num_messages; i++) {
+		state.backend_message_list.messages[i] = NULL;
 	}
 
 	if (pipe(sigusr_fds) != 0) {
