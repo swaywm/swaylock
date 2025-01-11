@@ -48,11 +48,10 @@ static int handle_conversation(int num_msg, const struct pam_message **msg,
 		case PAM_PROMPT_ECHO_OFF:
 			char *pw_buf = NULL;
 			ssize_t size = read_comm_prompt_response(&pw_buf);
-			if (size < 0) {
+			if (size <= 0) {
 				swaylock_log(LOG_ERROR, "Failed to read prompt response");
 				return PAM_ABORT;
 			}
-			//TODO: what to do if size == 0? in fbc5a8136187, if read_comm_prompt_response (there called read_comm_request) returned 0, it would break the while loop (i.e. auth successfully); we can't do that here
 
 			pam_reply[i].resp = strdup(pw_buf); // PAM clears and frees this
 			if (pam_reply[i].resp == NULL) {
