@@ -18,7 +18,7 @@ bool spawn_comm_child(void);
 // termination. Returns the number of bytes in the written string, *not* the
 // total no. of bytes written - the total number is the return value plus
 // sizeof(size_t).
-ssize_t write_string(int fd, const char * const *string, size_t len);
+ssize_t write_string(int fd, const char *string, size_t len);
 
 // Read a string from a file descriptor by first reading the size, allocating
 // memory to output using alloc(size) and then reading the string data to it.
@@ -36,7 +36,7 @@ ssize_t read_comm_message_from_backend(enum backend_message_type *msg_type, void
 // Write a string containing a message from the backend
 // Returns the no. of bytes in the *message* that was written, the total no. of
 // bytes written is the return value plus sizeof(enum backend_message_type).
-ssize_t write_comm_text_message_from_backend(const char * const *msg);
+ssize_t write_comm_text_message_from_backend(const char *msg);
 // Write a boolean value indicating the result of authentication
 // Returns the no. of bytes in the *data* that was written (i.e. sizeof(bool)),
 // the total no. of bytes written is the return value plus

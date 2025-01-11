@@ -36,7 +36,7 @@ static int handle_conversation(int num_msg, const struct pam_message **msg,
 		swaylock_log(LOG_DEBUG, "PAM message %d: %s", i, msg[i]->msg);
 		switch (msg[i]->msg_style) {
 		case PAM_PROMPT_ECHO_ON:
-			if(write_comm_text_message_from_backend(&msg[i]->msg) < 0) {
+			if(write_comm_text_message_from_backend(msg[i]->msg) < 0) {
 				swaylock_log(LOG_ERROR, "Failed to write message from backend");
 				return PAM_ABORT;
 			}
@@ -64,7 +64,7 @@ static int handle_conversation(int num_msg, const struct pam_message **msg,
 			break;
 		case PAM_ERROR_MSG:
 		case PAM_TEXT_INFO:
-			if(write_comm_text_message_from_backend(&msg[i]->msg) < 0) {
+			if(write_comm_text_message_from_backend(msg[i]->msg) < 0) {
 				swaylock_log(LOG_ERROR, "Failed to write message from backend");
 				return PAM_ABORT;
 			}

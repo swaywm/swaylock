@@ -9,7 +9,7 @@
 
 static int comm[2][2] = {{-1, -1}, {-1, -1}};
 
-ssize_t write_string(int fd, const char * const *string, size_t len) {
+ssize_t write_string(int fd, const char *string, size_t len) {
 	size_t offs = 0;
 	if (write(fd, &len, sizeof(len)) < 0) {
 		swaylock_log_errno(LOG_ERROR, "Failed to write string size");
@@ -17,7 +17,7 @@ ssize_t write_string(int fd, const char * const *string, size_t len) {
 	}
 
 	do {
-		ssize_t amt = write(fd, string[offs], len - offs);
+		ssize_t amt = write(fd, &string[offs], len - offs);
 		if (amt < 0) {
 			swaylock_log_errno(LOG_ERROR, "Failed to write string");
 			//TODO: different return value for different error?
@@ -69,13 +69,13 @@ ssize_t read_comm_prompt_response(char **buf_ptr) {
 	return amt;
 }
 
-ssize_t write_comm_text_message_from_backend(const char * const *msg) {
+ssize_t write_comm_text_message_from_backend(const char *msg) {
 	enum backend_message_type msg_type = BACKEND_MESSAGE_TYPE_TEXT;
 	if (write(comm[1][1], &msg_type, sizeof(msg_type)) != sizeof(msg_type)) {
 		swaylock_log_errno(LOG_ERROR, "failed to write message type");
 		return -1;
 	}
-	return write_string(comm[1][1], msg, strlen(*msg) + 1);
+	return write_string(comm[1][1], msg, strlen(msg) + 1);
 }
 
 ssize_t write_comm_auth_result_from_backend(bool success) {
@@ -117,7 +117,7 @@ bool spawn_comm_child(void) {
 
 bool write_comm_prompt_response(struct swaylock_password *pw) {
 	bool result = false;
-	ssize_t amt = write_string(comm[0][1], (const char * const *)&pw->buffer, pw->len + 1);
+	ssize_t amt = write_string(comm[0][1], pw->buffer, pw->len + 1);
 
 	if (amt < 0) {
 		swaylock_log_errno(LOG_ERROR, "Failed to write prompt response");
