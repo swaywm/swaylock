@@ -166,19 +166,21 @@ static bool render_frame(struct swaylock_surface *surface) {
 				}
 			}
 
-			xkb_layout_index_t num_layout = xkb_keymap_num_layouts(state->xkb.keymap);
-			if (!state->args.hide_keyboard_layout &&
-					(state->args.show_keyboard_layout || num_layout > 1)) {
-				xkb_layout_index_t curr_layout = 0;
+			if (state->xkb.keymap) {
+				xkb_layout_index_t num_layout = xkb_keymap_num_layouts(state->xkb.keymap);
+				if (!state->args.hide_keyboard_layout &&
+						(state->args.show_keyboard_layout || num_layout > 1)) {
+					xkb_layout_index_t curr_layout = 0;
 
-				// advance to the first active layout (if any)
-				while (curr_layout < num_layout &&
-					xkb_state_layout_index_is_active(state->xkb.state,
-						curr_layout, XKB_STATE_LAYOUT_EFFECTIVE) != 1) {
-					++curr_layout;
+					// advance to the first active layout (if any)
+					while (curr_layout < num_layout &&
+						xkb_state_layout_index_is_active(state->xkb.state,
+							curr_layout, XKB_STATE_LAYOUT_EFFECTIVE) != 1) {
+						++curr_layout;
+					}
+					// will handle invalid index if none are active
+					layout_text = xkb_keymap_layout_get_name(state->xkb.keymap, curr_layout);
 				}
-				// will handle invalid index if none are active
-				layout_text = xkb_keymap_layout_get_name(state->xkb.keymap, curr_layout);
 			}
 		}
 	}
