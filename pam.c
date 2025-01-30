@@ -10,8 +10,6 @@
 #include "password-buffer.h"
 #include "swaylock.h"
 
-static char *pw_buf = NULL;
-
 void initialize_pw_backend(int argc, char **argv) {
 	if (getuid() != geteuid() || getgid() != getegid()) {
 		swaylock_log(LOG_ERROR,
@@ -35,17 +33,40 @@ static int handle_conversation(int num_msg, const struct pam_message **msg,
 	}
 	*resp = pam_reply;
 	for (int i = 0; i < num_msg; ++i) {
+		swaylock_log(LOG_DEBUG, "PAM message %d: %s", i, msg[i]->msg);
 		switch (msg[i]->msg_style) {
-		case PAM_PROMPT_ECHO_OFF:
 		case PAM_PROMPT_ECHO_ON:
+			if(write_comm_text_message_from_backend(msg[i]->msg) < 0) {
+				swaylock_log(LOG_ERROR, "Failed to write message from backend");
+				return PAM_ABORT;
+			}
+			#ifdef __GNUC__
+			// both PAM_PROMPT_ECHO_ON and PAM_PROMPT_ECHO_OFF expect a string response
+			__attribute__((fallthrough));
+			#endif
+
+		case PAM_PROMPT_ECHO_OFF:
+			char *pw_buf = NULL;
+			ssize_t size = read_comm_prompt_response(&pw_buf);
+			if (size <= 0) {
+				swaylock_log(LOG_ERROR, "Failed to read prompt response");
+				return PAM_ABORT;
+			}
+
 			pam_reply[i].resp = strdup(pw_buf); // PAM clears and frees this
 			if (pam_reply[i].resp == NULL) {
 				swaylock_log(LOG_ERROR, "Allocation failed");
 				return PAM_ABORT;
 			}
+			password_buffer_destroy(pw_buf, size);
+			pw_buf = NULL;
 			break;
 		case PAM_ERROR_MSG:
 		case PAM_TEXT_INFO:
+			if(write_comm_text_message_from_backend(msg[i]->msg) < 0) {
+				swaylock_log(LOG_ERROR, "Failed to write message from backend");
+				return PAM_ABORT;
+			}
 			break;
 		}
 	}
@@ -94,16 +115,7 @@ void run_pw_backend_child(void) {
 
 	int pam_status = PAM_SUCCESS;
 	while (1) {
-		ssize_t size = read_comm_request(&pw_buf);
-		if (size < 0) {
-			exit(EXIT_FAILURE);
-		} else if (size == 0) {
-			break;
-		}
-
 		int pam_status = pam_authenticate(auth_handle, 0);
-		password_buffer_destroy(pw_buf, size);
-		pw_buf = NULL;
 
 		bool success = pam_status == PAM_SUCCESS;
 		if (!success) {
@@ -111,7 +123,7 @@ void run_pw_backend_child(void) {
 				get_pam_auth_error(pam_status));
 		}
 
-		if (!write_comm_reply(success)) {
+		if (write_comm_auth_result_from_backend(success) < 0) {
 			exit(EXIT_FAILURE);
 		}
 

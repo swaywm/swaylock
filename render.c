@@ -191,6 +191,7 @@ static bool render_frame(struct swaylock_surface *surface) {
 	int buffer_diameter = (arc_radius + arc_thickness) * 2;
 	int buffer_width = buffer_diameter;
 	int buffer_height = buffer_diameter;
+	double box_padding = 4.0 * surface->scale;
 
 	if (text || layout_text) {
 		cairo_set_antialias(state->test_cairo, CAIRO_ANTIALIAS_BEST);
@@ -206,7 +207,6 @@ static bool render_frame(struct swaylock_surface *surface) {
 		if (layout_text) {
 			cairo_text_extents_t extents;
 			cairo_font_extents_t fe;
-			double box_padding = 4.0 * surface->scale;
 			cairo_text_extents(state->test_cairo, layout_text, &extents);
 			cairo_font_extents(state->test_cairo, &fe);
 			buffer_height += fe.height + 2 * box_padding;
@@ -215,6 +215,25 @@ static bool render_frame(struct swaylock_surface *surface) {
 			}
 		}
 	}
+	if (state->backend_message_list.num_messages > 0) {
+		cairo_set_antialias(state->test_cairo, CAIRO_ANTIALIAS_BEST);
+		configure_font_drawing(state->test_cairo, state, surface->subpixel, arc_radius);
+
+		buffer_height += 2 * box_padding;
+		for (size_t i = 0; i < state->backend_message_list.num_messages; i++) {
+			cairo_text_extents_t extents;
+			cairo_font_extents_t fe;
+			cairo_text_extents(state->test_cairo, state->backend_message_list.messages[i], &extents);
+			cairo_font_extents(state->test_cairo, &fe);
+			// NOTE: if the indicator is not shown, this results in
+			// unnecessarily large buffer_height, that could be checked here
+			buffer_height += fe.height + 2 * box_padding;
+			if (buffer_width < extents.width + 2 * box_padding) {
+				buffer_width = extents.width + 2 * box_padding;
+			}
+		}
+	}
+
 	// Ensure buffer size is multiple of buffer scale - required by protocol
 	buffer_height += surface->scale - (buffer_height % surface->scale);
 	buffer_width += surface->scale - (buffer_width % surface->scale);
@@ -261,6 +280,8 @@ static bool render_frame(struct swaylock_surface *surface) {
 
 	float type_indicator_border_thickness =
 		TYPE_INDICATOR_BORDER_THICKNESS * surface->scale;
+
+	float layout_text_box_height = 0;
 
 	if (draw_indicator) {
 		// Fill inner circle
@@ -350,7 +371,6 @@ static bool render_frame(struct swaylock_surface *surface) {
 			cairo_text_extents_t extents;
 			cairo_font_extents_t fe;
 			double x, y;
-			double box_padding = 4.0 * surface->scale;
 			cairo_text_extents(cairo, layout_text, &extents);
 			cairo_font_extents(cairo, &fe);
 			// upper left coordinates for box
@@ -358,9 +378,10 @@ static bool render_frame(struct swaylock_surface *surface) {
 			y = buffer_diameter;
 
 			// background box
+			layout_text_box_height = fe.height + 2.0 * box_padding;
 			cairo_rectangle(cairo, x, y,
 				extents.width + 2.0 * box_padding,
-				fe.height + 2.0 * box_padding);
+				layout_text_box_height);
 			cairo_set_source_u32(cairo, state->args.colors.layout_background);
 			cairo_fill_preserve(cairo);
 			// border
@@ -373,6 +394,61 @@ static bool render_frame(struct swaylock_surface *surface) {
 				y + (fe.height - fe.descent) + box_padding);
 			cairo_set_source_u32(cairo, state->args.colors.layout_text);
 			cairo_show_text(cairo, layout_text);
+			cairo_new_sub_path(cairo);
+		}
+	}
+
+	// display messages from backend
+	if (state->backend_message_list.num_messages > 0) {
+		configure_font_drawing(cairo, state, surface->subpixel, arc_radius);
+		for (size_t i = 0; i < state->backend_message_list.num_messages; i++) {
+			char *str = state->backend_message_list.messages[i];
+
+			cairo_text_extents_t extents;
+			cairo_font_extents_t fe;
+			double x, y;
+
+			cairo_text_extents(cairo, str, &extents);
+			cairo_font_extents(cairo, &fe);
+
+			// upper left coordinates for box
+			x = (buffer_width / 2) - (extents.width / 2) - box_padding;
+			if (draw_indicator) {
+				y = buffer_diameter + 2 * box_padding;
+				if (layout_text) {
+					y += layout_text_box_height;
+				}
+			} else {
+				y = (buffer_diameter / 2) - (fe.height / 2) - box_padding;
+			}
+			y += (fe.height + 2 * box_padding) * i;
+
+			// background box
+			cairo_rectangle(cairo, x, y,
+					extents.width + 2.0 * box_padding,
+					fe.height + 2.0 * box_padding);
+			//TODO: make colors customizable
+			cairo_set_source_u32(cairo,
+					color_with_alpha(
+						state->args.colors.layout_background,
+						(uint8_t) (state->args.colors.layout_background & 0xFF) / (i == 0 ? 1 : 2)));
+			cairo_fill_preserve(cairo);
+
+			// border
+			cairo_set_source_u32(cairo,
+					color_with_alpha(
+						state->args.colors.layout_border,
+						(uint8_t) (state->args.colors.layout_border & 0xFF) / (i == 0 ? 1 : 2)));
+			cairo_stroke(cairo);
+
+			cairo_move_to(cairo,
+					x - extents.x_bearing + box_padding,
+					y + (fe.height - fe.descent) + box_padding);
+			cairo_set_source_u32(cairo,
+					color_with_alpha(
+						state->args.colors.layout_text,
+						(uint8_t) (state->args.colors.layout_text & 0xFF) / (i == 0 ? 1 : 2)));
+			cairo_show_text(cairo, str);
 			cairo_new_sub_path(cairo);
 		}
 	}

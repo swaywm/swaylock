@@ -77,6 +77,12 @@ struct swaylock_password {
 	char *buffer;
 };
 
+struct swaylock_backend_message_list {
+	size_t num_messages;
+	size_t max_num_messages;
+	char **messages;
+};
+
 struct swaylock_state {
 	struct loop *eventloop;
 	struct loop_timer *input_idle_timer; // timer to reset input state to IDLE
@@ -90,6 +96,7 @@ struct swaylock_state {
 	struct wl_list images;
 	struct swaylock_args args;
 	struct swaylock_password password;
+	struct swaylock_backend_message_list backend_message_list; // backend messages displayed in the UI
 	struct swaylock_xkb xkb;
 	cairo_surface_t *test_surface;
 	cairo_t *test_cairo; // used to estimate font/text sizes
@@ -143,5 +150,9 @@ void schedule_auth_idle(struct swaylock_state *state);
 void initialize_pw_backend(int argc, char **argv);
 void run_pw_backend_child(void);
 void clear_buffer(char *buf, size_t size);
+
+// Add a message to the list of displayed backend messages. Creates a copy of
+// the string, it can be freed after calling this function.
+void add_backend_message(struct swaylock_state *state, char *msg);
 
 #endif

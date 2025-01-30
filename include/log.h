@@ -27,7 +27,7 @@ void _swaylock_log(enum log_importance verbosity, const char *format, ...)
 const char *_swaylock_strip_path(const char *filepath);
 
 #define swaylock_log(verb, fmt, ...) \
-	_swaylock_log(verb, "[%s:%d] " fmt, _swaylock_strip_path(__FILE__), \
+	_swaylock_log(verb, "[%d:%s:%d] " fmt, getpid(), _swaylock_strip_path(__FILE__), \
 			__LINE__, ##__VA_ARGS__)
 
 #define swaylock_log_errno(verb, fmt, ...) \

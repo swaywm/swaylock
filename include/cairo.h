@@ -9,6 +9,7 @@
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #endif
 
+uint32_t color_with_alpha(uint32_t color, uint8_t alpha);
 void cairo_set_source_u32(cairo_t *cairo, uint32_t color);
 cairo_subpixel_order_t to_cairo_subpixel_order(enum wl_output_subpixel subpixel);
 

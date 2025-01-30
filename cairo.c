@@ -5,6 +5,10 @@
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #endif
 
+uint32_t color_with_alpha(uint32_t color, uint8_t alpha) {
+	return (color & 0xFFFFFF00) | alpha;
+}
+
 void cairo_set_source_u32(cairo_t *cairo, uint32_t color) {
 	cairo_set_source_rgba(cairo,
 			(color >> (3*8) & 0xFF) / 255.0,
