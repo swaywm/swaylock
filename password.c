@@ -111,6 +111,9 @@ static void submit_password(struct swaylock_state *state) {
 	if (state->args.ignore_empty && state->password.len == 0) {
 		return;
 	}
+	if (state->auth_state == AUTH_STATE_VALIDATING) {
+		return;
+	}
 
 	state->input_state = INPUT_STATE_IDLE;
 	state->auth_state = AUTH_STATE_VALIDATING;
