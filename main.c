@@ -1013,7 +1013,38 @@ static int load_config(char *path, struct swaylock_state *state,
 			swaylock_log(LOG_ERROR, "Failed to allocate memory");
 			return 0;
 		}
-		sprintf(flag, "--%s", line);
+
+    sprintf(flag, "--");
+    int search_state = 0;
+    int flag_index = 2;
+    for (int i = 0; i < nread; i++) {
+
+      switch(search_state) {
+        case 0:
+          if (line[i] != ' ') {
+            flag[flag_index++] = line[i];
+          }
+          if (line[i] == '=') {
+            search_state++;
+          }
+          break;
+
+        case 1:
+          if (line[i] != ' ') {
+            flag[flag_index++] = line[i];
+            search_state++;
+          }
+          break;
+
+        case 2:
+          flag[flag_index++] = line[i];
+          break;
+
+      }
+    }
+    flag[flag_index] = '\0';
+    
+		swaylock_log(LOG_DEBUG, "Read Flag: %s", flag);
 		char *argv[] = {"swaylock", flag};
 		result = parse_options(2, argv, state, line_mode, NULL);
 		free(flag);
