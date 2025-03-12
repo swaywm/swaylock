@@ -1,4 +1,5 @@
 #define _POSIX_C_SOURCE 200809L
+#include <assert.h>
 #include <pwd.h>
 #include <security/pam_appl.h>
 #include <stdbool.h>
@@ -100,6 +101,7 @@ void run_pw_backend_child(void) {
 		} else if (size == 0) {
 			break;
 		}
+		assert(pw_buf[size - 1] == '\0');
 
 		int pam_status = pam_authenticate(auth_handle, 0);
 		password_buffer_destroy(pw_buf, size);
