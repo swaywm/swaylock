@@ -72,6 +72,7 @@ ssize_t read_comm_request(char **buf_ptr) {
 		return -1;
 	}
 
+	assert(buf[size - 1] == '\0');
 	*buf_ptr = buf;
 	return size;
 }
