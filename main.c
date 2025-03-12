@@ -1035,17 +1035,23 @@ static void display_in(int fd, short mask, void *data) {
 }
 
 static void comm_in(int fd, short mask, void *data) {
-	if (read_comm_reply()) {
-		// Authentication succeeded
-		state.run_display = false;
+	if (mask & POLLIN) {
+		bool auth_success = false;
+		if (!read_comm_reply(&auth_success)) {
+			exit(EXIT_FAILURE);
+		}
+		if (auth_success) {
+			// Authentication succeeded
+			state.run_display = false;
+		} else {
+			state.auth_state = AUTH_STATE_INVALID;
+			schedule_auth_idle(&state);
+			++state.failed_attempts;
+			damage_state(&state);
+		}
 	} else if (mask & (POLLHUP | POLLERR)) {
 		swaylock_log(LOG_ERROR,	"Password checking subprocess crashed; exiting.");
 		exit(EXIT_FAILURE);
-	} else {
-		state.auth_state = AUTH_STATE_INVALID;
-		schedule_auth_idle(&state);
-		++state.failed_attempts;
-		damage_state(&state);
 	}
 }
 

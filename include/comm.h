@@ -11,7 +11,7 @@ bool write_comm_reply(bool success);
 // Requests the provided password to be checked. The password is always cleared
 // when the function returns.
 bool write_comm_request(struct swaylock_password *pw);
-bool read_comm_reply(void);
+bool read_comm_reply(bool *auth_success);
 // FD to poll for password authentication replies.
 int get_comm_reply_fd(void);
 

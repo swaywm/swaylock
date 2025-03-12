@@ -95,13 +95,17 @@ out:
 	return result;
 }
 
-bool read_comm_reply(void) {
-	bool result = false;
-	if (read(comm[1][0], &result, sizeof(result)) != sizeof(result)) {
-		swaylock_log_errno(LOG_ERROR, "Failed to read pw result");
-		result = false;
+bool read_comm_reply(bool *auth_success) {
+	ssize_t n = read(comm[1][0], auth_success, sizeof(*auth_success));
+	if (n != sizeof(*auth_success)) {
+		if (n < 0) {
+			swaylock_log_errno(LOG_ERROR, "Failed to read pw result");
+		} else {
+			swaylock_log(LOG_ERROR, "Failed to read pw result: short read of %zd bytes", n);
+		}
+		return false;
 	}
-	return result;
+	return true;
 }
 
 int get_comm_reply_fd(void) {
