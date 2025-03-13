@@ -201,6 +201,9 @@ Locks your Wayland session.
 *SIGUSR1*
 	Unlock the screen and exit.
 
+*SIGUSR2*
+	Increases failed-attempts counter e.g. from external fingerprint-verification.
+
 # AUTHORS
 
 Maintained by Drew DeVault <sir@cmpwn.com>, who is assisted by other open

@@ -303,7 +303,7 @@ static const struct wl_registry_listener registry_listener = {
 static int sigusr_fds[2] = {-1, -1};
 
 void do_sigusr(int sig) {
-	(void)write(sigusr_fds[1], "1", 1);
+	(void)write(sigusr_fds[1], &sig, sizeof(sig));
 }
 
 static cairo_surface_t *select_image(struct swaylock_state *state,
@@ -1056,7 +1056,21 @@ static void comm_in(int fd, short mask, void *data) {
 }
 
 static void term_in(int fd, short mask, void *data) {
-	state.run_display = false;
+	int sig = -1;
+	if (read(sigusr_fds[0], &sig, sizeof(sig)) != sizeof(sig)) {
+		swaylock_log_errno(LOG_ERROR, "Failed to read signum");
+		return;
+	}
+	if (sig == SIGUSR1) {
+		// External unlock succeeded
+		state.run_display = false;
+	}
+	else {
+		state.auth_state = AUTH_STATE_INVALID;
+		schedule_auth_idle(&state);
+		++state.failed_attempts;
+		damage_state(&state);
+	}
 }
 
 // Check for --debug 'early' we also apply the correct loglevel
@@ -1253,6 +1267,7 @@ int main(int argc, char **argv) {
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = SA_RESTART;
 	sigaction(SIGUSR1, &sa, NULL);
+	sigaction(SIGUSR2, &sa, NULL);
 
 	state.run_display = true;
 	while (state.run_display) {
