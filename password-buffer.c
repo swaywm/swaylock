@@ -1,4 +1,3 @@
-#define _POSIX_C_SOURCE 200809L
 #include "password-buffer.h"
 #include "log.h"
 #include "swaylock.h"

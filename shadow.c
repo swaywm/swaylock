@@ -1,3 +1,4 @@
+#undef _POSIX_C_SOURCE
 #define _XOPEN_SOURCE // for crypt
 #include <assert.h>
 #include <pwd.h>
