@@ -11,22 +11,18 @@ project(
 	],
 )
 
-add_project_arguments('-D_POSIX_C_SOURCE=200809L', language: 'c')
-
-add_project_arguments(
-	[
-		'-Wno-unused-parameter',
-		'-Wno-unused-result',
-		'-Wundef',
-		'-Wvla',
-	],
-	language: 'c',
-)
-
 cc = meson.get_compiler('c')
 
-is_freebsd = host_machine.system().startswith('freebsd')
+add_project_arguments('-D_POSIX_C_SOURCE=200809L', language: 'c')
 
+add_project_arguments(cc.get_supported_arguments([
+	'-Wno-unused-parameter',
+	'-Wno-unused-result',
+	'-Wundef',
+	'-Wvla',
+]), language: 'c')
+
+is_freebsd = host_machine.system().startswith('freebsd')
 if is_freebsd
 	add_project_arguments('-D_C11_SOURCE', language: 'c')
 endif
