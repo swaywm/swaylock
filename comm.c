@@ -59,6 +59,7 @@ ssize_t read_comm_request(char **buf_ptr) {
 	if (n <= 0) {
 		return n;
 	}
+	assert(size > 0);
 
 	swaylock_log(LOG_DEBUG, "received pw check request");
 
