@@ -1155,6 +1155,7 @@ int main(int argc, char **argv) {
 	if (!state.password.buffer) {
 		return EXIT_FAILURE;
 	}
+	state.password.buffer[0] = 0;
 
 	if (pipe(sigusr_fds) != 0) {
 		swaylock_log(LOG_ERROR, "Failed to pipe");
