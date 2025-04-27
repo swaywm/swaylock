@@ -96,6 +96,10 @@ bool spawn_comm_child(void) {
 		swaylock_log_errno(LOG_ERROR, "failed to fork");
 		return false;
 	} else if (child == 0) {
+		struct sigaction sa = {
+			.sa_handler = SIG_IGN,
+		};
+		sigaction(SIGUSR1, &sa, NULL);
 		close(comm[0][1]);
 		close(comm[1][0]);
 		run_pw_backend_child();
