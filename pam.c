@@ -10,10 +10,26 @@
 #include "password-buffer.h"
 #include "swaylock.h"
 
+#ifdef HAVE_SYS_AUXV_H
+#include <sys/auxv.h> // for getauxval()
+#endif
+
 static char *pw_buf = NULL;
 
+/**
+ * Are we running with elevated privileges? (e.g. setuid)
+ */
+static bool is_setid() {
+#if defined(HAVE_SYS_AUXV_H) && defined(AT_SECURE)
+	/* Linux-specific */
+	return getauxval(AT_SECURE);
+#else
+	return getuid() != geteuid() || getgid() != getegid();
+#endif
+}
+
 void initialize_pw_backend(int argc, char **argv) {
-	if (getuid() != geteuid() || getgid() != getegid()) {
+	if (is_setid()) {
 		swaylock_log(LOG_ERROR,
 			"swaylock is setuid, but was compiled with the PAM"
 			" backend. Run 'chmod a-s %s' to fix. Aborting.", argv[0]);
