@@ -10,13 +10,22 @@
 #include "password-buffer.h"
 #include "swaylock.h"
 
+#ifdef HAVE_SYS_AUXV_H
+#include <sys/auxv.h> // for getauxval()
+#endif
+
 static char *pw_buf = NULL;
 
 /**
  * Are we running with elevated privileges? (e.g. setuid)
  */
 static bool is_setid() {
+#if defined(HAVE_SYS_AUXV_H) && defined(AT_SECURE)
+	/* Linux-specific */
+	return getauxval(AT_SECURE);
+#else
 	return getuid() != geteuid() || getgid() != getegid();
+#endif
 }
 
 void initialize_pw_backend(int argc, char **argv) {
