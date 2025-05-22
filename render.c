@@ -1,5 +1,6 @@
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <wayland-client.h>
 #include "cairo.h"
 #include "background-image.h"
@@ -330,7 +331,7 @@ static bool render_frame(struct swaylock_surface *surface) {
 			cairo_line_to(cairo,
 				buffer_width / 2.0 + cos(highlight_start) * outer_radius,
 				buffer_diameter / 2.0 + sin(highlight_start) * outer_radius
-      );
+			);
 			cairo_stroke(cairo);
 
 			cairo_move_to(cairo,
@@ -340,7 +341,7 @@ static bool render_frame(struct swaylock_surface *surface) {
 			cairo_line_to(cairo,
 				buffer_width / 2.0 + cos(highlight_start + TYPE_INDICATOR_RANGE) * outer_radius,
 				buffer_diameter / 2.0 + sin(highlight_start + TYPE_INDICATOR_RANGE) * outer_radius
-      );
+			);
 			cairo_stroke(cairo);
 		}
 
