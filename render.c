@@ -1,5 +1,6 @@
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <wayland-client.h>
 #include "cairo.h"
 #include "background-image.h"
@@ -8,7 +9,6 @@
 
 #define M_PI 3.14159265358979323846
 const float TYPE_INDICATOR_RANGE = M_PI / 3.0f;
-const float TYPE_INDICATOR_BORDER_THICKNESS = M_PI / 128.0f;
 
 static void set_color_for_state(cairo_t *cairo, struct swaylock_state *state,
 		struct swaylock_colorset *colorset) {
@@ -259,9 +259,6 @@ static bool render_frame(struct swaylock_surface *surface) {
 	cairo_paint(cairo);
 	cairo_restore(cairo);
 
-	float type_indicator_border_thickness =
-		TYPE_INDICATOR_BORDER_THICKNESS * surface->scale;
-
 	if (draw_indicator) {
 		// Fill inner circle
 		cairo_set_line_width(cairo, 0);
@@ -322,16 +319,29 @@ static bool render_frame(struct swaylock_surface *surface) {
 			cairo_stroke(cairo);
 
 			// Draw borders
+			double inner_radius = buffer_diameter / 2.0 - arc_thickness * 1.5;
+			double outer_radius = buffer_diameter / 2.0 - arc_thickness / 2.0;
+
+			cairo_set_line_width(cairo, 2.0 * surface->scale);
 			cairo_set_source_u32(cairo, state->args.colors.separator);
-			cairo_arc(cairo, buffer_width / 2, buffer_diameter / 2,
-					arc_radius, highlight_start,
-					highlight_start + type_indicator_border_thickness);
+			cairo_move_to(cairo,
+				buffer_width / 2.0 + cos(highlight_start) * inner_radius,
+				buffer_diameter / 2.0 + sin(highlight_start) * inner_radius
+			);
+			cairo_line_to(cairo,
+				buffer_width / 2.0 + cos(highlight_start) * outer_radius,
+				buffer_diameter / 2.0 + sin(highlight_start) * outer_radius
+			);
 			cairo_stroke(cairo);
 
-			cairo_arc(cairo, buffer_width / 2, buffer_diameter / 2,
-					arc_radius, highlight_start + TYPE_INDICATOR_RANGE,
-					highlight_start + TYPE_INDICATOR_RANGE +
-						type_indicator_border_thickness);
+			cairo_move_to(cairo,
+				buffer_width / 2.0 + cos(highlight_start + TYPE_INDICATOR_RANGE) * inner_radius,
+				buffer_diameter / 2.0 + sin(highlight_start + TYPE_INDICATOR_RANGE) * inner_radius
+			);
+			cairo_line_to(cairo,
+				buffer_width / 2.0 + cos(highlight_start + TYPE_INDICATOR_RANGE) * outer_radius,
+				buffer_diameter / 2.0 + sin(highlight_start + TYPE_INDICATOR_RANGE) * outer_radius
+			);
 			cairo_stroke(cairo);
 		}
 
