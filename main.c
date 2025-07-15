@@ -397,7 +397,7 @@ static void load_image(char *arg, struct swaylock_state *state) {
 }
 
 static void set_default_colors(struct swaylock_colors *colors) {
-	colors->background = 0xFFFFFFFF;
+	colors->background = 0xA3A3A3FF;
 	colors->bs_highlight = 0xDB3300FF;
 	colors->key_highlight = 0x33DB00FF;
 	colors->caps_lock_bs_highlight = 0xDB3300FF;
@@ -546,7 +546,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		"  -C, --config <config_file>       "
 			"Path to the config file.\n"
 		"  -c, --color <color>              "
-			"Turn the screen into the given color instead of white.\n"
+			"Turn the screen into the given color instead of light gray.\n"
 		"  -d, --debug                      "
 			"Enable debugging output.\n"
 		"  -e, --ignore-empty-password      "
