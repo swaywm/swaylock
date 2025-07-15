@@ -80,9 +80,9 @@ Locks your Wayland session.
 	Same as --scaling=tile.
 
 *-c, --color* <rrggbb[aa]>
-	Turn the screen into the given color instead of white. If -i is used, this
-	sets the background of the image to the given color. Defaults to white
-	(FFFFFF).
+	Turn the screen into the given color instead of light gray. If -i is used,
+	this sets the background of the image to the given color. Defaults to light
+	gray (A3A3A3).
 
 *--bs-hl-color* <rrggbb[aa]>
 	Sets the color of backspace highlight segments.
