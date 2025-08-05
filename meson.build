@@ -108,7 +108,6 @@ sources = [
 
 if libpam.found()
 	sources += ['pam.c']
-	dependencies += [libpam]
 else
 	warning('The swaylock binary must be setuid when compiled without libpam')
 	warning('You must do this manually post-install: chmod a+s /path/to/swaylock')

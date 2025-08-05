@@ -1062,7 +1062,7 @@ static void term_in(int fd, short mask, void *data) {
 }
 
 // Check for --debug 'early' we also apply the correct loglevel
-// to the forked child, without having to first proces all of the
+// to the forked child, without having to first process all of the
 // configuration (including from file) before forking and (in the
 // case of the shadow backend) dropping privileges
 void log_init(int argc, char **argv) {

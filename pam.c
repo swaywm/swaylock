@@ -1,16 +1,53 @@
 #define _POSIX_C_SOURCE 200809L
+#include <dlfcn.h>
 #include <pwd.h>
 #include <security/pam_appl.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
 #include "comm.h"
 #include "log.h"
 #include "password-buffer.h"
 #include "swaylock.h"
 
 static char *pw_buf = NULL;
+static void *pam_handle = NULL;
+
+// Function pointers for PAM symbols
+static int (*fp_pam_start)(const char *, const char *, const struct pam_conv *, pam_handle_t **) = NULL;
+static int (*fp_pam_authenticate)(pam_handle_t *, int) = NULL;
+static int (*fp_pam_end)(pam_handle_t *, int) = NULL;
+static int (*fp_pam_setcred)(pam_handle_t *, int) = NULL;
+
+static bool load_pam_library(void) {
+	pam_handle = dlopen("libpam.so.0", RTLD_NOW);
+	if (!pam_handle) {
+		swaylock_log(LOG_ERROR, "Failed to load libpam.so.0: %s", dlerror());
+		return false;
+	}
+
+	fp_pam_start = dlsym(pam_handle, "pam_start");
+	fp_pam_authenticate = dlsym(pam_handle, "pam_authenticate");
+	fp_pam_end = dlsym(pam_handle, "pam_end");
+	fp_pam_setcred = dlsym(pam_handle, "pam_setcred");
+
+	if (!fp_pam_start || !fp_pam_authenticate || !fp_pam_end || !fp_pam_setcred) {
+		swaylock_log(LOG_ERROR, "Failed to load one or more PAM symbols");
+		dlclose(pam_handle);
+		pam_handle = NULL;
+		return false;
+	}
+	return true;
+}
+
+static void unload_pam_library(void) {
+	if (pam_handle) {
+		dlclose(pam_handle);
+		pam_handle = NULL;
+	}
+}
 
 void initialize_pw_backend(int argc, char **argv) {
 	if (getuid() != geteuid() || getgid() != getegid()) {
@@ -71,9 +108,14 @@ static const char *get_pam_auth_error(int pam_status) {
 }
 
 void run_pw_backend_child(void) {
+	if (!load_pam_library()) {
+		exit(EXIT_FAILURE);  // Fall back or exit if desired
+	}
+
 	struct passwd *passwd = getpwuid(getuid());
 	if (!passwd) {
 		swaylock_log_errno(LOG_ERROR, "getpwuid failed");
+		unload_pam_library();
 		exit(EXIT_FAILURE);
 	}
 
@@ -84,8 +126,9 @@ void run_pw_backend_child(void) {
 		.appdata_ptr = NULL,
 	};
 	pam_handle_t *auth_handle = NULL;
-	if (pam_start("swaylock", username, &conv, &auth_handle) != PAM_SUCCESS) {
+	if (fp_pam_start("swaylock", username, &conv, &auth_handle) != PAM_SUCCESS) {
 		swaylock_log(LOG_ERROR, "pam_start failed");
+		unload_pam_library();
 		exit(EXIT_FAILURE);
 	}
 
@@ -101,7 +144,7 @@ void run_pw_backend_child(void) {
 			break;
 		}
 
-		int pam_status = pam_authenticate(auth_handle, 0);
+		int pam_status = fp_pam_authenticate(auth_handle, 0);
 		password_buffer_destroy(pw_buf, size);
 		pw_buf = NULL;
 
@@ -122,12 +165,14 @@ void run_pw_backend_child(void) {
 		}
 	}
 
-	pam_setcred(auth_handle, PAM_REFRESH_CRED);
+	fp_pam_setcred(auth_handle, PAM_REFRESH_CRED);
 
-	if (pam_end(auth_handle, pam_status) != PAM_SUCCESS) {
+	if (fp_pam_end(auth_handle, pam_status) != PAM_SUCCESS) {
 		swaylock_log(LOG_ERROR, "pam_end failed");
+		unload_pam_library();
 		exit(EXIT_FAILURE);
 	}
 
+	unload_pam_library();
 	exit((pam_status == PAM_SUCCESS) ? EXIT_SUCCESS : EXIT_FAILURE);
 }
