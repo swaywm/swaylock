@@ -21,7 +21,7 @@ static int (*fp_pam_authenticate)(pam_handle_t *, int) = NULL;
 static int (*fp_pam_end)(pam_handle_t *, int) = NULL;
 static int (*fp_pam_setcred)(pam_handle_t *, int) = NULL;
 
-static bool load_pam_library(void) {
+bool load_pam_library(void) {
 	pam_handle = dlopen("libpam.so.0", RTLD_NOW);
 	if (!pam_handle) {
 		swaylock_log(LOG_ERROR, "Failed to load libpam.so.0: %s", dlerror());
@@ -42,6 +42,10 @@ static bool load_pam_library(void) {
 	return true;
 }
 
+bool is_pam_loaded(void) {
+	return pam_handle != NULL;
+}
+
 static void unload_pam_library(void) {
 	if (pam_handle) {
 		dlclose(pam_handle);
@@ -49,7 +53,7 @@ static void unload_pam_library(void) {
 	}
 }
 
-void initialize_pw_backend(int argc, char **argv) {
+void initialize_pam_backend(int argc, char **argv) {
 	if (getuid() != geteuid() || getgid() != getegid()) {
 		swaylock_log(LOG_ERROR,
 			"swaylock is setuid, but was compiled with the PAM"
@@ -107,11 +111,7 @@ static const char *get_pam_auth_error(int pam_status) {
 	}
 }
 
-void run_pw_backend_child(void) {
-	if (!load_pam_library()) {
-		exit(EXIT_FAILURE);  // Fall back or exit if desired
-	}
-
+void run_pam_backend_child(void) {
 	struct passwd *passwd = getpwuid(getuid());
 	if (!passwd) {
 		swaylock_log_errno(LOG_ERROR, "getpwuid failed");
