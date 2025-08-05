@@ -14,10 +14,14 @@ tasks:
   - setup: |
       cd swaylock
       meson build
-  - build: |
+  - build-both: |
       cd swaylock
       ninja -C build
-  - build-no-pam: |
+  - build-pam: |
       cd swaylock
-      meson configure build -Dpam=disabled
+      meson build-pam -Dshadow=disabled
+      ninja -C build
+  - build-shadow: |
+      cd swaylock
+      meson build-shadow -Dpam=disabled
       ninja -C build
