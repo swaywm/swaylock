@@ -18,7 +18,7 @@
 
 char *encpw = NULL;
 
-void initialize_pw_backend(int argc, char **argv) {
+void initialize_shadow_backend(int argc, char **argv) {
 	/* This code runs as root */
 	struct passwd *pwent = getpwuid(getuid());
 	if (!pwent) {
@@ -61,7 +61,7 @@ void initialize_pw_backend(int argc, char **argv) {
 	encpw = NULL;
 }
 
-void run_pw_backend_child(void) {
+void run_shadow_backend_child(void) {
 	assert(encpw != NULL);
 	while (1) {
 		char *buf;

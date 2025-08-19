@@ -93,6 +93,7 @@ dependencies = [
 
 sources = [
 	'background-image.c',
+	'backend.c',
 	'cairo.c',
 	'comm.c',
 	'log.c',
@@ -106,11 +107,13 @@ sources = [
 	'unicode.c',
 ]
 
+# TODO: should fail is both pam and shadow are disabled
+
 if libpam.found()
 	sources += ['pam.c']
-	dependencies += [libpam]
-else
-	warning('The swaylock binary must be setuid when compiled without libpam')
+endif
+if get_option('shadow').enabled()
+	warning('The swaylock binary must be setuid when used without libpam')
 	warning('You must do this manually post-install: chmod a+s /path/to/swaylock')
 	sources += ['shadow.c']
 	dependencies += [crypt]
@@ -156,3 +159,8 @@ if scdoc.found()
 endif
 
 subdir('completions')
+
+summary({
+	'pam': libpam.found(),
+	'shadow': get_option('shadow').enabled(),
+}, bool_yn: true)
