@@ -25,6 +25,7 @@
 #include "seat.h"
 #include "swaylock.h"
 #include "ext-session-lock-v1-client-protocol.h"
+#include "presentation-time-client-protocol.h"
 
 static uint32_t parse_color(const char *color) {
 	if (color[0] == '#') {
@@ -282,6 +283,9 @@ static void handle_global(void *data, struct wl_registry *registry,
 	} else if (strcmp(interface, ext_session_lock_manager_v1_interface.name) == 0) {
 		state->ext_session_lock_manager_v1 = wl_registry_bind(registry, name,
 				&ext_session_lock_manager_v1_interface, 1);
+	} else if (strcmp(interface, wp_presentation_interface.name) == 0) {
+		state->presentation = wl_registry_bind(registry, name,
+				&wp_presentation_interface, 1);
 	}
 }
 
@@ -1232,6 +1236,21 @@ int main(int argc, char **argv) {
 		}
 	}
 
+	state.run_display = true;
+	while (state.run_display) {
+		bool presented = true;
+		wl_list_for_each(surface, &state.surfaces, link) {
+			presented = presented && surface->presented;
+		}
+		if (presented) {
+			break;
+		}
+		if (wl_display_dispatch(state.display) < 0) {
+			swaylock_log(LOG_ERROR, "wl_display_dispatch() failed");
+			return 2;
+		}
+	}
+
 	if (state.args.ready_fd >= 0) {
 		if (write(state.args.ready_fd, "\n", 1) != 1) {
 			swaylock_log(LOG_ERROR, "Failed to send readiness notification");
@@ -1257,7 +1276,6 @@ int main(int argc, char **argv) {
 	sa.sa_flags = SA_RESTART;
 	sigaction(SIGUSR1, &sa, NULL);
 
-	state.run_display = true;
 	while (state.run_display) {
 		errno = 0;
 		if (wl_display_flush(state.display) == -1 && errno != EAGAIN) {

@@ -69,6 +69,7 @@ struct swaylock_args {
 	bool daemonize;
 	int ready_fd;
 	bool indicator_idle_visible;
+	bool await_render;
 };
 
 struct swaylock_password {
@@ -100,6 +101,7 @@ struct swaylock_state {
 	bool run_display, locked;
 	struct ext_session_lock_manager_v1 *ext_session_lock_manager_v1;
 	struct ext_session_lock_v1 *ext_session_lock_v1;
+	struct wp_presentation *presentation;
 };
 
 struct swaylock_surface {
@@ -114,6 +116,7 @@ struct swaylock_surface {
 	struct pool_buffer indicator_buffers[2];
 	bool created;
 	bool dirty;
+	bool presented;
 	uint32_t width, height;
 	int32_t scale;
 	enum wl_output_subpixel subpixel;

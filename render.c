@@ -6,6 +6,7 @@
 #include "background-image.h"
 #include "swaylock.h"
 #include "log.h"
+#include "presentation-time-client-protocol.h"
 
 #define M_PI 3.14159265358979323846
 const float TYPE_INDICATOR_RANGE = M_PI / 3.0f;
@@ -45,6 +46,33 @@ static void surface_frame_handle_done(void *data, struct wl_callback *callback,
 
 static const struct wl_callback_listener surface_frame_listener = {
 	.done = surface_frame_handle_done,
+};
+
+static void presentation_feedback_handle_sync_output(void *data,
+		struct wp_presentation_feedback *feedback,
+		struct wl_output *output) {
+	// We don't care
+}
+
+static void presentation_feedback_handle_presented(void *data,
+		struct wp_presentation_feedback *feedback,
+		uint32_t tv_sec_hi, uint32_t tv_sec_lo, uint32_t tv_nsec,
+		uint32_t refresh, uint32_t seq_hi, uint32_t seq_lo,
+		enum wp_presentation_feedback_kind) {
+	struct swaylock_surface *surface = data;
+	wp_presentation_feedback_destroy(feedback);
+	surface->presented = true;
+}
+
+static void presentation_feedback_handle_discarded(void *data,
+		struct wp_presentation_feedback *feedback) {
+	wp_presentation_feedback_destroy(feedback);
+}
+
+static const struct wp_presentation_feedback_listener presentation_feedback_listener = {
+	.sync_output = presentation_feedback_handle_sync_output,
+	.presented = presentation_feedback_handle_presented,
+	.discarded = presentation_feedback_handle_discarded,
 };
 
 static bool render_frame(struct swaylock_surface *surface);
@@ -104,6 +132,14 @@ void render(struct swaylock_surface *surface) {
 	surface->dirty = false;
 	surface->frame = wl_surface_frame(surface->surface);
 	wl_callback_add_listener(surface->frame, &surface_frame_listener, surface);
+
+	if (!surface->presented && state->presentation) {
+		struct wp_presentation_feedback *feedback = wp_presentation_feedback(
+			state->presentation, surface->surface);
+		wp_presentation_feedback_add_listener(feedback,
+			&presentation_feedback_listener, surface);
+	}
+
 	wl_surface_commit(surface->surface);
 
 	if (need_destroy) {
