@@ -38,7 +38,6 @@ static bool password_buffer_lock(char *addr, size_t size) {
 			swaylock_log_errno(LOG_ERROR, "Unable to mlock() password memory.");
 			return false;
 		}
-		return false;
 	}
 
 	return true;
