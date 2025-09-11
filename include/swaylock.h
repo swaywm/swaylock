@@ -30,6 +30,7 @@ struct swaylock_colorset {
 	uint32_t caps_lock;
 	uint32_t verifying;
 	uint32_t wrong;
+	uint32_t failed_attempts;
 };
 
 struct swaylock_colors {

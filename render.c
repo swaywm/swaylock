@@ -27,6 +27,9 @@ static void set_color_for_state(cairo_t *cairo, struct swaylock_state *state,
 			state->args.colors.text.input = state->args.colors.text.caps_lock;
 			cairo_set_source_u32(cairo, colorset->input);
 			state->args.colors.text.input = inputtextcolor;
+		} else if (state->args.show_failed_attempts &&
+								state->failed_attempts > 0) {
+		cairo_set_source_u32(cairo, colorset->failed_attempts);
 		} else {
 			cairo_set_source_u32(cairo, colorset->input);
 		}
