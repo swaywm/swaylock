@@ -415,6 +415,7 @@ static void set_default_colors(struct swaylock_colors *colors) {
 		.caps_lock = 0x000000C0,
 		.verifying = 0x0072FFC0,
 		.wrong = 0xFA0000C0,
+		.failed_attempts = 0x000000C0,
 	};
 	colors->line = (struct swaylock_colorset){
 		.input = 0x000000FF,
@@ -422,6 +423,7 @@ static void set_default_colors(struct swaylock_colors *colors) {
 		.caps_lock = 0x000000FF,
 		.verifying = 0x000000FF,
 		.wrong = 0x000000FF,
+		.failed_attempts = 0x000000FF,
 	};
 	colors->ring = (struct swaylock_colorset){
 		.input = 0x337D00FF,
@@ -429,6 +431,7 @@ static void set_default_colors(struct swaylock_colors *colors) {
 		.caps_lock = 0xE5A445FF,
 		.verifying = 0x3300FFFF,
 		.wrong = 0x7D3300FF,
+		.failed_attempts = 0x337D00FF,
 	};
 	colors->text = (struct swaylock_colorset){
 		.input = 0xE5A445FF,
@@ -436,6 +439,7 @@ static void set_default_colors(struct swaylock_colors *colors) {
 		.caps_lock = 0xE5A445FF,
 		.verifying = 0x000000FF,
 		.wrong = 0x000000FF,
+		.failed_attempts = 0x000000FF,
 	};
 }
 
@@ -463,6 +467,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_INSIDE_CAPS_LOCK_COLOR,
 		LO_INSIDE_VER_COLOR,
 		LO_INSIDE_WRONG_COLOR,
+		LO_INSIDE_FAILED_ATTEMPTS_COLOR,
 		LO_KEY_HL_COLOR,
 		LO_LAYOUT_TXT_COLOR,
 		LO_LAYOUT_BG_COLOR,
@@ -472,17 +477,20 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_LINE_CAPS_LOCK_COLOR,
 		LO_LINE_VER_COLOR,
 		LO_LINE_WRONG_COLOR,
+		LO_LINE_FAILED_ATTEMPTS_COLOR,
 		LO_RING_COLOR,
 		LO_RING_CLEAR_COLOR,
 		LO_RING_CAPS_LOCK_COLOR,
 		LO_RING_VER_COLOR,
 		LO_RING_WRONG_COLOR,
+		LO_RING_FAILED_ATTEMPTS_COLOR,
 		LO_SEP_COLOR,
 		LO_TEXT_COLOR,
 		LO_TEXT_CLEAR_COLOR,
 		LO_TEXT_CAPS_LOCK_COLOR,
 		LO_TEXT_VER_COLOR,
 		LO_TEXT_WRONG_COLOR,
+		LO_TEXT_FAILED_ATTEMPTS_COLOR,
 	};
 
 	static struct option long_options[] = {
@@ -520,6 +528,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"inside-caps-lock-color", required_argument, NULL, LO_INSIDE_CAPS_LOCK_COLOR},
 		{"inside-ver-color", required_argument, NULL, LO_INSIDE_VER_COLOR},
 		{"inside-wrong-color", required_argument, NULL, LO_INSIDE_WRONG_COLOR},
+		{"inside-failed-attempts-color", required_argument, NULL, LO_INSIDE_FAILED_ATTEMPTS_COLOR},
 		{"key-hl-color", required_argument, NULL, LO_KEY_HL_COLOR},
 		{"layout-bg-color", required_argument, NULL, LO_LAYOUT_BG_COLOR},
 		{"layout-border-color", required_argument, NULL, LO_LAYOUT_BORDER_COLOR},
@@ -529,17 +538,20 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"line-caps-lock-color", required_argument, NULL, LO_LINE_CAPS_LOCK_COLOR},
 		{"line-ver-color", required_argument, NULL, LO_LINE_VER_COLOR},
 		{"line-wrong-color", required_argument, NULL, LO_LINE_WRONG_COLOR},
+		{"line-failed-attempts-color", required_argument, NULL, LO_LINE_FAILED_ATTEMPTS_COLOR},
 		{"ring-color", required_argument, NULL, LO_RING_COLOR},
 		{"ring-clear-color", required_argument, NULL, LO_RING_CLEAR_COLOR},
 		{"ring-caps-lock-color", required_argument, NULL, LO_RING_CAPS_LOCK_COLOR},
 		{"ring-ver-color", required_argument, NULL, LO_RING_VER_COLOR},
 		{"ring-wrong-color", required_argument, NULL, LO_RING_WRONG_COLOR},
+		{"ring-failed-attempts-color", required_argument, NULL, LO_RING_FAILED_ATTEMPTS_COLOR},
 		{"separator-color", required_argument, NULL, LO_SEP_COLOR},
 		{"text-color", required_argument, NULL, LO_TEXT_COLOR},
 		{"text-clear-color", required_argument, NULL, LO_TEXT_CLEAR_COLOR},
 		{"text-caps-lock-color", required_argument, NULL, LO_TEXT_CAPS_LOCK_COLOR},
 		{"text-ver-color", required_argument, NULL, LO_TEXT_VER_COLOR},
 		{"text-wrong-color", required_argument, NULL, LO_TEXT_WRONG_COLOR},
+		{"text-failed-attempts-color", required_argument, NULL, LO_TEXT_FAILED_ATTEMPTS_COLOR},
 		{0, 0, 0, 0}
 	};
 
@@ -843,6 +855,11 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 				state->args.colors.inside.wrong = parse_color(optarg);
 			}
 			break;
+		case LO_INSIDE_FAILED_ATTEMPTS_COLOR:
+			if (state) {
+				state->args.colors.inside.failed_attempts = parse_color(optarg);
+			}
+			break;
 		case LO_KEY_HL_COLOR:
 			if (state) {
 				state->args.colors.key_highlight = parse_color(optarg);
@@ -888,6 +905,11 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 				state->args.colors.line.wrong = parse_color(optarg);
 			}
 			break;
+		case LO_LINE_FAILED_ATTEMPTS_COLOR:
+			if (state) {
+				state->args.colors.line.failed_attempts = parse_color(optarg);
+			}
+			break;
 		case LO_RING_COLOR:
 			if (state) {
 				state->args.colors.ring.input = parse_color(optarg);
@@ -911,6 +933,11 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		case LO_RING_WRONG_COLOR:
 			if (state) {
 				state->args.colors.ring.wrong = parse_color(optarg);
+			}
+			break;
+		case LO_RING_FAILED_ATTEMPTS_COLOR:
+			if (state) {
+				state->args.colors.ring.failed_attempts = parse_color(optarg);
 			}
 			break;
 		case LO_SEP_COLOR:
@@ -941,6 +968,11 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		case LO_TEXT_WRONG_COLOR:
 			if (state) {
 				state->args.colors.text.wrong = parse_color(optarg);
+			}
+			break;
+		case LO_TEXT_FAILED_ATTEMPTS_COLOR:
+			if (state) {
+				state->args.colors.text.failed_attempts = parse_color(optarg);
 			}
 			break;
 		default:
