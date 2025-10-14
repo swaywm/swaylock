@@ -110,8 +110,9 @@ if libpam.found()
 	sources += ['pam.c']
 	dependencies += [libpam]
 else
-	warning('The swaylock binary must be setuid when compiled without libpam')
+	warning('The swaylock binary often needs to be setuid when compiled without libpam')
 	warning('You must do this manually post-install: chmod a+s /path/to/swaylock')
+	warning('See the "Without PAM" section of the README for details.')
 	sources += ['shadow.c']
 	dependencies += [crypt]
 endif
