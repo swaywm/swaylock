@@ -79,6 +79,8 @@ conf_data = configuration_data()
 conf_data.set_quoted('SYSCONFDIR', get_option('prefix') / get_option('sysconfdir'))
 conf_data.set_quoted('SWAYLOCK_VERSION', version)
 conf_data.set10('HAVE_GDK_PIXBUF', gdk_pixbuf.found())
+conf_data.set10('HAVE_PAM', libpam.found())
+conf_data.set10('HAVE_SHADOW', get_option('shadow').enabled())
 
 subdir('include')
 
@@ -93,6 +95,7 @@ dependencies = [
 
 sources = [
 	'background-image.c',
+	'backend.c',
 	'cairo.c',
 	'comm.c',
 	'log.c',
@@ -108,12 +111,17 @@ sources = [
 
 if libpam.found()
 	sources += ['pam.c']
-	dependencies += [libpam]
-else
+endif
+
+if get_option('shadow').enabled()
 	warning('The swaylock binary must be setuid when compiled without libpam')
 	warning('You must do this manually post-install: chmod a+s /path/to/swaylock')
 	sources += ['shadow.c']
 	dependencies += [crypt]
+endif
+
+if not libpam.found() and not get_option('shadow').enabled()
+	error('At least one of PAM or shadow support must be enabled.')
 endif
 
 swaylock_inc = include_directories('include')
@@ -156,3 +164,8 @@ if scdoc.found()
 endif
 
 subdir('completions')
+
+summary({
+	'pam': libpam.found(),
+	'shadow': get_option('shadow').enabled(),
+}, bool_yn: true)
