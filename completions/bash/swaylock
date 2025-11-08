@@ -34,6 +34,7 @@ _swaylock()
     --config
     --daemonize
     --debug
+    --default-text
     --disable-caps-lock-text
     --font
     --font-size

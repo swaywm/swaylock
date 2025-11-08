@@ -448,7 +448,8 @@ enum line_mode {
 static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		enum line_mode *line_mode, char **config_path) {
 	enum long_option_codes {
-		LO_BS_HL_COLOR = 256,
+		LO_DEFAULT_TEXT = 256,
+		LO_BS_HL_COLOR,
 		LO_CAPS_LOCK_BS_HL_COLOR,
 		LO_CAPS_LOCK_KEY_HL_COLOR,
 		LO_FONT,
@@ -505,6 +506,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"hide-keyboard-layout", no_argument, NULL, 'K'},
 		{"show-failed-attempts", no_argument, NULL, 'F'},
 		{"version", no_argument, NULL, 'v'},
+		{"default-text", required_argument, NULL, LO_DEFAULT_TEXT},
 		{"bs-hl-color", required_argument, NULL, LO_BS_HL_COLOR},
 		{"caps-lock-bs-hl-color", required_argument, NULL, LO_CAPS_LOCK_BS_HL_COLOR},
 		{"caps-lock-key-hl-color", required_argument, NULL, LO_CAPS_LOCK_KEY_HL_COLOR},
@@ -580,6 +582,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Disable the unlock indicator.\n"
 		"  -v, --version                    "
 			"Show the version number and quit.\n"
+		"  --default-text <text>            "
+			"Show text when no other (Caps Lock, attempt count, etc.) is shown.\n"
 		"  --bs-hl-color <color>            "
 			"Sets the color of backspace highlight segments.\n"
 		"  --caps-lock-bs-hl-color <color>  "
@@ -764,6 +768,12 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		case 'v':
 			fprintf(stdout, "swaylock version " SWAYLOCK_VERSION "\n");
 			exit(EXIT_SUCCESS);
+			break;
+		case LO_DEFAULT_TEXT:
+			if (state) {
+				free(state->args.default_text);
+				state->args.default_text = strdup(optarg);
+			}
 			break;
 		case LO_BS_HL_COLOR:
 			if (state) {
@@ -1111,6 +1121,7 @@ int main(int argc, char **argv) {
 		.show_keyboard_layout = false,
 		.hide_keyboard_layout = false,
 		.show_failed_attempts = false,
+		.default_text = NULL,
 		.indicator_idle_visible = false,
 		.ready_fd = -1,
 	};
