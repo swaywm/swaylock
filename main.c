@@ -31,17 +31,33 @@ static uint32_t parse_color(const char *color) {
 		++color;
 	}
 
-	int len = strlen(color);
-	if (len != 6 && len != 8) {
-		swaylock_log(LOG_DEBUG, "Invalid color %s, defaulting to 0xFFFFFFFF",
-				color);
-		return 0xFFFFFFFF;
+	size_t len = strlen(color);
+	if (len == 3 || len == 4) {
+		errno = 0;
+		uint32_t res = (uint32_t)strtoul(color, NULL, 16);
+		if (errno == 0) {
+			if (len == 3) {
+					res = res << 4 | 0xF;
+			}
+			uint32_t r = ((res >> 12) & 0xF) * 0x11000000;
+			uint32_t g = ((res >> 8) & 0xF)  * 0x00110000;
+			uint32_t b = ((res >> 4) & 0xF)  * 0x00001100;
+			uint32_t a = (res & 0xF)         * 0x00000011;
+			return r | g | b | a;
+		}
+	} else if (len == 6 || len == 8) {
+		errno = 0;
+		uint32_t res = (uint32_t)strtoul(color, NULL, 16);
+		if (errno == 0) {
+			if (len == 6) {
+				res = res << 8 | 0xFF;
+			}
+			return res;
+		}
 	}
-	uint32_t res = (uint32_t)strtoul(color, NULL, 16);
-	if (strlen(color) == 6) {
-		res = (res << 8) | 0xFF;
-	}
-	return res;
+
+	swaylock_log(LOG_DEBUG, "Invalid color %s, defaulting to 0xFFFFFFFF", color);
+	return 0xFFFFFFFF;
 }
 
 int lenient_strcmp(char *a, char *b) {
