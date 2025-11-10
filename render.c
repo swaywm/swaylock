@@ -7,7 +7,9 @@
 #include "swaylock.h"
 #include "log.h"
 
+#ifndef M_PI
 #define M_PI 3.14159265358979323846
+#endif
 const float TYPE_INDICATOR_RANGE = M_PI / 3.0f;
 
 static void set_color_for_state(cairo_t *cairo, struct swaylock_state *state,
