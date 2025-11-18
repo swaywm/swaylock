@@ -13,7 +13,7 @@ static const char *verbosity_colors[] = {
 	[LOG_SILENT] = "",
 	[LOG_ERROR ] = "\x1B[1;31m",
 	[LOG_INFO  ] = "\x1B[1;34m",
-	[LOG_DEBUG ] = "\x1B[1;30m",
+	[LOG_DEBUG ] = "\x1B[1;90m",
 };
 
 void swaylock_log_init(enum log_importance verbosity) {
