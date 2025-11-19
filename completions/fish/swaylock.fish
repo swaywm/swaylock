@@ -14,6 +14,7 @@ complete -c swaylock -l help                   -s h --description "Show help mes
 complete -c swaylock -l hide-keyboard-layout   -s K --description "Hide the current xkb layout while typing."
 complete -c swaylock -l ignore-empty-password  -s e --description "When an empty password is provided, do not validate it."
 complete -c swaylock -l image                  -s i --description "Display the given image, optionally only on the given output."
+complete -c swaylock -l fingerprint               p --description "Enable fingerprint scanning. Fprint is required."
 complete -c swaylock -l indicator-caps-lock    -s l --description "Show the current Caps Lock state also on the indicator."
 complete -c swaylock -l indicator-idle-visible      --description "Sets the indicator to show even if idle."
 complete -c swaylock -l indicator-radius            --description "Sets the indicator radius."
