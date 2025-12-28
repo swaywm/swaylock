@@ -111,6 +111,8 @@ static void destroy_surface(struct swaylock_surface *surface) {
 	destroy_buffer(&surface->indicator_buffers[0]);
 	destroy_buffer(&surface->indicator_buffers[1]);
 	wl_output_release(surface->output);
+	free(surface->output_name);
+	free(surface->output_description);
 	free(surface);
 }
 
@@ -223,7 +225,8 @@ static void handle_wl_output_name(void *data, struct wl_output *output,
 
 static void handle_wl_output_description(void *data, struct wl_output *output,
 		const char *description) {
-	// Who cares
+	struct swaylock_surface *surface = data;
+	surface->output_description = strdup(description);
 }
 
 struct wl_output_listener _wl_output_listener = {
@@ -313,7 +316,9 @@ static cairo_surface_t *select_image(struct swaylock_state *state,
 	struct swaylock_image *image;
 	cairo_surface_t *default_image = NULL;
 	wl_list_for_each(image, &state->images, link) {
-		if (lenient_strcmp(image->output_name, surface->output_name) == 0) {
+		if (lenient_strcmp(image->output_name, surface->output_name) == 0 ||
+			lenient_strcmp(image->output_name, surface->output_description) == 0
+		) {
 			return image->cairo_surface;
 		} else if (!image->output_name) {
 			default_image = image->cairo_surface;
