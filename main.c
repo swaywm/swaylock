@@ -11,6 +11,7 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
 #include <wayland-client.h>
@@ -487,6 +488,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_TEXT_CAPS_LOCK_COLOR,
 		LO_TEXT_VER_COLOR,
 		LO_TEXT_WRONG_COLOR,
+		LO_EXTRA_AUTH_COMMAND,
 	};
 
 	static struct option long_options[] = {
@@ -544,6 +546,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"text-caps-lock-color", required_argument, NULL, LO_TEXT_CAPS_LOCK_COLOR},
 		{"text-ver-color", required_argument, NULL, LO_TEXT_VER_COLOR},
 		{"text-wrong-color", required_argument, NULL, LO_TEXT_WRONG_COLOR},
+		{"extra-auth-command", required_argument, NULL, LO_EXTRA_AUTH_COMMAND},
 		{0, 0, 0, 0}
 	};
 
@@ -666,6 +669,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Sets the color of the text when verifying.\n"
 		"  --text-wrong-color <color>       "
 			"Sets the color of the text when invalid.\n"
+		"  --extra-auth-command <command>         "
+		        "Sets a command to run for authentication.\n"
 		"\n"
 		"All <color> options are of the form <rrggbb[aa]>.\n";
 
@@ -947,6 +952,11 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 				state->args.colors.text.wrong = parse_color(optarg);
 			}
 			break;
+		case LO_EXTRA_AUTH_COMMAND:
+			if (state) {
+				state->auth_command_path = strdup(optarg);
+			}
+			break;
 		default:
 			fprintf(stderr, "%s", usage);
 			return 1;
@@ -1061,6 +1071,35 @@ static void comm_in(int fd, short mask, void *data) {
 	}
 }
 
+static void start_auth_command() {
+	pid_t pid;
+	if (state.auth_command_pid != 0) {
+		swaylock_log(LOG_ERROR, "Auth command already running");
+		return;
+	}
+
+	pid = fork();
+	if (pid < 0) {
+		swaylock_log(LOG_ERROR, "Couldn't fork auth command.");
+	} else if (pid == 0) {
+		int devnull = open("/dev/null", O_RDONLY);
+		if (devnull < 0) {
+			swaylock_log(LOG_ERROR,
+				     "Couldn't open /dev/null.");
+			exit(1); /* fail authentication */
+		}
+		dup2(devnull, 0);
+		execl(state.auth_command_path,
+		      state.auth_command_path,
+		      NULL);
+		swaylock_log(LOG_ERROR,
+			     "Couldn't execute auth command.");
+		exit(1); /* fail authentication */
+	} else {
+		state.auth_command_pid = pid;
+	}
+}
+
 static void term_in(int fd, short mask, void *data) {
 	char buf[1];
 	int rc;
@@ -1073,8 +1112,27 @@ static void term_in(int fd, short mask, void *data) {
 	case '1':
 		state.run_display = false;
 		break;
-	case 'C':
-		swaylock_log(LOG_ERROR, "Unexpected SIGCHLD.");
+	case 'C': {
+		pid_t pid;
+		int status;
+		pid = waitpid(-1, &status, WNOHANG);
+		if (state.auth_command_pid > 0 && pid == state.auth_command_pid) {
+			state.auth_command_pid = 0;
+			if (WIFEXITED(status)) {
+				int rc = WEXITSTATUS(status);
+				if (rc == 0) {
+					state.run_display = false;
+				} else {
+					swaylock_log(LOG_INFO, "Auth command failed, restarting.");
+					start_auth_command();
+				}
+			} else {
+				swaylock_log(LOG_ERROR, "Auth command crashed.");
+			}
+		} else {
+			swaylock_log(LOG_ERROR, "Unexpected SIGCHLD.");
+		}
+	}
 		break;
 	default:
 		swaylock_log(LOG_ERROR,
@@ -1283,6 +1341,10 @@ int main(int argc, char **argv) {
 	sa.sa_flags = SA_RESTART;
 	sigaction(SIGCHLD, &sa, NULL);
 
+	if (state.auth_command_path != NULL) {
+		start_auth_command();
+	}
+
 	state.run_display = true;
 	while (state.run_display) {
 		errno = 0;
@@ -1290,6 +1352,11 @@ int main(int argc, char **argv) {
 			break;
 		}
 		loop_poll(state.eventloop);
+	}
+
+	if (state.auth_command_pid > 0) {
+		kill(state.auth_command_pid, SIGTERM);
+		state.auth_command_pid = 0;
 	}
 
 	ext_session_lock_v1_unlock_and_destroy(state.ext_session_lock_v1);

@@ -196,6 +196,9 @@ Locks your Wayland session.
 *--text-wrong-color* <rrggbb[aa]>
 	Sets the color of the text when invalid.
 
+*--extra-auth-command* <command>
+	Sets a command to run for extra authentication.
+
 # SIGNALS
 
 *SIGUSR1*
