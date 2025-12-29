@@ -302,10 +302,14 @@ static const struct wl_registry_listener registry_listener = {
 	.global_remove = handle_global_remove,
 };
 
-static int sigusr_fds[2] = {-1, -1};
+static int signal_fds[2] = {-1, -1};
 
 void do_sigusr(int sig) {
-	(void)write(sigusr_fds[1], "1", 1);
+	(void)write(signal_fds[1], "1", 1);
+}
+
+void do_sigchld(int sig) {
+	(void)write(signal_fds[1], "C", 1);
 }
 
 static cairo_surface_t *select_image(struct swaylock_state *state,
@@ -1058,7 +1062,24 @@ static void comm_in(int fd, short mask, void *data) {
 }
 
 static void term_in(int fd, short mask, void *data) {
-	state.run_display = false;
+	char buf[1];
+	int rc;
+	rc = read(fd, buf, 1);
+	if (rc <= 0) {
+		swaylock_log(LOG_ERROR, "Couldn't read from term_in.");
+		return;
+	}
+	switch (buf[0]) {
+	case '1':
+		state.run_display = false;
+		break;
+	case 'C':
+		swaylock_log(LOG_ERROR, "Unexpected SIGCHLD.");
+		break;
+	default:
+		swaylock_log(LOG_ERROR,
+			     "Unexpected value '%c' on term_in.", buf[0]);
+	}
 }
 
 // Check for --debug 'early' we also apply the correct loglevel
@@ -1160,11 +1181,11 @@ int main(int argc, char **argv) {
 	}
 	state.password.buffer[0] = 0;
 
-	if (pipe(sigusr_fds) != 0) {
+	if (pipe(signal_fds) != 0) {
 		swaylock_log(LOG_ERROR, "Failed to pipe");
 		return EXIT_FAILURE;
 	}
-	if (fcntl(sigusr_fds[1], F_SETFL, O_NONBLOCK) == -1) {
+	if (fcntl(signal_fds[1], F_SETFL, O_NONBLOCK) == -1) {
 		swaylock_log(LOG_ERROR, "Failed to make pipe end nonblocking");
 		return EXIT_FAILURE;
 	}
@@ -1249,13 +1270,18 @@ int main(int argc, char **argv) {
 
 	loop_add_fd(state.eventloop, get_comm_reply_fd(), POLLIN, comm_in, NULL);
 
-	loop_add_fd(state.eventloop, sigusr_fds[0], POLLIN, term_in, NULL);
+	loop_add_fd(state.eventloop, signal_fds[0], POLLIN, term_in, NULL);
 
 	struct sigaction sa;
 	sa.sa_handler = do_sigusr;
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = SA_RESTART;
 	sigaction(SIGUSR1, &sa, NULL);
+
+	sa.sa_handler = do_sigchld;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_RESTART;
+	sigaction(SIGCHLD, &sa, NULL);
 
 	state.run_display = true;
 	while (state.run_display) {
