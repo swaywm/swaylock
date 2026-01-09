@@ -52,24 +52,6 @@ static int handle_conversation(int num_msg, const struct pam_message **msg,
 	return PAM_SUCCESS;
 }
 
-static const char *get_pam_auth_error(int pam_status) {
-	switch (pam_status) {
-	case PAM_AUTH_ERR:
-		return "invalid credentials";
-	case PAM_CRED_INSUFFICIENT:
-		return "swaylock cannot authenticate users; check /etc/pam.d/swaylock "
-			"has been installed properly";
-	case PAM_AUTHINFO_UNAVAIL:
-		return "authentication information unavailable";
-	case PAM_MAXTRIES:
-		return "maximum number of authentication tries exceeded";
-	default:;
-		static char msg[64];
-		snprintf(msg, sizeof(msg), "unknown error (%d)", pam_status);
-		return msg;
-	}
-}
-
 void run_pw_backend_child(void) {
 	struct passwd *passwd = getpwuid(getuid());
 	if (!passwd) {
@@ -108,7 +90,7 @@ void run_pw_backend_child(void) {
 		bool success = pam_status == PAM_SUCCESS;
 		if (!success) {
 			swaylock_log(LOG_ERROR, "pam_authenticate failed: %s",
-				get_pam_auth_error(pam_status));
+				pam_strerror(auth_handle, pam_status));
 		}
 
 		if (!write_comm_reply(success)) {
