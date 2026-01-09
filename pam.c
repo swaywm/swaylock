@@ -1,11 +1,15 @@
 #define _POSIX_C_SOURCE 200809L
+#include <fcntl.h>
 #include <pwd.h>
 #include <security/pam_appl.h>
+#include <signal.h>
 #include <stdbool.h>
+#include <sys/prctl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include "comm.h"
+#include "config.h"
 #include "log.h"
 #include "password-buffer.h"
 #include "swaylock.h"
@@ -127,4 +131,152 @@ void run_pw_backend_child(void) {
 	}
 
 	exit((pam_status == PAM_SUCCESS) ? EXIT_SUCCESS : EXIT_FAILURE);
+}
+
+static int fingerprint_pipe[2] = {-1, -1};
+static bool fingerprint_conv_called;
+
+static void send_fingerprint_msg(const char *msg) {
+	struct fingerprint_result result = { .success = false };
+	snprintf(result.msg, sizeof(result.msg), "%s", msg);
+	write(fingerprint_pipe[1], &result, sizeof(result));
+}
+
+/*
+ * Conversation function for fingerprint auth. Forwards info and error
+ * messages from pam_fprintd to the parent process for display in the UI.
+ */
+static int fingerprint_conversation(int num_msg, const struct pam_message **msg,
+		struct pam_response **resp, void *data) {
+	fingerprint_conv_called = true;
+
+	struct pam_response *pam_reply = calloc(num_msg, sizeof(*pam_reply));
+	if (pam_reply == NULL) {
+		return PAM_ABORT;
+	}
+	*resp = pam_reply;
+	for (int i = 0; i < num_msg; ++i) {
+		switch (msg[i]->msg_style) {
+		case PAM_PROMPT_ECHO_OFF:
+		case PAM_PROMPT_ECHO_ON:
+			pam_reply[i].resp = strdup("");
+			if (pam_reply[i].resp == NULL) {
+				return PAM_ABORT;
+			}
+			break;
+		case PAM_ERROR_MSG:
+		case PAM_TEXT_INFO:
+			send_fingerprint_msg(msg[i]->msg);
+			break;
+		}
+	}
+	return PAM_SUCCESS;
+}
+
+/*
+ * Child process that continuously attempts fingerprint authentication.
+ * Blocks on pam_authenticate() until pam_fprintd detects a fingerprint.
+ * A fresh PAM session is created for each attempt to handle device
+ * reconnection after suspend.
+ */
+static void run_fingerprint_child(void) {
+	struct passwd *passwd = getpwuid(getuid());
+	if (!passwd) {
+		swaylock_log_errno(LOG_ERROR, "getpwuid failed");
+		exit(EXIT_FAILURE);
+	}
+
+	const struct pam_conv conv = {
+		.conv = fingerprint_conversation,
+		.appdata_ptr = NULL,
+	};
+	int consecutive_errors = 0;
+	unsigned int backoff = 1;
+
+	while (1) {
+		pam_handle_t *auth_handle = NULL;
+		int pam_status;
+
+		pam_status = pam_start("swaylock-fingerprint",
+			passwd->pw_name, &conv, &auth_handle);
+		if (pam_status != PAM_SUCCESS) {
+			swaylock_log(LOG_ERROR, "fingerprint: pam_start failed (%d)", pam_status);
+			exit(EXIT_FAILURE);
+		}
+
+		swaylock_log(LOG_DEBUG, "fingerprint: waiting");
+		fingerprint_conv_called = false;
+		pam_status = pam_authenticate(auth_handle, 0);
+
+		if (pam_status == PAM_SUCCESS) {
+			struct fingerprint_result result = { .success = true };
+			write(fingerprint_pipe[1], &result, sizeof(result));
+			swaylock_log(LOG_INFO, "fingerprint: authentication successful");
+			pam_setcred(auth_handle, PAM_REFRESH_CRED);
+			pam_end(auth_handle, PAM_SUCCESS);
+			exit(EXIT_SUCCESS);
+		}
+
+		if (fingerprint_conv_called) {
+			/* pam_fprintd ran but returned an error (e.g.
+			 * PAM_MAXTRIES with finite max-tries). Retry with
+			 * a fresh session. */
+			swaylock_log(LOG_ERROR, "fingerprint: pam_authenticate failed: %s",
+				pam_strerror(auth_handle, pam_status));
+			pam_end(auth_handle, pam_status);
+			consecutive_errors = 0;
+			backoff = 1;
+			continue;
+		}
+
+		/*
+		 * The conversation function was never called, meaning
+		 * pam_fprintd did not run at all. This happens when the
+		 * device is unavailable (e.g. reconnecting after suspend)
+		 * or the PAM service file is missing. Keep retrying with
+		 * backoff so we recover when the device comes back.
+		 */
+		pam_end(auth_handle, pam_status);
+
+		if (++consecutive_errors >= 3) {
+			swaylock_log(LOG_ERROR, "fingerprint: device unavailable, "
+				"retrying (is " SYSCONFDIR "/pam.d/swaylock-fingerprint installed?)");
+			send_fingerprint_msg("fingerprint unavailable");
+		}
+
+		sleep(backoff);
+		if (backoff < 5)
+			backoff++;
+	}
+}
+
+bool spawn_fingerprint_child(void) {
+	if (pipe(fingerprint_pipe) != 0) {
+		swaylock_log_errno(LOG_ERROR, "failed to create fingerprint pipe");
+		return false;
+	}
+
+	pid_t child = fork();
+	if (child < 0) {
+		swaylock_log_errno(LOG_ERROR, "failed to fork fingerprint child");
+		return false;
+	} else if (child == 0) {
+		prctl(PR_SET_PDEATHSIG, SIGTERM);
+		struct sigaction sa = { .sa_handler = SIG_IGN };
+		sigaction(SIGUSR1, &sa, NULL);
+		close(fingerprint_pipe[0]);
+		run_fingerprint_child();
+	}
+
+	if (fcntl(fingerprint_pipe[0], F_SETFL, O_NONBLOCK) == -1) {
+		swaylock_log(LOG_ERROR, "Failed to make pipe end nonblocking");
+		return false;
+	}
+
+	close(fingerprint_pipe[1]);
+	return true;
+}
+
+int get_fingerprint_fd(void) {
+	return fingerprint_pipe[0];
 }

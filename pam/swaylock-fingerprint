@@ -1,0 +1,11 @@
+#
+# PAM configuration file for swaylock fingerprint authentication.
+#
+# Use infinite retries and timeout so that pam_fprintd handles retries
+# internally and the fingerprint child process stays in a single
+# pam_authenticate() call. If you set finite values, swaylock will
+# start a fresh PAM session when pam_authenticate returns.
+#
+auth required pam_fprintd.so max-tries=-1 timeout=-1
+account include login
+session include login
