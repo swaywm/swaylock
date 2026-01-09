@@ -69,6 +69,7 @@ struct swaylock_args {
 	bool daemonize;
 	int ready_fd;
 	bool indicator_idle_visible;
+	bool fingerprint;
 };
 
 struct swaylock_password {
@@ -143,5 +144,7 @@ void schedule_auth_idle(struct swaylock_state *state);
 void initialize_pw_backend(int argc, char **argv);
 void run_pw_backend_child(void);
 void clear_buffer(char *buf, size_t size);
+bool spawn_fingerprint_child(void);
+int get_fingerprint_fd(void);
 
 #endif

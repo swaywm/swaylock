@@ -35,6 +35,9 @@ Locks your Wayland session.
 
 	Note: this is the default behavior of i3lock.
 
+*-p, --fingerprint*
+	Enable unlocking with a fingerprint reader via *pam_fprintd*(8).
+
 *-R, --ready-fd* <fd>
 	File descriptor to send readiness notifications to.
 

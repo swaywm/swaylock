@@ -16,6 +16,7 @@
 #include <wayland-client.h>
 #include <wordexp.h>
 #include "background-image.h"
+#include "config.h"
 #include "cairo.h"
 #include "comm.h"
 #include "log.h"
@@ -497,6 +498,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"disable-caps-lock-text", no_argument, NULL, 'L'},
 		{"indicator-caps-lock", no_argument, NULL, 'l'},
 		{"line-uses-inside", no_argument, NULL, 'n'},
+		{"fingerprint", no_argument, NULL, 'p'},
 		{"line-uses-ring", no_argument, NULL, 'r'},
 		{"scaling", required_argument, NULL, 's'},
 		{"tiling", no_argument, NULL, 't'},
@@ -572,6 +574,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Disable the Caps Lock text.\n"
 		"  -l, --indicator-caps-lock        "
 			"Show the current Caps Lock state also on the indicator.\n"
+		"  -p, --fingerprint                "
+			"Enable fingerprint authentication via PAM (pam_fprintd).\n"
 		"  -s, --scaling <mode>             "
 			"Image scaling mode: stretch, fill, fit, center, tile, solid_color.\n"
 		"  -t, --tiling                     "
@@ -669,7 +673,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 	optind = 1;
 	while (1) {
 		int opt_idx = 0;
-		c = getopt_long(argc, argv, "c:deFfhi:kKLlnrs:tuvC:R:", long_options,
+		c = getopt_long(argc, argv, "c:deFfhi:kKLlnprs:tuvC:R:", long_options,
 				&opt_idx);
 		if (c == -1) {
 			break;
@@ -712,6 +716,15 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			if (state) {
 				load_image(optarg, state);
 			}
+			break;
+		case 'p':
+#if HAVE_PAM
+			if (state) {
+				state->args.fingerprint = true;
+			}
+#else
+			fprintf(stderr, "No PAM support. Fingerprint not supported.\n");
+#endif
 			break;
 		case 'k':
 			if (state) {
@@ -1061,6 +1074,34 @@ static void term_in(int fd, short mask, void *data) {
 	state.run_display = false;
 }
 
+#if HAVE_PAM
+static void fingerprint_in(int fd, short mask, void *data) {
+	if (mask & POLLIN) {
+		bool auth_success = false;
+		ssize_t n = read(fd, &auth_success, sizeof(auth_success));
+		if (n < 0) {
+			swaylock_log_errno(LOG_ERROR, "read");
+		} else if (n == 0) {
+			swaylock_log(LOG_ERROR, "child closed the pipe");
+		} else if (n != sizeof(auth_success)) {
+			swaylock_log(LOG_ERROR, "partial read");
+		}
+		if (auth_success) {
+			// Authentication succeeded
+			state.run_display = false;
+		} else {
+			state.auth_state = AUTH_STATE_INVALID;
+			schedule_auth_idle(&state);
+			++state.failed_attempts;
+			damage_state(&state);
+		}
+	} else if (mask & (POLLHUP | POLLERR)) {
+		swaylock_log(LOG_ERROR,	"Fingerprint checking subprocess crashed; exiting.");
+		state.run_display = false;
+	}
+}
+#endif
+
 // Check for --debug 'early' we also apply the correct loglevel
 // to the forked child, without having to first proces all of the
 // configuration (including from file) before forking and (in the
@@ -1113,6 +1154,7 @@ int main(int argc, char **argv) {
 		.show_failed_attempts = false,
 		.indicator_idle_visible = false,
 		.ready_fd = -1,
+		.fingerprint = false
 	};
 	wl_list_init(&state.images);
 	set_default_colors(&state.args.colors);
@@ -1250,6 +1292,13 @@ int main(int argc, char **argv) {
 	loop_add_fd(state.eventloop, get_comm_reply_fd(), POLLIN, comm_in, NULL);
 
 	loop_add_fd(state.eventloop, sigusr_fds[0], POLLIN, term_in, NULL);
+
+#if HAVE_PAM
+	if (state.args.fingerprint && spawn_fingerprint_child()) {
+		loop_add_fd(state.eventloop, get_fingerprint_fd(), POLLIN,
+			fingerprint_in, NULL);
+	}
+#endif
 
 	struct sigaction sa;
 	sa.sa_handler = do_sigusr;
