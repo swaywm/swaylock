@@ -58,6 +58,10 @@ Locks your Wayland session.
 	a background color. If the path potentially contains a ':', prefix it with another
 	':' to prevent interpreting part of it as <output>.
 
+	Animated GIF images are supported. When a GIF file is specified, swaylock
+	will automatically animate through all frames at the appropriate frame rate.
+	This requires gdk-pixbuf support to be compiled in.
+
 *-k, --show-keyboard-layout*
 	Display the current xkb layout while typing.
 

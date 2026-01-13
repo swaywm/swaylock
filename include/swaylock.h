@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <wayland-client.h>
 #include "background-image.h"
+#include "loop.h"
 #include "cairo.h"
 #include "pool-buffer.h"
 #include "seat.h"
@@ -82,6 +83,7 @@ struct swaylock_state {
 	struct loop_timer *input_idle_timer; // timer to reset input state to IDLE
 	struct loop_timer *auth_idle_timer; // timer to stop displaying AUTH_STATE_INVALID
 	struct loop_timer *clear_password_timer;  // clears the password buffer
+	struct loop_timer *gif_timer;             // timer for GIF animation
 	struct wl_display *display;
 	struct wl_compositor *compositor;
 	struct wl_subcompositor *subcompositor;
@@ -104,6 +106,7 @@ struct swaylock_state {
 
 struct swaylock_surface {
 	cairo_surface_t *image;
+	struct swaylock_gif *gif;  // Non-NULL if this surface uses an animated GIF
 	struct swaylock_state *state;
 	struct wl_output *output;
 	uint32_t output_global_name;
@@ -129,6 +132,7 @@ struct swaylock_image {
 	char *path;
 	char *output_name;
 	cairo_surface_t *cairo_surface;
+	struct swaylock_gif *gif;  // Non-NULL if this is an animated GIF
 	struct wl_list link;
 };
 
@@ -136,6 +140,7 @@ void swaylock_handle_key(struct swaylock_state *state,
 		xkb_keysym_t keysym, uint32_t codepoint);
 
 void render(struct swaylock_surface *surface);
+void render_background(struct swaylock_surface *surface, bool force_background);
 void damage_state(struct swaylock_state *state);
 void clear_password_buffer(struct swaylock_password *pw);
 void schedule_auth_idle(struct swaylock_state *state);

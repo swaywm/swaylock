@@ -4,7 +4,28 @@ swaylock is a screen locking utility for Wayland compositors. It is compatible
 with any Wayland compositor which implements the ext-session-lock-v1 Wayland
 protocol.
 
+This fork adds **animated GIF support** for background images. You can use GIF
+files as your lock screen background, and they will animate at the appropriate
+frame rate.
+
 See the man page, [swaylock(1)](swaylock.1.scd), for instructions on using swaylock.
+
+## Features
+
+- All standard swaylock features
+- **Animated GIF backgrounds**: Use `-i /path/to/animation.gif` to set an animated
+  GIF as your lock screen background
+- Per-output GIF support: Different animated backgrounds on different monitors
+
+### Example Usage
+
+```
+# Use an animated GIF as background
+swaylock -i ~/wallpapers/animation.gif
+
+# Use different GIFs for different outputs
+swaylock -i eDP-1:~/wallpapers/laptop.gif -i HDMI-A-1:~/wallpapers/monitor.gif
+```
 
 ## Release Signatures
 
@@ -28,13 +49,13 @@ Install dependencies:
 * wayland-protocols \*
 * libxkbcommon
 * cairo
-* gdk-pixbuf2 \*\*
+* gdk-pixbuf2 \*\* (required for GIF animation support)
 * pam (optional)
 * [scdoc](https://git.sr.ht/~sircmpwn/scdoc) (optional: man pages) \*
 * git \*
 
 _\* Compile-time dep_  
-_\*\* Optional: required for background images other than PNG_
+_\*\* Optional: required for background images other than PNG, and for animated GIF support_
 
 Run these commands:
 

@@ -50,6 +50,10 @@ static const struct wl_callback_listener surface_frame_listener = {
 static bool render_frame(struct swaylock_surface *surface);
 
 void render(struct swaylock_surface *surface) {
+	render_background(surface, false);
+}
+
+void render_background(struct swaylock_surface *surface, bool force_background) {
 	struct swaylock_state *state = surface->state;
 
 	int buffer_width = surface->width * surface->scale;
@@ -66,8 +70,11 @@ void render(struct swaylock_surface *surface) {
 	bool need_destroy = false;
 	struct pool_buffer buffer;
 
-	if (buffer_width != surface->last_buffer_width ||
-			buffer_height != surface->last_buffer_height) {
+	// Re-render background if dimensions changed or if forced (e.g., GIF frame change)
+	bool dimensions_changed = (buffer_width != surface->last_buffer_width ||
+			buffer_height != surface->last_buffer_height);
+
+	if (dimensions_changed || force_background) {
 		need_destroy = true;
 		if (!create_buffer(state->shm, &buffer, buffer_width, buffer_height,
 				WL_SHM_FORMAT_ARGB8888)) {

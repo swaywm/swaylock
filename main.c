@@ -308,18 +308,106 @@ void do_sigusr(int sig) {
 	(void)write(sigusr_fds[1], "1", 1);
 }
 
+// Select the appropriate image for a surface, also sets up GIF reference
 static cairo_surface_t *select_image(struct swaylock_state *state,
 		struct swaylock_surface *surface) {
 	struct swaylock_image *image;
-	cairo_surface_t *default_image = NULL;
+	struct swaylock_image *default_image = NULL;
 	wl_list_for_each(image, &state->images, link) {
 		if (lenient_strcmp(image->output_name, surface->output_name) == 0) {
+			// Store GIF reference in surface for animation
+			surface->gif = image->gif;
+			if (image->gif) {
+				return gif_get_current_frame(image->gif);
+			}
 			return image->cairo_surface;
 		} else if (!image->output_name) {
-			default_image = image->cairo_surface;
+			default_image = image;
 		}
 	}
-	return default_image;
+	if (default_image) {
+		surface->gif = default_image->gif;
+		if (default_image->gif) {
+			return gif_get_current_frame(default_image->gif);
+		}
+		return default_image->cairo_surface;
+	}
+	surface->gif = NULL;
+	return NULL;
+}
+
+// Check if any loaded image is an animated GIF
+static bool has_animated_gif(struct swaylock_state *state) {
+	struct swaylock_image *image;
+	wl_list_for_each(image, &state->images, link) {
+		if (image->gif && image->gif->is_animated) {
+			return true;
+		}
+	}
+	return false;
+}
+
+// Get the minimum delay across all animated GIFs for the timer
+static int get_gif_min_delay(struct swaylock_state *state) {
+	int min_delay = 100; // Default
+	struct swaylock_image *image;
+	wl_list_for_each(image, &state->images, link) {
+		if (image->gif && image->gif->is_animated) {
+			int delay = gif_get_current_delay(image->gif);
+			if (delay < min_delay) {
+				min_delay = delay;
+			}
+		}
+	}
+	return min_delay;
+}
+
+// Advance all animated GIFs to the next frame
+static void advance_gif_frames(struct swaylock_state *state) {
+	struct swaylock_image *image;
+	wl_list_for_each(image, &state->images, link) {
+		if (image->gif && image->gif->is_animated) {
+			gif_advance_frame(image->gif);
+			// Update the cairo_surface pointer to current frame
+			image->cairo_surface = gif_get_current_frame(image->gif);
+		}
+	}
+}
+
+// Timer callback for GIF animation
+static void gif_timer_callback(void *data);
+
+static void schedule_gif_frame(struct swaylock_state *state) {
+	if (!has_animated_gif(state)) {
+		return;
+	}
+	int delay = get_gif_min_delay(state);
+	state->gif_timer = loop_add_timer(state->eventloop, delay, gif_timer_callback, state);
+}
+
+static void gif_timer_callback(void *data) {
+	struct swaylock_state *state = data;
+	state->gif_timer = NULL;
+
+	// Advance all GIF frames
+	advance_gif_frames(state);
+
+	// Update surface images and mark dirty for re-render
+	struct swaylock_surface *surface;
+	wl_list_for_each(surface, &state->surfaces, link) {
+		if (surface->gif && surface->gif->is_animated) {
+			// Update surface->image to the new frame
+			surface->image = gif_get_current_frame(surface->gif);
+			// Force background re-render
+			surface->last_buffer_width = 0;
+			surface->last_buffer_height = 0;
+			surface->dirty = true;
+			render(surface);
+		}
+	}
+
+	// Schedule the next frame
+	schedule_gif_frame(state);
 }
 
 static char *join_args(char **argv, int argc) {
@@ -364,7 +452,11 @@ static void load_image(char *arg, struct swaylock_state *state) {
 						image->path);
 			}
 			wl_list_remove(&iter_image->link);
-			free(iter_image->cairo_surface);
+			if (iter_image->gif) {
+				free_gif(iter_image->gif);
+			} else if (iter_image->cairo_surface) {
+				cairo_surface_destroy(iter_image->cairo_surface);
+			}
 			free(iter_image->output_name);
 			free(iter_image->path);
 			free(iter_image);
@@ -388,9 +480,30 @@ static void load_image(char *arg, struct swaylock_state *state) {
 		wordfree(&p);
 	}
 
+	// Check if this is a GIF file
+	if (is_gif_path(image->path)) {
+		image->gif = load_gif_image(image->path);
+		if (image->gif) {
+			// Set cairo_surface to the first frame for compatibility
+			image->cairo_surface = gif_get_current_frame(image->gif);
+			wl_list_insert(&state->images, &image->link);
+			swaylock_log(LOG_DEBUG, "Loaded GIF %s for output %s (%d frames, animated: %s)",
+					image->path,
+					image->output_name ? image->output_name : "*",
+					image->gif->frame_count,
+					image->gif->is_animated ? "yes" : "no");
+			return;
+		}
+		// If GIF loading failed, try loading as regular image
+		swaylock_log(LOG_DEBUG, "Failed to load as GIF, trying as regular image");
+	}
+
 	// Load the actual image
+	image->gif = NULL;
 	image->cairo_surface = load_background_image(image->path);
 	if (!image->cairo_surface) {
+		free(image->path);
+		free(image->output_name);
 		free(image);
 		return;
 	}
@@ -1250,6 +1363,10 @@ int main(int argc, char **argv) {
 	loop_add_fd(state.eventloop, get_comm_reply_fd(), POLLIN, comm_in, NULL);
 
 	loop_add_fd(state.eventloop, sigusr_fds[0], POLLIN, term_in, NULL);
+
+	// Start GIF animation timer if we have any animated GIFs
+	state.gif_timer = NULL;
+	schedule_gif_frame(&state);
 
 	struct sigaction sa;
 	sa.sa_handler = do_sigusr;
