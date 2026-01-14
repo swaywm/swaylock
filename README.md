@@ -54,7 +54,7 @@ Install dependencies:
 * [scdoc](https://git.sr.ht/~sircmpwn/scdoc) (optional: man pages) \*
 * git \*
 
-_\* Compile-time dep_  
+_\* Compile-time dep_
 _\*\* Optional: required for background images other than PNG, and for animated GIF support_
 
 Run these commands:
@@ -62,28 +62,6 @@ Run these commands:
     meson build
     ninja -C build
     sudo ninja -C build install
-
-##### PAM Configuration
-
-When building with PAM support (the default when libpam is available), swaylock
-requires a PAM configuration file at `/etc/pam.d/swaylock`. This file is
-installed automatically when running `sudo ninja -C build install`.
-
-**Arch Linux users:** If authentication fails even with the correct password,
-the default PAM configuration (`auth include login`) may not work properly.
-Replace `/etc/pam.d/swaylock` with the following:
-
-```
-#%PAM-1.0
-auth       include      system-auth
-account    include      system-auth
-password   include      system-auth
-session    include      system-auth
-```
-
-You can test PAM authentication without locking your screen by creating a small
-test program or by running swaylock from a second TTY (switch with `Ctrl+Alt+F2`)
-so you can kill it if needed (`pkill swaylock`).
 
 ##### Without PAM
 
