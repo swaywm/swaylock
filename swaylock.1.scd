@@ -19,7 +19,14 @@ Locks your Wayland session.
 	options in the configuration file using the format _long-option=value_.
 	For options such as _ignore-empty-password_, just supply the _long-option_.
 	All leading dashes should be omitted and the equals sign is required for
-	flags that take an argument.
+	flags that take an argument. For example:
+
+	```
+	image=/usr/share/backgrounds/sway/Sway_Wallpaper_Blue_768x1024.png
+	scaling=center
+	show-failed-attempts
+	ring-color=#ff00ff
+	```
 
 *-d, --debug*
 	Enable debugging output.
