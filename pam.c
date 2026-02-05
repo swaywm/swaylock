@@ -26,6 +26,8 @@ void initialize_pw_backend(int argc, char **argv) {
 
 static int handle_conversation(int num_msg, const struct pam_message **msg,
 		struct pam_response **resp, void *data) {
+	static char previous_pw[512] = {0};
+
 	/* PAM expects an array of responses, one for each message */
 	struct pam_response *pam_reply =
 		calloc(num_msg, sizeof(struct pam_response));
@@ -38,6 +40,14 @@ static int handle_conversation(int num_msg, const struct pam_message **msg,
 		switch (msg[i]->msg_style) {
 		case PAM_PROMPT_ECHO_OFF:
 		case PAM_PROMPT_ECHO_ON:
+			/* workaround pam_systemd_home internal retries: 
+			 * https://github.com/systemd/systemd/blob/main/src/home/pam_systemd_home.c#L594-L599
+			 * if the password is unchanged, abort the conversation */
+			if (!strcmp(pw_buf, (char *)previous_pw)) {
+				return PAM_ABORT;
+			}
+			strncpy((char *)previous_pw, pw_buf, sizeof(previous_pw) - 1);
+
 			pam_reply[i].resp = strdup(pw_buf); // PAM clears and frees this
 			if (pam_reply[i].resp == NULL) {
 				swaylock_log(LOG_ERROR, "Allocation failed");
