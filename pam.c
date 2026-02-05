@@ -10,8 +10,6 @@
 #include "password-buffer.h"
 #include "swaylock.h"
 
-static char *pw_buf = NULL;
-
 void initialize_pw_backend(int argc, char **argv) {
 	if (getuid() != geteuid() || getgid() != getegid()) {
 		swaylock_log(LOG_ERROR,
@@ -24,8 +22,14 @@ void initialize_pw_backend(int argc, char **argv) {
 	}
 }
 
+struct conv_state {
+	char *password;
+};
+
 static int handle_conversation(int num_msg, const struct pam_message **msg,
 		struct pam_response **resp, void *data) {
+	struct conv_state *state = data;
+
 	/* PAM expects an array of responses, one for each message */
 	struct pam_response *pam_reply =
 		calloc(num_msg, sizeof(struct pam_response));
@@ -38,11 +42,18 @@ static int handle_conversation(int num_msg, const struct pam_message **msg,
 		switch (msg[i]->msg_style) {
 		case PAM_PROMPT_ECHO_OFF:
 		case PAM_PROMPT_ECHO_ON:
-			pam_reply[i].resp = strdup(pw_buf); // PAM clears and frees this
+			/* workaround pam_systemd_home internal retries:
+			 * https://github.com/systemd/systemd/blob/main/src/home/pam_systemd_home.c#L594-L599
+			 * if the password has already been rejected once, abort the conversation */
+			if (state->password == NULL) {
+				return PAM_ABORT;
+			}
+			pam_reply[i].resp = strdup(state->password); // PAM clears and frees this
 			if (pam_reply[i].resp == NULL) {
 				swaylock_log(LOG_ERROR, "Allocation failed");
 				return PAM_ABORT;
 			}
+			state->password = NULL;
 			break;
 		case PAM_ERROR_MSG:
 		case PAM_TEXT_INFO:
@@ -71,6 +82,7 @@ static const char *get_pam_auth_error(int pam_status) {
 }
 
 void run_pw_backend_child(void) {
+	char *pw_buf = NULL;
 	struct passwd *passwd = getpwuid(getuid());
 	if (!passwd) {
 		swaylock_log_errno(LOG_ERROR, "getpwuid failed");
@@ -79,9 +91,10 @@ void run_pw_backend_child(void) {
 
 	char *username = passwd->pw_name;
 
+	struct conv_state state = {0};
 	const struct pam_conv conv = {
 		.conv = handle_conversation,
-		.appdata_ptr = NULL,
+		.appdata_ptr = &state,
 	};
 	pam_handle_t *auth_handle = NULL;
 	if (pam_start("swaylock", username, &conv, &auth_handle) != PAM_SUCCESS) {
@@ -101,9 +114,11 @@ void run_pw_backend_child(void) {
 			break;
 		}
 
+		state.password = pw_buf;
 		int pam_status = pam_authenticate(auth_handle, 0);
 		password_buffer_destroy(pw_buf, size);
 		pw_buf = NULL;
+		state.password = NULL;
 
 		bool success = pam_status == PAM_SUCCESS;
 		if (!success) {
