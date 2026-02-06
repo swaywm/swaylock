@@ -26,7 +26,13 @@ void initialize_pw_backend(int argc, char **argv) {
 
 static int handle_conversation(int num_msg, const struct pam_message **msg,
 		struct pam_response **resp, void *data) {
-	static char previous_pw[512] = {0};
+	/* workaround pam_systemd_home internal retries:
+	 * https://github.com/systemd/systemd/blob/main/src/home/pam_systemd_home.c#L594-L599
+	 * abort if the conversation is invoked more than once per authenticate */
+	int *conv_count = data;
+	if ((*conv_count)++ > 0) {
+		return PAM_ABORT;
+	}
 
 	/* PAM expects an array of responses, one for each message */
 	struct pam_response *pam_reply =
@@ -40,15 +46,7 @@ static int handle_conversation(int num_msg, const struct pam_message **msg,
 		switch (msg[i]->msg_style) {
 		case PAM_PROMPT_ECHO_OFF:
 		case PAM_PROMPT_ECHO_ON:
-			/* workaround pam_systemd_home internal retries: 
-			 * https://github.com/systemd/systemd/blob/main/src/home/pam_systemd_home.c#L594-L599
-			 * if the password is unchanged, abort the conversation */
-			if (!strcmp(pw_buf, (char *)previous_pw)) {
-				return PAM_ABORT;
-			}
-			strncpy((char *)previous_pw, pw_buf, sizeof(previous_pw) - 1);
-
-			pam_reply[i].resp = strdup(pw_buf); // PAM clears and frees this
+			pam_reply[i].resp = strdup(pw_buf); /* PAM clears and frees this */
 			if (pam_reply[i].resp == NULL) {
 				swaylock_log(LOG_ERROR, "Allocation failed");
 				return PAM_ABORT;
@@ -89,9 +87,10 @@ void run_pw_backend_child(void) {
 
 	char *username = passwd->pw_name;
 
+	int conv_count = 0;
 	const struct pam_conv conv = {
 		.conv = handle_conversation,
-		.appdata_ptr = NULL,
+		.appdata_ptr = &conv_count,
 	};
 	pam_handle_t *auth_handle = NULL;
 	if (pam_start("swaylock", username, &conv, &auth_handle) != PAM_SUCCESS) {
@@ -111,6 +110,7 @@ void run_pw_backend_child(void) {
 			break;
 		}
 
+		conv_count = 0;
 		int pam_status = pam_authenticate(auth_handle, 0);
 		password_buffer_destroy(pw_buf, size);
 		pw_buf = NULL;
