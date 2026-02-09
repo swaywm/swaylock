@@ -12,25 +12,33 @@ static void keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard,
 		uint32_t format, int32_t fd, uint32_t size) {
 	struct swaylock_seat *seat = data;
 	struct swaylock_state *state = seat->state;
-	if (format != WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1) {
-		close(fd);
-		swaylock_log(LOG_ERROR, "Unknown keymap format %d, aborting", format);
-		exit(1);
-	}
-	char *map_shm = mmap(NULL, size - 1, PROT_READ, MAP_PRIVATE, fd, 0);
-	if (map_shm == MAP_FAILED) {
-		close(fd);
-		swaylock_log(LOG_ERROR, "Unable to initialize keymap shm, aborting");
-		exit(1);
-	}
-	struct xkb_keymap *keymap = xkb_keymap_new_from_buffer(
+
+	struct xkb_keymap *keymap = NULL;
+	struct xkb_state *xkb_state = NULL;
+
+	switch (format) {
+	case WL_KEYBOARD_KEYMAP_FORMAT_NO_KEYMAP:
+		break;
+	case WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1:;
+		char *map_shm = mmap(NULL, size - 1, PROT_READ, MAP_PRIVATE, fd, 0);
+		if (map_shm == MAP_FAILED) {
+			close(fd);
+			swaylock_log(LOG_ERROR, "Unable to initialize keymap shm, aborting");
+			exit(1);
+		}
+		keymap = xkb_keymap_new_from_buffer(
 			state->xkb.context, map_shm, size - 1, XKB_KEYMAP_FORMAT_TEXT_V1,
 			XKB_KEYMAP_COMPILE_NO_FLAGS);
-	munmap(map_shm, size - 1);
+		assert(keymap);
+		munmap(map_shm, size - 1);
+
+		xkb_state = xkb_state_new(keymap);
+		assert(xkb_state);
+		break;
+	}
+
 	close(fd);
-	assert(keymap);
-	struct xkb_state *xkb_state = xkb_state_new(keymap);
-	assert(xkb_state);
+
 	xkb_keymap_unref(state->xkb.keymap);
 	xkb_state_unref(state->xkb.state);
 	state->xkb.keymap = keymap;
@@ -59,6 +67,10 @@ static void keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
 		uint32_t serial, uint32_t time, uint32_t key, uint32_t _key_state) {
 	struct swaylock_seat *seat = data;
 	struct swaylock_state *state = seat->state;
+	if (state->xkb.state == NULL) {
+		return;
+	}
+
 	enum wl_keyboard_key_state key_state = _key_state;
 	xkb_keysym_t sym = xkb_state_key_get_one_sym(state->xkb.state, key + 8);
 	uint32_t keycode = key_state == WL_KEYBOARD_KEY_STATE_PRESSED ?
