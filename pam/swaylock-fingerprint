@@ -1,0 +1,7 @@
+#
+# PAM configuration file for swaylock fingerprint authentication.
+#
+
+auth required pam_fprintd.so
+account include login
+session include login
