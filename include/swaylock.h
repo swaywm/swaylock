@@ -11,6 +11,7 @@
 // Indicator state: status of authentication attempt
 enum auth_state {
 	AUTH_STATE_IDLE, // nothing happening
+	AUTH_STATE_FINGERPRINT, // idle but listening for fingerprint
 	AUTH_STATE_VALIDATING, // currently validating password
 	AUTH_STATE_INVALID, // displaying message: password was wrong
 };
@@ -69,6 +70,7 @@ struct swaylock_args {
 	bool daemonize;
 	int ready_fd;
 	bool indicator_idle_visible;
+	bool fingerprint;
 };
 
 struct swaylock_password {
@@ -100,6 +102,7 @@ struct swaylock_state {
 	bool run_display, locked;
 	struct ext_session_lock_manager_v1 *ext_session_lock_manager_v1;
 	struct ext_session_lock_v1 *ext_session_lock_v1;
+	char *fingerprint_msg;
 };
 
 struct swaylock_surface {

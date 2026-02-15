@@ -18,6 +18,7 @@ _arguments -s \
 	'(--hide-keyboard-layout -K)'{--hide-keyboard-layout,-K}'[Hide the current xkb layout while typing]' \
 	'(--ignore-empty-password -e)'{--ignore-empty-password,-e}'[When an empty password is provided, do not validate it]' \
 	'(--image -i)'{--image,-i}'[Display the given image, optionally only on the given output]:filename:_files' \
+	'(--fingerprint -p)'{--fingerprint,-p}'[Enable fingerprint scanning. Fprint is required]' \
 	'(--indicator-caps-lock -l)'{--indicator-caps-lock,-l}'[Show the current Caps Lock state also on the indicator]' \
 	'(--indicator-idle-visible)'--indicator-idle-visible'[Sets the indicator to show even if idle]' \
 	'(--indicator-radius)'--indicator-radius'[Sets the indicator radius]:radius:' \
