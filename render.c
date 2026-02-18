@@ -122,7 +122,7 @@ static void configure_font_drawing(cairo_t *cairo, struct swaylock_state *state,
 
 	cairo_set_font_options(cairo, fo);
 	cairo_select_font_face(cairo, state->args.font,
-		CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
+		CAIRO_FONT_SLANT_NORMAL, state->args.font_bold ? CAIRO_FONT_WEIGHT_BOLD : CAIRO_FONT_WEIGHT_NORMAL);
 	if (state->args.font_size > 0) {
 		cairo_set_font_size(cairo, state->args.font_size);
 	} else {

@@ -10,6 +10,7 @@ complete -c swaylock -l debug                  -s d --description "Enable debugg
 complete -c swaylock -l disable-caps-lock-text -s L --description "Disable the Caps Lock text."
 complete -c swaylock -l font                        --description "Sets the font of the text."
 complete -c swaylock -l font-size                   --description "Sets a fixed font size for the indicator text."
+complete -c swaylock -l font-bold                   --description "Use bold font weight for the indicator text"
 complete -c swaylock -l help                   -s h --description "Show help message and quit."
 complete -c swaylock -l hide-keyboard-layout   -s K --description "Hide the current xkb layout while typing."
 complete -c swaylock -l ignore-empty-password  -s e --description "When an empty password is provided, do not validate it."
