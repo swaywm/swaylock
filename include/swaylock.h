@@ -66,6 +66,7 @@ struct swaylock_args {
 	bool show_keyboard_layout;
 	bool hide_keyboard_layout;
 	bool show_failed_attempts;
+	char *default_text;
 	bool daemonize;
 	int ready_fd;
 	bool indicator_idle_visible;
