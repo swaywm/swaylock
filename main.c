@@ -27,6 +27,15 @@
 #include "ext-session-lock-v1-client-protocol.h"
 
 static uint32_t parse_color(const char *color) {
+	
+
+	for (size_t i = 0; i < HTML_COLORS_COUNT; ++i) {
+		if (strncasecmp(color, html_colors[i][0], strlen(html_colors[i][0])) == 0) {
+			color = html_colors[i][1];
+			break;
+		}
+	}
+
 	if (color[0] == '#') {
 		++color;
 	}
@@ -663,7 +672,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		"  --text-wrong-color <color>       "
 			"Sets the color of the text when invalid.\n"
 		"\n"
-		"All <color> options are of the form <rrggbb[aa]>.\n";
+		"All <color> options are either HTML named colors or of the form <[#]rrggbb[aa]>.\n";
 
 	int c;
 	optind = 1;
