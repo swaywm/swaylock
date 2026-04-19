@@ -42,6 +42,10 @@ Locks your Wayland session.
 
 	Note: this is the default behavior of i3lock.
 
+*-g, --grace <seconds>* (default 0, disabled)
+	Duration after startup to allow the user to dismiss the lock screen without authenticating.
+	Intended for use along swayidle or similar.
+
 *-R, --ready-fd* <fd>
 	File descriptor to send readiness notifications to.
 
