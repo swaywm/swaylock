@@ -51,4 +51,9 @@ bool loop_remove_fd(struct loop *loop, int fd);
  */
 bool loop_remove_timer(struct loop *loop, struct loop_timer *timer);
 
+/**
+ * Attribute an optional label to a timer
+ */
+void timer_set_label(struct loop_timer *timer, const char *label);
+
 #endif

@@ -10,6 +10,7 @@
 #include "password-buffer.h"
 
 static int comm[2][2] = {{-1, -1}, {-1, -1}};
+static bool shutdown_comm = false;
 
 static ssize_t read_full(int fd, void *dst, size_t size) {
 	char *buf = dst;
@@ -53,6 +54,10 @@ static bool write_full(int fd, const void *src, size_t size) {
 }
 
 ssize_t read_comm_request(char **buf_ptr) {
+	if (shutdown_comm) {
+		return 0; // tell the PAM auth backend to bail
+	}
+
 	int fd = comm[0][0];
 
 	size_t size;
@@ -142,4 +147,13 @@ bool read_comm_reply(bool *auth_success) {
 
 int get_comm_reply_fd(void) {
 	return comm[1][0];
+}
+
+void shutdown_comm_channel(void) {
+	if (shutdown_comm) {
+		return;
+	}
+	shutdown_comm = true;
+	close(comm[0][1]);
+	close(comm[1][0]);
 }

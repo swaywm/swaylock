@@ -69,6 +69,7 @@ char *password_buffer_create(size_t size) {
 		return NULL;
 	}
 
+	memset(buffer, 0, size);
 	return buffer;
 }
 

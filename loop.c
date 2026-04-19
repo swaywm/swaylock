@@ -22,6 +22,7 @@ struct loop_timer {
 	struct timespec expiry;
 	bool removed;
 	struct wl_list link; // struct loop_timer::link
+	char *label;         // for diagnostics; not all loops get labels
 };
 
 struct loop {
@@ -30,7 +31,7 @@ struct loop {
 	int fd_capacity;
 
 	struct wl_list fd_events; // struct loop_fd_event::link
-	struct wl_list timers; // struct loop_timer::link
+	struct wl_list timers;    // struct loop_timer::link
 };
 
 struct loop *loop_create(void) {
@@ -93,7 +94,7 @@ void loop_poll(struct loop *loop) {
 		struct pollfd pfd = loop->fds[fd_index];
 
 		// Always send these events
-		unsigned events = pfd.events | POLLHUP | POLLERR;
+		const short events = pfd.events | POLLHUP | POLLERR;
 
 		if (pfd.revents & events) {
 			event->callback(pfd.fd, pfd.revents, event->data);
@@ -102,7 +103,7 @@ void loop_poll(struct loop *loop) {
 		++fd_index;
 	}
 
-	// Dispatch timers
+	// Dispatch and prune timers
 	if (!wl_list_empty(&loop->timers)) {
 		struct timespec now;
 		clock_gettime(CLOCK_MONOTONIC, &now);
@@ -110,6 +111,7 @@ void loop_poll(struct loop *loop) {
 		wl_list_for_each_safe(timer, tmp_timer, &loop->timers, link) {
 			if (timer->removed) {
 				wl_list_remove(&timer->link);
+				free(timer->label);
 				free(timer);
 				continue;
 			}
@@ -120,6 +122,7 @@ void loop_poll(struct loop *loop) {
 			if (expired) {
 				timer->callback(timer->data);
 				wl_list_remove(&timer->link);
+				free(timer->label);
 				free(timer);
 			}
 		}
@@ -191,13 +194,25 @@ bool loop_remove_fd(struct loop *loop, int fd) {
 	return false;
 }
 
+// mark timer for removal, will be pruned in loop_poll
 bool loop_remove_timer(struct loop *loop, struct loop_timer *remove) {
 	struct loop_timer *timer = NULL, *tmp_timer = NULL;
 	wl_list_for_each_safe(timer, tmp_timer, &loop->timers, link) {
 		if (timer == remove) {
 			timer->removed = true;
+			if (timer->label) {
+				swaylock_log(LOG_DEBUG, "Timer (%s, +%.2fs) marked for removal",
+					timer->label, timer->expiry.tv_sec + timer->expiry.tv_nsec / 1000000000.0);
+			}
 			return true;
 		}
 	}
 	return false;
+}
+
+void timer_set_label(struct loop_timer *timer, const char *label) {
+	if (timer->label) {
+		free(timer->label);
+	}
+	timer->label = strndup(label, 0x100);
 }

@@ -144,5 +144,6 @@ void run_pw_backend_child(void) {
 		exit(EXIT_FAILURE);
 	}
 
+	swaylock_log(LOG_DEBUG, "PAM backend exiting.");
 	exit((pam_status == PAM_SUCCESS) ? EXIT_SUCCESS : EXIT_FAILURE);
 }

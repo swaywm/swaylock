@@ -4,11 +4,13 @@
 #include <fcntl.h>
 #include <getopt.h>
 #include <poll.h>
+#include <sched.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h> // strncasecmp
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <time.h>
@@ -18,6 +20,7 @@
 #include "background-image.h"
 #include "cairo.h"
 #include "comm.h"
+#include "html_colors.h"
 #include "log.h"
 #include "loop.h"
 #include "password-buffer.h"
@@ -40,7 +43,7 @@ static uint32_t parse_color(const char *color) {
 		++color;
 	}
 
-	int len = strlen(color);
+	int len = strnlen(color, 16);
 	if (len != 6 && len != 8) {
 		swaylock_log(LOG_DEBUG, "Invalid color %s, defaulting to 0xFFFFFFFF",
 				color);
@@ -53,7 +56,7 @@ static uint32_t parse_color(const char *color) {
 	return res;
 }
 
-int lenient_strcmp(char *a, char *b) {
+static int lenient_strcmp(char *a, char *b) {
 	if (a == b) {
 		return 0;
 	} else if (!a) {
@@ -68,7 +71,7 @@ int lenient_strcmp(char *a, char *b) {
 static void daemonize(void) {
 	int fds[2];
 	if (pipe(fds) != 0) {
-		swaylock_log(LOG_ERROR, "Failed to pipe");
+		swaylock_log_errno(LOG_ERROR, "Failed to pipe");
 		exit(1);
 	}
 	if (fork() == 0) {
@@ -311,12 +314,6 @@ static const struct wl_registry_listener registry_listener = {
 	.global_remove = handle_global_remove,
 };
 
-static int sigusr_fds[2] = {-1, -1};
-
-void do_sigusr(int sig) {
-	(void)write(sigusr_fds[1], "1", 1);
-}
-
 static cairo_surface_t *select_image(struct swaylock_state *state,
 		struct swaylock_surface *surface) {
 	struct swaylock_image *image;
@@ -500,6 +497,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"debug", no_argument, NULL, 'd'},
 		{"ignore-empty-password", no_argument, NULL, 'e'},
 		{"daemonize", no_argument, NULL, 'f'},
+		{"grace", required_argument, NULL, 'g'},
 		{"ready-fd", required_argument, NULL, 'R'},
 		{"help", no_argument, NULL, 'h'},
 		{"image", required_argument, NULL, 'i'},
@@ -567,6 +565,10 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Show current count of failed authentication attempts.\n"
 		"  -f, --daemonize                  "
 			"Detach from the controlling terminal after locking.\n"
+		"  -g, --grace <seconds>            "
+		    "Duration after startup to allow the user to dismiss the lock screen without authenticating.\n"
+		"                                   "
+		    "default 0 (disabled), intended for use along swayidle or similar.\n"
 		"  -R, --ready-fd <fd>              "
 			"File descriptor to send readiness notifications to.\n"
 		"  -h, --help                       "
@@ -678,7 +680,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 	optind = 1;
 	while (1) {
 		int opt_idx = 0;
-		c = getopt_long(argc, argv, "c:deFfhi:kKLlnrs:tuvC:R:", long_options,
+		c = getopt_long(argc, argv, "c:deFfg:hi:kKLlnrs:tuvC:R:", long_options,
 				&opt_idx);
 		if (c == -1) {
 			break;
@@ -710,6 +712,16 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		case 'f':
 			if (state) {
 				state->args.daemonize = true;
+			}
+			break;
+		case 'g':
+			if (state) {
+				double grace_milliseconds = strtod(optarg, NULL) * 1000;
+				if (grace_milliseconds < 0) {
+					swaylock_log(LOG_ERROR, "Grace period cannot be negative (got %.0fms)", grace_milliseconds);
+					return 1;
+				}
+				state->args.grace_milliseconds = (uint32_t)grace_milliseconds;
 			}
 			break;
 		case 'R':
@@ -1012,7 +1024,24 @@ static int load_config(char *path, struct swaylock_state *state,
 			line[--nread] = '\0';
 		}
 
-		if (!*line || line[0] == '#') {
+		// trim leading whitespace
+		while (isspace(line[0])) {
+			line++;
+			nread--;
+		}
+
+		// eliminate line or trailing comments
+		if (strchr(line, '#')) {
+			nread = strchr(line, '#') - line;
+			*strchr(line, '#') = '\0';
+		}
+
+		// eliminate trailing whitespace
+		while (nread > 0 && isspace(line[nread - 1])) {
+			line[--nread] = '\0';
+		}
+
+		if (!*line) {
 			continue;
 		}
 
@@ -1024,7 +1053,7 @@ static int load_config(char *path, struct swaylock_state *state,
 			swaylock_log(LOG_ERROR, "Failed to allocate memory");
 			return 0;
 		}
-		sprintf(flag, "--%s", line);
+		snprintf(flag, nread + 3, "--%s", line);
 		char *argv[] = {"swaylock", flag};
 		result = parse_options(2, argv, state, line_mode, NULL);
 		free(flag);
@@ -1096,6 +1125,12 @@ void log_init(int argc, char **argv) {
 	swaylock_log_init(LOG_ERROR);
 }
 
+static int sigusr_fds[2] = {-1, -1};
+
+void do_sigusr(int sig) {
+	(void)write(sigusr_fds[1], "1", 1);
+}
+
 int main(int argc, char **argv) {
 	log_init(argc, argv);
 	initialize_pw_backend(argc, argv);
@@ -1107,6 +1142,7 @@ int main(int argc, char **argv) {
 		.mode = BACKGROUND_MODE_FILL,
 		.font = strdup("sans-serif"),
 		.font_size = 0,
+		.grace_milliseconds = 0,
 		.radius = 50,
 		.thickness = 10,
 		.indicator_x_position = 0,
@@ -1147,7 +1183,7 @@ int main(int argc, char **argv) {
 	}
 
 	if (argc > 1) {
-		swaylock_log(LOG_DEBUG, "Parsing CLI Args");
+		swaylock_log(LOG_DEBUG, "Parsing CLI Args (%d)", argc);
 		int result = parse_options(argc, argv, &state, &line_mode, NULL);
 		if (result != 0) {
 			free(state.args.font);
@@ -1167,7 +1203,6 @@ int main(int argc, char **argv) {
 	if (!state.password.buffer) {
 		return EXIT_FAILURE;
 	}
-	state.password.buffer[0] = 0;
 
 	if (pipe(sigusr_fds) != 0) {
 		swaylock_log(LOG_ERROR, "Failed to pipe");
@@ -1260,6 +1295,12 @@ int main(int argc, char **argv) {
 
 	loop_add_fd(state.eventloop, sigusr_fds[0], POLLIN, term_in, NULL);
 
+	if (state.args.grace_milliseconds > 0) {
+		schedule_grace_timeout(&state);
+	} else {
+		state.grace_timeout_timer = NULL;
+	}
+
 	struct sigaction sa;
 	sa.sa_handler = do_sigusr;
 	sigemptyset(&sa.sa_mask);
@@ -1274,6 +1315,9 @@ int main(int argc, char **argv) {
 		}
 		loop_poll(state.eventloop);
 	}
+
+	// signal comm backend to exit if it has not already
+	shutdown_comm_channel();
 
 	ext_session_lock_v1_unlock_and_destroy(state.ext_session_lock_v1);
 	wl_display_roundtrip(state.display);

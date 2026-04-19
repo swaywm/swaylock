@@ -2,6 +2,7 @@
 #define _SWAYLOCK_COMM_H
 
 #include <stdbool.h>
+#include <sys/types.h>
 
 struct swaylock_password;
 
@@ -14,5 +15,7 @@ bool write_comm_request(struct swaylock_password *pw);
 bool read_comm_reply(bool *auth_success);
 // FD to poll for password authentication replies.
 int get_comm_reply_fd(void);
+
+void shutdown_comm_channel(void);
 
 #endif

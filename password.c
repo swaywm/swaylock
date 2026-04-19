@@ -60,6 +60,20 @@ static void set_auth_idle(void *data) {
 	damage_state(state);
 }
 
+static void clear_grace_timeout(void *data) {
+	struct swaylock_state *state = data;
+
+	state->grace_on = false;
+
+	if (state->grace_timeout_timer) {
+		loop_remove_timer(state->eventloop, state->grace_timeout_timer);
+		state->grace_timeout_timer = NULL;
+	}
+
+	swaylock_log(LOG_DEBUG, "Grace period (%dms) ended", state->args.grace_milliseconds);
+	damage_state(state);
+}
+
 static void schedule_input_idle(struct swaylock_state *state) {
 	if (state->input_idle_timer) {
 		loop_remove_timer(state->eventloop, state->input_idle_timer);
@@ -81,6 +95,18 @@ void schedule_auth_idle(struct swaylock_state *state) {
 	}
 	state->auth_idle_timer = loop_add_timer(
 		state->eventloop, 3000, set_auth_idle, state);
+}
+
+void schedule_grace_timeout(struct swaylock_state *state) {
+	if (state->args.grace_milliseconds == 0) {
+		return;
+	}
+	state->grace_on = true;
+	state->grace_timeout_timer = loop_add_timer(state->eventloop, state->args.grace_milliseconds,
+		clear_grace_timeout, state);
+	if (state->grace_timeout_timer) {
+		timer_set_label(state->grace_timeout_timer, "grace timeout");
+	}
 }
 
 static void clear_password(void *data) {
@@ -136,6 +162,11 @@ static void update_highlight(struct swaylock_state *state) {
 
 void swaylock_handle_key(struct swaylock_state *state,
 		xkb_keysym_t keysym, uint32_t codepoint) {
+
+	if (state->grace_on) {
+		swaylock_log(LOG_DEBUG, "Received key during grace period, skipping lock");
+		state->run_display = false;
+	}
 
 	switch (keysym) {
 	case XKB_KEY_KP_Enter: /* fallthrough */
