@@ -1012,13 +1012,14 @@ static int load_config(char *path, struct swaylock_state *state,
 		swaylock_log(LOG_ERROR, "Failed to read config. Running without it.");
 		return 0;
 	}
-	char *line = NULL;
+	char *line_buffer = NULL;
 	size_t line_size = 0;
 	ssize_t nread;
 	int line_number = 0;
 	int result = 0;
-	while ((nread = getline(&line, &line_size, config)) != -1) {
+	while ((nread = getline(&line_buffer, &line_size, config)) != -1) {
 		line_number++;
+		char *line = line_buffer;
 
 		if (line[nread - 1] == '\n') {
 			line[--nread] = '\0';
@@ -1048,7 +1049,6 @@ static int load_config(char *path, struct swaylock_state *state,
 		swaylock_log(LOG_DEBUG, "Config Line #%d: %s", line_number, line);
 		char *flag = malloc(nread + 3);
 		if (flag == NULL) {
-			free(line);
 			fclose(config);
 			swaylock_log(LOG_ERROR, "Failed to allocate memory");
 			return 0;
@@ -1061,7 +1061,7 @@ static int load_config(char *path, struct swaylock_state *state,
 			break;
 		}
 	}
-	free(line);
+	free(line_buffer);
 	fclose(config);
 	return 0;
 }
