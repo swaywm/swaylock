@@ -655,7 +655,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Sets the color of the ring of the indicator when invalid.\n"
 		"  --separator-color <color>        "
 			"Sets the color of the lines that separate highlight segments.\n"
-		"  --caps-lock-sep-color <color>        "
+		"  --caps-lock-sep-color <color>    "
 			"Sets the color of the lines that separate highlight segments when"
 			"Caps Lock is active.\n"
 		"  --text-color <color>             "
