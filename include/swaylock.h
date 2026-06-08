@@ -42,6 +42,7 @@ struct swaylock_colors {
 	uint32_t layout_background;
 	uint32_t layout_border;
 	uint32_t layout_text;
+	uint32_t keypad_text;
 	struct swaylock_colorset inside;
 	struct swaylock_colorset line;
 	struct swaylock_colorset ring;
@@ -69,6 +70,7 @@ struct swaylock_args {
 	bool daemonize;
 	int ready_fd;
 	bool indicator_idle_visible;
+	bool show_keypad;
 };
 
 struct swaylock_password {
@@ -97,6 +99,7 @@ struct swaylock_state {
 	enum input_state input_state; // state of the password buffer and key inputs
 	uint32_t highlight_start; // position of highlight; 2048 = 1 full turn
 	int failed_attempts;
+	bool keypad_upper;
 	bool run_display, locked;
 	struct ext_session_lock_manager_v1 *ext_session_lock_manager_v1;
 	struct ext_session_lock_v1 *ext_session_lock_v1;
@@ -110,11 +113,16 @@ struct swaylock_surface {
 	struct wl_surface *surface; // surface for background
 	struct wl_surface *child; // indicator surface made into subsurface
 	struct wl_subsurface *subsurface;
+	struct wl_surface *keypad_child; // keypad surface made into subsurface
+	struct wl_subsurface *keypad_subsurface;
 	struct ext_session_lock_surface_v1 *ext_session_lock_surface_v1;
 	struct pool_buffer indicator_buffers[2];
+	struct pool_buffer keypad_buffers[2];
 	bool created;
 	bool dirty;
 	uint32_t width, height;
+	int32_t keypad_x, keypad_y;
+	uint32_t keypad_width, keypad_height;
 	int32_t scale;
 	enum wl_output_subpixel subpixel;
 	char *output_name;
@@ -139,6 +147,9 @@ void render(struct swaylock_surface *surface);
 void damage_state(struct swaylock_state *state);
 void clear_password_buffer(struct swaylock_password *pw);
 void schedule_auth_idle(struct swaylock_state *state);
+void swaylock_handle_keypad_key(struct swaylock_state *state, const char *key);
+void swaylock_handle_pointer_click(struct swaylock_state *state,
+		struct swaylock_surface *surface, double x, double y);
 
 void initialize_pw_backend(int argc, char **argv);
 void run_pw_backend_child(void);
