@@ -40,7 +40,7 @@ struct loop *loop_create(void) {
 		return NULL;
 	}
 	loop->fd_capacity = 10;
-	loop->fds = malloc(sizeof(struct pollfd) * loop->fd_capacity);
+	loop->fds = calloc(loop->fd_capacity, sizeof(struct pollfd));
 	wl_list_init(&loop->fd_events);
 	wl_list_init(&loop->timers);
 	return loop;
@@ -141,6 +141,10 @@ void loop_add_fd(struct loop *loop, int fd, short mask,
 
 	if (loop->fd_length == loop->fd_capacity) {
 		loop->fd_capacity += 10;
+		if ((size_t)loop->fd_capacity > SIZE_MAX / sizeof(struct pollfd)) {
+			swaylock_log(LOG_ERROR, "Too many file descriptors");
+			return;
+		}
 		loop->fds = realloc(loop->fds,
 				sizeof(struct pollfd) * loop->fd_capacity);
 	}
