@@ -66,8 +66,8 @@ static void daemonize(void) {
 		setsid();
 		close(fds[0]);
 		int devnull = open("/dev/null", O_RDWR);
-		dup2(STDOUT_FILENO, devnull);
-		dup2(STDERR_FILENO, devnull);
+		dup2(devnull, STDOUT_FILENO);
+		dup2(devnull, STDERR_FILENO);
 		close(devnull);
 		uint8_t success = 0;
 		if (chdir("/") != 0) {
