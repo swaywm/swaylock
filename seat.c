@@ -45,6 +45,13 @@ static void keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard,
 	state->xkb.state = xkb_state;
 }
 
+static void stop_repeat(struct swaylock_seat *seat) {
+	if (seat->repeat_timer) {
+		loop_remove_timer(seat->state->eventloop, seat->repeat_timer);
+		seat->repeat_timer = NULL;
+	}
+}
+
 static void keyboard_enter(void *data, struct wl_keyboard *wl_keyboard,
 		uint32_t serial, struct wl_surface *surface, struct wl_array *keys) {
 	// Who cares
@@ -52,7 +59,12 @@ static void keyboard_enter(void *data, struct wl_keyboard *wl_keyboard,
 
 static void keyboard_leave(void *data, struct wl_keyboard *wl_keyboard,
 		uint32_t serial, struct wl_surface *surface) {
-	// Who cares
+	// When focus leaves (e.g. the compositor takes it away across a
+	// suspend/DPMS transition) the protocol guarantees no release events for
+	// currently-held keys, so an armed key-repeat would otherwise linger and
+	// fire on resume, injecting a phantom character into the password buffer.
+	struct swaylock_seat *seat = data;
+	stop_repeat(seat);
 }
 
 static void keyboard_repeat(void *data) {
@@ -80,10 +92,7 @@ static void keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
 		swaylock_handle_key(state, sym, codepoint);
 	}
 
-	if (seat->repeat_timer) {
-		loop_remove_timer(seat->state->eventloop, seat->repeat_timer);
-		seat->repeat_timer = NULL;
-	}
+	stop_repeat(seat);
 
 	if (key_state == WL_KEYBOARD_KEY_STATE_PRESSED && seat->repeat_period_ms > 0) {
 		seat->repeat_sym = sym;
