@@ -188,6 +188,9 @@ Locks your Wayland session.
 *--separator-color* <rrggbb[aa]>
 	Sets the color of the lines that separate highlight segments.
 
+*--caps-lock-sep-color* <rrggbb[aa]>
+	Sets the color of the highlight segments separator when Caps Lock is active.
+
 *--text-color* <rrggbb[aa]>
 	Sets the color of the text.
 

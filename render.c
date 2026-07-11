@@ -325,7 +325,11 @@ static bool render_frame(struct swaylock_surface *surface) {
 			double outer_radius = buffer_diameter / 2.0 - arc_thickness / 2.0;
 
 			cairo_set_line_width(cairo, 2.0 * surface->scale);
-			cairo_set_source_u32(cairo, state->args.colors.separator);
+			if (state->xkb.caps_lock && state->args.show_caps_lock_indicator) {
+				cairo_set_source_u32(cairo, state->args.colors.caps_lock_separator);
+			} else {
+				cairo_set_source_u32(cairo, state->args.colors.separator);
+			}
 			cairo_move_to(cairo,
 				buffer_width / 2.0 + cos(highlight_start) * inner_radius,
 				buffer_diameter / 2.0 + sin(highlight_start) * inner_radius

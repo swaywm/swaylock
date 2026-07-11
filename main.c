@@ -406,6 +406,7 @@ static void set_default_colors(struct swaylock_colors *colors) {
 	colors->caps_lock_bs_highlight = 0xDB3300FF;
 	colors->caps_lock_key_highlight = 0x33DB00FF;
 	colors->separator = 0x000000FF;
+	colors->caps_lock_separator = 0x000000FF;
 	colors->layout_background = 0x000000C0;
 	colors->layout_border = 0x00000000;
 	colors->layout_text = 0xFFFFFFFF;
@@ -478,6 +479,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_RING_VER_COLOR,
 		LO_RING_WRONG_COLOR,
 		LO_SEP_COLOR,
+		LO_CAPS_LOCK_SEP_COLOR,
 		LO_TEXT_COLOR,
 		LO_TEXT_CLEAR_COLOR,
 		LO_TEXT_CAPS_LOCK_COLOR,
@@ -535,6 +537,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"ring-ver-color", required_argument, NULL, LO_RING_VER_COLOR},
 		{"ring-wrong-color", required_argument, NULL, LO_RING_WRONG_COLOR},
 		{"separator-color", required_argument, NULL, LO_SEP_COLOR},
+		{"caps-lock-sep-color", required_argument, NULL, LO_CAPS_LOCK_SEP_COLOR},
 		{"text-color", required_argument, NULL, LO_TEXT_COLOR},
 		{"text-clear-color", required_argument, NULL, LO_TEXT_CLEAR_COLOR},
 		{"text-caps-lock-color", required_argument, NULL, LO_TEXT_CAPS_LOCK_COLOR},
@@ -652,6 +655,9 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Sets the color of the ring of the indicator when invalid.\n"
 		"  --separator-color <color>        "
 			"Sets the color of the lines that separate highlight segments.\n"
+		"  --caps-lock-sep-color <color>    "
+			"Sets the color of the lines that separate highlight segments when "
+			"Caps Lock is active.\n"
 		"  --text-color <color>             "
 			"Sets the color of the text.\n"
 		"  --text-clear-color <color>       "
@@ -916,6 +922,11 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		case LO_SEP_COLOR:
 			if (state) {
 				state->args.colors.separator = parse_color(optarg);
+			}
+			break;
+		case LO_CAPS_LOCK_SEP_COLOR:
+			if (state) {
+				state->args.colors.caps_lock_separator = parse_color(optarg);
 			}
 			break;
 		case LO_TEXT_COLOR:
