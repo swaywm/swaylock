@@ -8,6 +8,9 @@ packages:
   - gdk-pixbuf-dev
   - linux-pam-dev
   - scdoc
+  - fprintd
+  - glib
+  - dbus
 sources:
   - https://github.com/swaywm/swaylock
 tasks:
