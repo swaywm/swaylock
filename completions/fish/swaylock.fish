@@ -7,6 +7,7 @@ complete -c swaylock -l color                  -s c --description "Turn the scre
 complete -c swaylock -l config                 -s C --description "Path to the config file."
 complete -c swaylock -l daemonize              -s f --description "Detach from the controlling terminal after locking."
 complete -c swaylock -l debug                  -s d --description "Enable debugging output."
+complete -c swaylock -l default-text                --description "Show text when no other (Caps Lock, attempt count, etc.) is shown."
 complete -c swaylock -l disable-caps-lock-text -s L --description "Disable the Caps Lock text."
 complete -c swaylock -l font                        --description "Sets the font of the text."
 complete -c swaylock -l font-size                   --description "Sets a fixed font size for the indicator text."

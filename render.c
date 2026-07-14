@@ -185,6 +185,8 @@ static bool render_frame(struct swaylock_surface *surface) {
 				}
 			}
 		}
+	} else if (state->args.default_text) {
+		text = state->args.default_text;
 	}
 
 	// Compute the size of the buffer needed
@@ -277,27 +279,9 @@ static bool render_frame(struct swaylock_surface *surface) {
 		set_color_for_state(cairo, state, &state->args.colors.ring);
 		cairo_stroke(cairo);
 
-		// Draw a message
-		configure_font_drawing(cairo, state, surface->subpixel, arc_radius);
-		set_color_for_state(cairo, state, &state->args.colors.text);
+	}
 
-		if (text) {
-			cairo_text_extents_t extents;
-			cairo_font_extents_t fe;
-			double x, y;
-			cairo_text_extents(cairo, text, &extents);
-			cairo_font_extents(cairo, &fe);
-			x = (buffer_width / 2) -
-				(extents.width / 2 + extents.x_bearing);
-			y = (buffer_diameter / 2) +
-				(fe.height / 2 - fe.descent);
-
-			cairo_move_to(cairo, x, y);
-			cairo_show_text(cairo, text);
-			cairo_close_path(cairo);
-			cairo_new_sub_path(cairo);
-		}
-
+	if (draw_indicator) {
 		// Typing indicator: Highlight random part on keypress
 		if (state->input_state == INPUT_STATE_LETTER ||
 				state->input_state == INPUT_STATE_BACKSPACE) {
@@ -356,37 +340,58 @@ static bool render_frame(struct swaylock_surface *surface) {
 		cairo_arc(cairo, buffer_width / 2, buffer_diameter / 2,
 				arc_radius + arc_thickness / 2, 0, 2 * M_PI);
 		cairo_stroke(cairo);
+	}
 
-		// display layout text separately
-		if (layout_text) {
-			cairo_text_extents_t extents;
-			cairo_font_extents_t fe;
-			double x, y;
-			double box_padding = 4.0 * surface->scale;
-			cairo_text_extents(cairo, layout_text, &extents);
-			cairo_font_extents(cairo, &fe);
-			// upper left coordinates for box
-			x = (buffer_width / 2) - (extents.width / 2) - box_padding;
-			y = buffer_diameter;
+	// Draw a message
+	configure_font_drawing(cairo, state, surface->subpixel, arc_radius);
+	set_color_for_state(cairo, state, &state->args.colors.text);
 
-			// background box
-			cairo_rectangle(cairo, x, y,
-				extents.width + 2.0 * box_padding,
-				fe.height + 2.0 * box_padding);
-			cairo_set_source_u32(cairo, state->args.colors.layout_background);
-			cairo_fill_preserve(cairo);
-			// border
-			cairo_set_source_u32(cairo, state->args.colors.layout_border);
-			cairo_stroke(cairo);
+	if (text) {
+		cairo_text_extents_t extents;
+		cairo_font_extents_t fe;
+		double x, y;
+		cairo_text_extents(cairo, text, &extents);
+		cairo_font_extents(cairo, &fe);
+		x = (buffer_width / 2) -
+			(extents.width / 2 + extents.x_bearing);
+		y = (buffer_diameter / 2) +
+			(fe.height / 2 - fe.descent);
 
-			// take font extents and padding into account
-			cairo_move_to(cairo,
-				x - extents.x_bearing + box_padding,
-				y + (fe.height - fe.descent) + box_padding);
-			cairo_set_source_u32(cairo, state->args.colors.layout_text);
-			cairo_show_text(cairo, layout_text);
-			cairo_new_sub_path(cairo);
-		}
+		cairo_move_to(cairo, x, y);
+		cairo_show_text(cairo, text);
+		cairo_close_path(cairo);
+		cairo_new_sub_path(cairo);
+	}
+
+	// display layout text separately
+	if (layout_text) {
+		cairo_text_extents_t extents;
+		cairo_font_extents_t fe;
+		double x, y;
+		double box_padding = 4.0 * surface->scale;
+		cairo_text_extents(cairo, layout_text, &extents);
+		cairo_font_extents(cairo, &fe);
+		// upper left coordinates for box
+		x = (buffer_width / 2) - (extents.width / 2) - box_padding;
+		y = buffer_diameter;
+
+		// background box
+		cairo_rectangle(cairo, x, y,
+			extents.width + 2.0 * box_padding,
+			fe.height + 2.0 * box_padding);
+		cairo_set_source_u32(cairo, state->args.colors.layout_background);
+		cairo_fill_preserve(cairo);
+		// border
+		cairo_set_source_u32(cairo, state->args.colors.layout_border);
+		cairo_stroke(cairo);
+
+		// take font extents and padding into account
+		cairo_move_to(cairo,
+			x - extents.x_bearing + box_padding,
+			y + (fe.height - fe.descent) + box_padding);
+		cairo_set_source_u32(cairo, state->args.colors.layout_text);
+		cairo_show_text(cairo, layout_text);
+		cairo_new_sub_path(cairo);
 	}
 
 	// Send Wayland requests
