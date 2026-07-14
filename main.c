@@ -483,6 +483,10 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_TEXT_CAPS_LOCK_COLOR,
 		LO_TEXT_VER_COLOR,
 		LO_TEXT_WRONG_COLOR,
+		LO_CLEAR_STRING,
+		LO_CAPS_LOCK_STRING,
+		LO_VER_STRING,
+		LO_WRONG_STRING
 	};
 
 	static struct option long_options[] = {
@@ -540,6 +544,10 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"text-caps-lock-color", required_argument, NULL, LO_TEXT_CAPS_LOCK_COLOR},
 		{"text-ver-color", required_argument, NULL, LO_TEXT_VER_COLOR},
 		{"text-wrong-color", required_argument, NULL, LO_TEXT_WRONG_COLOR},
+		{"clear-string", required_argument, NULL, LO_CLEAR_STRING},
+		{"caps-lock-string", required_argument, NULL, LO_CAPS_LOCK_STRING},
+		{"ver-string", required_argument, NULL, LO_VER_STRING},
+		{"wrong-string", required_argument, NULL, LO_WRONG_STRING},
 		{0, 0, 0, 0}
 	};
 
@@ -662,7 +670,15 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Sets the color of the text when verifying.\n"
 		"  --text-wrong-color <color>       "
 			"Sets the color of the text when invalid.\n"
-		"\n"
+		"  --clear-string <string>       "
+			"Sets the text that is displayed when cleared.\n"
+		"  --caps-lock-string <string>       "
+			"Sets the text that is displayed when Caps Lock is active.\n"
+		"  --ver-string <string>       "
+			"Sets the text that is displayed when verifying.\n"
+		"  --wrong-string <string>       "
+			"Sets the text that is displayed when invalid.\n"
+			"\n"
 		"All <color> options are of the form <rrggbb[aa]>.\n";
 
 	int c;
@@ -943,6 +959,30 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 				state->args.colors.text.wrong = parse_color(optarg);
 			}
 			break;
+		case LO_CLEAR_STRING:
+            if (state) {
+                free(state->args.clear_string);
+				state->args.clear_string = strdup(optarg);
+			}
+			break;
+		case LO_CAPS_LOCK_STRING:
+			if (state) {
+				free(state->args.caps_lock_string);
+				state->args.caps_lock_string = strdup(optarg);
+			}
+			break;
+		case LO_VER_STRING:
+			if (state) {
+				free(state->args.ver_string);
+				state->args.ver_string = strdup(optarg);
+			}
+			break;
+		case LO_WRONG_STRING:
+			if (state) {
+				free(state->args.wrong_string);
+				state->args.wrong_string = strdup(optarg);
+			}
+			break;
 		default:
 			fprintf(stderr, "%s", usage);
 			return 1;
@@ -1113,6 +1153,10 @@ int main(int argc, char **argv) {
 		.show_failed_attempts = false,
 		.indicator_idle_visible = false,
 		.ready_fd = -1,
+		.clear_string = strdup("Cleared"),
+		.caps_lock_string = strdup("Caps Lock"),
+		.ver_string = strdup("Verifying"),
+		.wrong_string = strdup("Wrong")
 	};
 	wl_list_init(&state.images);
 	set_default_colors(&state.args.colors);

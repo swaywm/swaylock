@@ -203,6 +203,18 @@ Locks your Wayland session.
 *--text-wrong-color* <rrggbb[aa]>
 	Sets the color of the text when invalid.
 
+*--clear-string* <string>
+	Sets the text that is displayed when cleared.
+
+*--caps-lock-string* <string>
+	Sets the text that is displayed when Caps Lock is active.
+
+*--ver-string* <string>
+	Sets the text that is displayed when verifying.
+
+*--wrong-string* <string>
+	Sets the text that is displayed when invalid.
+
 # SIGNALS
 
 *SIGUSR1*
