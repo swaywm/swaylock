@@ -118,6 +118,7 @@ struct swaylock_surface {
 	int32_t scale;
 	enum wl_output_subpixel subpixel;
 	char *output_name;
+	char *output_description;
 	struct wl_list link;
 	struct wl_callback *frame;
 	// Dimensions of last wl_buffer committed to background surface
