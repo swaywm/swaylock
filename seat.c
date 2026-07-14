@@ -2,11 +2,13 @@
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <linux/input-event-codes.h>
 #include <xkbcommon/xkbcommon.h>
 #include "log.h"
 #include "swaylock.h"
 #include "seat.h"
 #include "loop.h"
+#include "keypad_layout.h"
 
 static void keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard,
 		uint32_t format, int32_t fd, uint32_t size) {
@@ -147,25 +149,66 @@ static const struct wl_keyboard_listener keyboard_listener = {
 	.repeat_info = keyboard_repeat_info,
 };
 
+static struct swaylock_surface *surface_for_wl_surface(
+		struct swaylock_state *state, struct wl_surface *wl_surface) {
+	struct swaylock_surface *surface;
+	wl_list_for_each(surface, &state->surfaces, link) {
+		if (wl_surface == surface->surface ||
+				wl_surface == surface->child ||
+				wl_surface == surface->keypad_child) {
+			return surface;
+		}
+	}
+	return NULL;
+}
+
 static void wl_pointer_enter(void *data, struct wl_pointer *wl_pointer,
 		uint32_t serial, struct wl_surface *surface,
 		wl_fixed_t surface_x, wl_fixed_t surface_y) {
+	struct swaylock_seat *seat = data;
+	seat->pointer_wl_surface = surface;
+	seat->pointer_surface = surface_for_wl_surface(seat->state, surface);
+	seat->pointer_x = wl_fixed_to_double(surface_x);
+	seat->pointer_y = wl_fixed_to_double(surface_y);
 	wl_pointer_set_cursor(wl_pointer, serial, NULL, 0, 0);
 }
 
 static void wl_pointer_leave(void *data, struct wl_pointer *wl_pointer,
 		uint32_t serial, struct wl_surface *surface) {
 	// Who cares
+	struct swaylock_seat *seat = data;
+	seat->pointer_wl_surface = NULL;
+	seat->pointer_surface = NULL;
 }
 
 static void wl_pointer_motion(void *data, struct wl_pointer *wl_pointer,
 		uint32_t time, wl_fixed_t surface_x, wl_fixed_t surface_y) {
 	// Who cares
+	struct swaylock_seat *seat = data;
+	seat->pointer_x = wl_fixed_to_double(surface_x);
+	seat->pointer_y = wl_fixed_to_double(surface_y);
 }
 
 static void wl_pointer_button(void *data, struct wl_pointer *wl_pointer,
 		uint32_t serial, uint32_t time, uint32_t button, uint32_t state) {
 	// Who cares
+	struct swaylock_seat *seat = data;
+	if (state != WL_POINTER_BUTTON_STATE_PRESSED || button != BTN_LEFT) {
+		return;
+	}
+	if (seat->pointer_surface == NULL) {
+		return;
+	}
+	double x = seat->pointer_x;
+	double y = seat->pointer_y;
+	if (seat->pointer_wl_surface == seat->pointer_surface->child) {
+		return;
+	}
+	if (seat->pointer_wl_surface == seat->pointer_surface->keypad_child) {
+		x += seat->pointer_surface->keypad_x;
+		y += seat->pointer_surface->keypad_y;
+	}
+	swaylock_handle_pointer_click(seat->state, seat->pointer_surface, x, y);
 }
 
 static void wl_pointer_axis(void *data, struct wl_pointer *wl_pointer,
@@ -217,12 +260,43 @@ static void seat_handle_capabilities(void *data, struct wl_seat *wl_seat,
 	}
 	if ((caps & WL_SEAT_CAPABILITY_POINTER)) {
 		seat->pointer = wl_seat_get_pointer(wl_seat);
-		wl_pointer_add_listener(seat->pointer, &pointer_listener, NULL);
+		wl_pointer_add_listener(seat->pointer, &pointer_listener, seat);
 	}
 	if ((caps & WL_SEAT_CAPABILITY_KEYBOARD)) {
 		seat->keyboard = wl_seat_get_keyboard(wl_seat);
 		wl_keyboard_add_listener(seat->keyboard, &keyboard_listener, seat);
 	}
+}
+
+static bool point_in_rect(double x, double y, int32_t rx, int32_t ry,
+		uint32_t rw, uint32_t rh) {
+	return x >= rx && y >= ry && x < (double)rx + rw && y < (double)ry + rh;
+}
+
+void swaylock_handle_pointer_click(struct swaylock_state *state,
+		struct swaylock_surface *surface, double x, double y) {
+	if (!state->args.show_keypad) {
+		return;
+	}
+	if (!point_in_rect(x, y, surface->keypad_x, surface->keypad_y,
+			surface->keypad_width, surface->keypad_height)) {
+		return;
+	}
+
+	double local_x = x - surface->keypad_x;
+	double local_y = y - surface->keypad_y;
+	double cell_w = (double)surface->keypad_width / KEYPAD_COLS;
+	double cell_h = (double)surface->keypad_height / KEYPAD_ROWS;
+	int col = local_x / cell_w;
+	int row = local_y / cell_h;
+
+	if (row < 0 || row >= KEYPAD_ROWS || col < 0 || col >= KEYPAD_COLS) {
+		return;
+	}
+
+	const char *key = state->keypad_upper ?
+		keypad_layout_upper[row][col] : keypad_layout_base[row][col];
+	swaylock_handle_keypad_key(state, key);
 }
 
 static void seat_handle_name(void *data, struct wl_seat *wl_seat,

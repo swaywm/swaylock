@@ -102,14 +102,22 @@ static void destroy_surface(struct swaylock_surface *surface) {
 	if (surface->subsurface) {
 		wl_subsurface_destroy(surface->subsurface);
 	}
+	if (surface->keypad_subsurface) {
+		wl_subsurface_destroy(surface->keypad_subsurface);
+	}
 	if (surface->child) {
 		wl_surface_destroy(surface->child);
+	}
+	if (surface->keypad_child) {
+		wl_surface_destroy(surface->keypad_child);
 	}
 	if (surface->surface != NULL) {
 		wl_surface_destroy(surface->surface);
 	}
 	destroy_buffer(&surface->indicator_buffers[0]);
 	destroy_buffer(&surface->indicator_buffers[1]);
+	destroy_buffer(&surface->keypad_buffers[0]);
+	destroy_buffer(&surface->keypad_buffers[1]);
 	wl_output_release(surface->output);
 	free(surface);
 }
@@ -139,6 +147,13 @@ static void create_surface(struct swaylock_surface *surface) {
 	surface->subsurface = wl_subcompositor_get_subsurface(state->subcompositor, surface->child, surface->surface);
 	assert(surface->subsurface);
 	wl_subsurface_set_sync(surface->subsurface);
+
+	surface->keypad_child = wl_compositor_create_surface(state->compositor);
+	assert(surface->keypad_child);
+	surface->keypad_subsurface = wl_subcompositor_get_subsurface(
+		state->subcompositor, surface->keypad_child, surface->surface);
+	assert(surface->keypad_subsurface);
+	wl_subsurface_set_sync(surface->keypad_subsurface);
 
 	surface->ext_session_lock_surface_v1 = ext_session_lock_v1_get_lock_surface(
 		state->ext_session_lock_v1, surface->surface, surface->output);
@@ -409,6 +424,7 @@ static void set_default_colors(struct swaylock_colors *colors) {
 	colors->layout_background = 0x000000C0;
 	colors->layout_border = 0x00000000;
 	colors->layout_text = 0xFFFFFFFF;
+	colors->keypad_text = 0x000000FF;
 	colors->inside = (struct swaylock_colorset){
 		.input = 0x000000C0,
 		.cleared = 0xE5A445C0,
@@ -464,6 +480,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_INSIDE_VER_COLOR,
 		LO_INSIDE_WRONG_COLOR,
 		LO_KEY_HL_COLOR,
+		LO_KEYPAD_TEXT_COLOR,
 		LO_LAYOUT_TXT_COLOR,
 		LO_LAYOUT_BG_COLOR,
 		LO_LAYOUT_BORDER_COLOR,
@@ -483,6 +500,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_TEXT_CAPS_LOCK_COLOR,
 		LO_TEXT_VER_COLOR,
 		LO_TEXT_WRONG_COLOR,
+		LO_SHOW_KEYPAD,
 	};
 
 	static struct option long_options[] = {
@@ -521,6 +539,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"inside-ver-color", required_argument, NULL, LO_INSIDE_VER_COLOR},
 		{"inside-wrong-color", required_argument, NULL, LO_INSIDE_WRONG_COLOR},
 		{"key-hl-color", required_argument, NULL, LO_KEY_HL_COLOR},
+		{"keypad-text-color", required_argument, NULL, LO_KEYPAD_TEXT_COLOR},
 		{"layout-bg-color", required_argument, NULL, LO_LAYOUT_BG_COLOR},
 		{"layout-border-color", required_argument, NULL, LO_LAYOUT_BORDER_COLOR},
 		{"layout-text-color", required_argument, NULL, LO_LAYOUT_TXT_COLOR},
@@ -540,6 +559,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"text-caps-lock-color", required_argument, NULL, LO_TEXT_CAPS_LOCK_COLOR},
 		{"text-ver-color", required_argument, NULL, LO_TEXT_VER_COLOR},
 		{"text-wrong-color", required_argument, NULL, LO_TEXT_WRONG_COLOR},
+		{"show-keypad", no_argument, NULL, LO_SHOW_KEYPAD},
 		{0, 0, 0, 0}
 	};
 
@@ -615,6 +635,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Sets the color of the inside of the indicator when invalid.\n"
 		"  --key-hl-color <color>           "
 			"Sets the color of the key press highlight segments.\n"
+		"  --keypad-text-color <color>      "
+			"Sets the color of on-screen keyboard key labels.\n"
 		"  --layout-bg-color <color>        "
 			"Sets the background color of the box containing the layout text.\n"
 		"  --layout-border-color <color>    "
@@ -662,6 +684,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Sets the color of the text when verifying.\n"
 		"  --text-wrong-color <color>       "
 			"Sets the color of the text when invalid.\n"
+		"  --show-keypad                    "
+			"Enable on-screen keyboard.\n"
 		"\n"
 		"All <color> options are of the form <rrggbb[aa]>.\n";
 
@@ -848,6 +872,11 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 				state->args.colors.key_highlight = parse_color(optarg);
 			}
 			break;
+		case LO_KEYPAD_TEXT_COLOR:
+			if (state) {
+				state->args.colors.keypad_text = parse_color(optarg);
+			}
+			break;
 		case LO_LAYOUT_BG_COLOR:
 			if (state) {
 				state->args.colors.layout_background = parse_color(optarg);
@@ -941,6 +970,11 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		case LO_TEXT_WRONG_COLOR:
 			if (state) {
 				state->args.colors.text.wrong = parse_color(optarg);
+			}
+			break;
+		case LO_SHOW_KEYPAD:
+			if (state) {
+				state->args.show_keypad = true;
 			}
 			break;
 		default:
@@ -1112,6 +1146,7 @@ int main(int argc, char **argv) {
 		.hide_keyboard_layout = false,
 		.show_failed_attempts = false,
 		.indicator_idle_visible = false,
+		.show_keypad = false,
 		.ready_fd = -1,
 	};
 	wl_list_init(&state.images);

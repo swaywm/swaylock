@@ -3,9 +3,11 @@
 #include <xkbcommon/xkbcommon.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <wayland-client.h>
 
 struct loop;
 struct loop_timer;
+struct swaylock_surface;
 
 struct swaylock_xkb {
 	bool caps_lock;
@@ -19,6 +21,10 @@ struct swaylock_seat {
 	struct swaylock_state *state;
 	struct wl_pointer *pointer;
 	struct wl_keyboard *keyboard;
+	struct wl_surface *pointer_wl_surface;
+	struct swaylock_surface *pointer_surface;
+	double pointer_x;
+	double pointer_y;
 	int32_t repeat_period_ms;
 	int32_t repeat_delay_ms;
 	uint32_t repeat_sym;

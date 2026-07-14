@@ -215,3 +215,28 @@ void swaylock_handle_key(struct swaylock_state *state,
 		break;
 	}
 }
+
+void swaylock_handle_keypad_key(struct swaylock_state *state, const char *key) {
+	if (key == NULL || key[0] == '\0') {
+		return;
+	}
+
+	if (strcmp(key, "Go") == 0) {
+		swaylock_handle_key(state, XKB_KEY_Return, 0);
+		return;
+	}
+	if (strcmp(key, "Del") == 0) {
+		swaylock_handle_key(state, XKB_KEY_BackSpace, 0);
+		return;
+	}
+	if (strcmp(key, "Alt") == 0) {
+		state->keypad_upper = !state->keypad_upper;
+		damage_state(state);
+		return;
+	}
+
+	uint32_t codepoint = (unsigned char)key[0];
+	if (codepoint != 0) {
+		swaylock_handle_key(state, XKB_KEY_NoSymbol, codepoint);
+	}
+}

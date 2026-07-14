@@ -4,6 +4,7 @@
 #include <wayland-client.h>
 #include "cairo.h"
 #include "background-image.h"
+#include "keypad_layout.h"
 #include "swaylock.h"
 #include "log.h"
 
@@ -48,6 +49,7 @@ static const struct wl_callback_listener surface_frame_listener = {
 };
 
 static bool render_frame(struct swaylock_surface *surface);
+static bool render_keypad_frame(struct swaylock_surface *surface);
 
 void render(struct swaylock_surface *surface) {
 	struct swaylock_state *state = surface->state;
@@ -103,6 +105,7 @@ void render(struct swaylock_surface *surface) {
 	wl_surface_set_buffer_scale(surface->surface, surface->scale);
 
 	render_frame(surface);
+	render_keypad_frame(surface);
 	surface->dirty = false;
 	surface->frame = wl_surface_frame(surface->surface);
 	wl_callback_add_listener(surface->frame, &surface_frame_listener, surface);
@@ -397,5 +400,78 @@ static bool render_frame(struct swaylock_surface *surface) {
 	wl_surface_damage_buffer(surface->child, 0, 0, INT32_MAX, INT32_MAX);
 	wl_surface_commit(surface->child);
 
+	return true;
+}
+
+static void draw_key_label(cairo_t *cairo, const char *label,
+		double x, double y, double w, double h) {
+	cairo_text_extents_t ext;
+	cairo_font_extents_t fe;
+	cairo_text_extents(cairo, label, &ext);
+	cairo_font_extents(cairo, &fe);
+	double tx = x + (w / 2.0) - (ext.width / 2.0 + ext.x_bearing);
+	double ty = y + (h / 2.0) + (fe.height / 2.0 - fe.descent);
+	cairo_move_to(cairo, tx, ty);
+	cairo_show_text(cairo, label);
+}
+
+static bool render_keypad_frame(struct swaylock_surface *surface) {
+	struct swaylock_state *state = surface->state;
+	if (!state->args.show_keypad) {
+		wl_surface_attach(surface->keypad_child, NULL, 0, 0);
+		wl_surface_commit(surface->keypad_child);
+		return true;
+	}
+
+	const double spacing = 6.0;
+	const int key_h = 42;
+	int keypad_w = surface->width;
+	int keypad_h = (int)(KEYPAD_ROWS * key_h + (KEYPAD_ROWS + 1) * spacing);
+	double key_w = ((double)keypad_w - ((KEYPAD_COLS + 1) * spacing)) / KEYPAD_COLS;
+
+	surface->keypad_width = keypad_w;
+	surface->keypad_height = keypad_h;
+	surface->keypad_x = 0;
+	surface->keypad_y = surface->height - keypad_h;
+
+	int buffer_width = keypad_w * surface->scale;
+	int buffer_height = keypad_h * surface->scale;
+	struct pool_buffer *buffer = get_next_buffer(state->shm, surface->keypad_buffers,
+		buffer_width, buffer_height);
+	if (buffer == NULL) {
+		return false;
+	}
+
+	cairo_t *cairo = buffer->cairo;
+	cairo_set_antialias(cairo, CAIRO_ANTIALIAS_BEST);
+	cairo_identity_matrix(cairo);
+	cairo_save(cairo);
+	cairo_set_source_rgba(cairo, 0, 0, 0, 0);
+	cairo_set_operator(cairo, CAIRO_OPERATOR_SOURCE);
+	cairo_paint(cairo);
+	cairo_restore(cairo);
+	cairo_scale(cairo, surface->scale, surface->scale);
+	configure_font_drawing(cairo, state, surface->subpixel, state->args.radius);
+
+	const char *(*layout)[KEYPAD_COLS] = state->keypad_upper ?
+		keypad_layout_upper : keypad_layout_base;
+	for (int row = 0; row < KEYPAD_ROWS; ++row) {
+		for (int col = 0; col < KEYPAD_COLS; ++col) {
+			const char *label = layout[row][col];
+			if (label[0] == '\0') {
+				continue;
+			}
+			double x = spacing + col * (key_w + spacing);
+			double y = spacing + row * (key_h + spacing);
+			cairo_set_source_u32(cairo, state->args.colors.keypad_text);
+			draw_key_label(cairo, label, x, y, key_w, key_h);
+		}
+	}
+
+	wl_subsurface_set_position(surface->keypad_subsurface, surface->keypad_x, surface->keypad_y);
+	wl_surface_set_buffer_scale(surface->keypad_child, surface->scale);
+	wl_surface_attach(surface->keypad_child, buffer->buffer, 0, 0);
+	wl_surface_damage_buffer(surface->keypad_child, 0, 0, INT32_MAX, INT32_MAX);
+	wl_surface_commit(surface->keypad_child);
 	return true;
 }
