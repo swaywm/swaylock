@@ -140,8 +140,15 @@ void damage_state(struct swaylock_state *state);
 void clear_password_buffer(struct swaylock_password *pw);
 void schedule_auth_idle(struct swaylock_state *state);
 
+bool load_pam_library(void);
+bool is_pam_loaded(void);
+
 void initialize_pw_backend(int argc, char **argv);
+void initialize_pam_backend(int argc, char **argv);
+void initialize_shadow_backend(int argc, char **argv);
 void run_pw_backend_child(void);
+void run_pam_backend_child(void);
+void run_shadow_backend_child(void);
 void clear_buffer(char *buf, size_t size);
 
 #endif
