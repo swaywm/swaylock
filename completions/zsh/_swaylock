@@ -14,6 +14,7 @@ _arguments -s \
 	'(--disable-caps-lock-text -L)'{--disable-caps-lock-text,-L}'[Disable the Caps Lock text]' \
 	'(--font)'--font'[Sets the font of the text]:font:' \
 	'(--font-size)'--font-size'[Sets a fixed font size for the indicator text]' \
+	'(--font-bold)'--font-bold'[Use bold font weight for the indicator text]' \
 	'(--help -h)'{--help,-h}'[Show help message and quit]' \
 	'(--hide-keyboard-layout -K)'{--hide-keyboard-layout,-K}'[Hide the current xkb layout while typing]' \
 	'(--ignore-empty-password -e)'{--ignore-empty-password,-e}'[When an empty password is provided, do not validate it]' \

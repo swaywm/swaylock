@@ -37,6 +37,7 @@ _swaylock()
     --disable-caps-lock-text
     --font
     --font-size
+    --font-bold
     --help
     --hide-keyboard-layout
     --ignore-empty-password
