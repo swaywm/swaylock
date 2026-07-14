@@ -1,3 +1,4 @@
+#define _BSD_SOURCE // for explicit_bzero
 #include <assert.h>
 #include <errno.h>
 #include <pwd.h>
@@ -13,12 +14,16 @@
 #include "unicode.h"
 
 void clear_buffer(char *buf, size_t size) {
+#ifdef HAVE_EXPLICIT_BZERO
+	explicit_bzero(buf, size);
+#else
 	// Use volatile keyword so so compiler can't optimize this out.
 	volatile char *buffer = buf;
 	volatile char zero = '\0';
 	for (size_t i = 0; i < size; ++i) {
 		buffer[i] = zero;
 	}
+#endif
 }
 
 void clear_password_buffer(struct swaylock_password *pw) {
