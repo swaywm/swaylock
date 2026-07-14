@@ -11,6 +11,7 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
 #include <wayland-client.h>
@@ -302,10 +303,14 @@ static const struct wl_registry_listener registry_listener = {
 	.global_remove = handle_global_remove,
 };
 
-static int sigusr_fds[2] = {-1, -1};
+static int signal_fds[2] = {-1, -1};
 
 void do_sigusr(int sig) {
-	(void)write(sigusr_fds[1], "1", 1);
+	(void)write(signal_fds[1], "1", 1);
+}
+
+void do_sigchld(int sig) {
+	(void)write(signal_fds[1], "C", 1);
 }
 
 static cairo_surface_t *select_image(struct swaylock_state *state,
@@ -483,6 +488,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_TEXT_CAPS_LOCK_COLOR,
 		LO_TEXT_VER_COLOR,
 		LO_TEXT_WRONG_COLOR,
+		LO_EXTRA_AUTH_COMMAND,
 	};
 
 	static struct option long_options[] = {
@@ -540,6 +546,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"text-caps-lock-color", required_argument, NULL, LO_TEXT_CAPS_LOCK_COLOR},
 		{"text-ver-color", required_argument, NULL, LO_TEXT_VER_COLOR},
 		{"text-wrong-color", required_argument, NULL, LO_TEXT_WRONG_COLOR},
+		{"extra-auth-command", required_argument, NULL, LO_EXTRA_AUTH_COMMAND},
 		{0, 0, 0, 0}
 	};
 
@@ -662,6 +669,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Sets the color of the text when verifying.\n"
 		"  --text-wrong-color <color>       "
 			"Sets the color of the text when invalid.\n"
+		"  --extra-auth-command <command>         "
+		        "Sets a command to run for authentication.\n"
 		"\n"
 		"All <color> options are of the form <rrggbb[aa]>.\n";
 
@@ -943,6 +952,11 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 				state->args.colors.text.wrong = parse_color(optarg);
 			}
 			break;
+		case LO_EXTRA_AUTH_COMMAND:
+			if (state) {
+				state->auth_command_path = strdup(optarg);
+			}
+			break;
 		default:
 			fprintf(stderr, "%s", usage);
 			return 1;
@@ -1057,8 +1071,73 @@ static void comm_in(int fd, short mask, void *data) {
 	}
 }
 
+static void start_auth_command() {
+	pid_t pid;
+	if (state.auth_command_pid != 0) {
+		swaylock_log(LOG_ERROR, "Auth command already running");
+		return;
+	}
+
+	pid = fork();
+	if (pid < 0) {
+		swaylock_log(LOG_ERROR, "Couldn't fork auth command.");
+	} else if (pid == 0) {
+		int devnull = open("/dev/null", O_RDONLY);
+		if (devnull < 0) {
+			swaylock_log(LOG_ERROR,
+				     "Couldn't open /dev/null.");
+			exit(1); /* fail authentication */
+		}
+		dup2(devnull, 0);
+		execl(state.auth_command_path,
+		      state.auth_command_path,
+		      NULL);
+		swaylock_log(LOG_ERROR,
+			     "Couldn't execute auth command.");
+		exit(1); /* fail authentication */
+	} else {
+		state.auth_command_pid = pid;
+	}
+}
+
 static void term_in(int fd, short mask, void *data) {
-	state.run_display = false;
+	char buf[1];
+	int rc;
+	rc = read(fd, buf, 1);
+	if (rc <= 0) {
+		swaylock_log(LOG_ERROR, "Couldn't read from term_in.");
+		return;
+	}
+	switch (buf[0]) {
+	case '1':
+		state.run_display = false;
+		break;
+	case 'C': {
+		pid_t pid;
+		int status;
+		pid = waitpid(-1, &status, WNOHANG);
+		if (state.auth_command_pid > 0 && pid == state.auth_command_pid) {
+			state.auth_command_pid = 0;
+			if (WIFEXITED(status)) {
+				int rc = WEXITSTATUS(status);
+				if (rc == 0) {
+					state.run_display = false;
+				} else {
+					swaylock_log(LOG_INFO, "Auth command failed, restarting.");
+					start_auth_command();
+				}
+			} else {
+				swaylock_log(LOG_ERROR, "Auth command crashed.");
+			}
+		} else {
+			swaylock_log(LOG_ERROR, "Unexpected SIGCHLD.");
+		}
+	}
+		break;
+	default:
+		swaylock_log(LOG_ERROR,
+			     "Unexpected value '%c' on term_in.", buf[0]);
+	}
 }
 
 // Check for --debug 'early' we also apply the correct loglevel
@@ -1160,11 +1239,11 @@ int main(int argc, char **argv) {
 	}
 	state.password.buffer[0] = 0;
 
-	if (pipe(sigusr_fds) != 0) {
+	if (pipe(signal_fds) != 0) {
 		swaylock_log(LOG_ERROR, "Failed to pipe");
 		return EXIT_FAILURE;
 	}
-	if (fcntl(sigusr_fds[1], F_SETFL, O_NONBLOCK) == -1) {
+	if (fcntl(signal_fds[1], F_SETFL, O_NONBLOCK) == -1) {
 		swaylock_log(LOG_ERROR, "Failed to make pipe end nonblocking");
 		return EXIT_FAILURE;
 	}
@@ -1249,13 +1328,22 @@ int main(int argc, char **argv) {
 
 	loop_add_fd(state.eventloop, get_comm_reply_fd(), POLLIN, comm_in, NULL);
 
-	loop_add_fd(state.eventloop, sigusr_fds[0], POLLIN, term_in, NULL);
+	loop_add_fd(state.eventloop, signal_fds[0], POLLIN, term_in, NULL);
 
 	struct sigaction sa;
 	sa.sa_handler = do_sigusr;
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = SA_RESTART;
 	sigaction(SIGUSR1, &sa, NULL);
+
+	sa.sa_handler = do_sigchld;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_RESTART;
+	sigaction(SIGCHLD, &sa, NULL);
+
+	if (state.auth_command_path != NULL) {
+		start_auth_command();
+	}
 
 	state.run_display = true;
 	while (state.run_display) {
@@ -1264,6 +1352,11 @@ int main(int argc, char **argv) {
 			break;
 		}
 		loop_poll(state.eventloop);
+	}
+
+	if (state.auth_command_pid > 0) {
+		kill(state.auth_command_pid, SIGTERM);
+		state.auth_command_pid = 0;
 	}
 
 	ext_session_lock_v1_unlock_and_destroy(state.ext_session_lock_v1);
