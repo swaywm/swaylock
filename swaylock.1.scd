@@ -136,6 +136,10 @@ Locks your Wayland session.
 *--inside-wrong-color* <rrggbb[aa]>
 	Sets the color of the inside of the indicator when invalid.
 
+*--inside-failed-attempts-color* <rrggbb[aa]>
+	Sets the color of the inside of the indicator when there were failed
+	attempts.
+
 *--key-hl-color* <rrggbb[aa]>
 	Sets the color of the key press highlight segments.
 
@@ -164,6 +168,10 @@ Locks your Wayland session.
 *--line-wrong-color* <rrggbb[aa]>
 	Sets the color of the line between the inside and ring when invalid.
 
+*--line-failed-attempts-color* <rrggbb[aa]>
+	Sets the color of the line between the inside and ring when there were
+	failed attempts.
+
 *-n, --line-uses-inside*
 	Use the inside color for the line between the inside and ring.
 
@@ -185,6 +193,10 @@ Locks your Wayland session.
 *--ring-wrong-color* <rrggbb[aa]>
 	Sets the color of the ring of the indicator when invalid.
 
+*--ring-failed-attempts-color* <rrggbb[aa]>
+	Sets the color of the ring of the indicator when there were failed
+	attempts.
+
 *--separator-color* <rrggbb[aa]>
 	Sets the color of the lines that separate highlight segments.
 
@@ -202,6 +214,9 @@ Locks your Wayland session.
 
 *--text-wrong-color* <rrggbb[aa]>
 	Sets the color of the text when invalid.
+
+*--text-failed-attempts-color* <rrggbb[aa]>
+	Sets the color of the text when there were failed attempts.
 
 # SIGNALS
 
