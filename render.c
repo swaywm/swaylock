@@ -144,7 +144,8 @@ static bool render_frame(struct swaylock_surface *surface) {
 	bool draw_indicator = state->args.show_indicator &&
 		(state->auth_state != AUTH_STATE_IDLE ||
 			state->input_state != INPUT_STATE_IDLE ||
-			state->args.indicator_idle_visible);
+			state->args.indicator_idle_visible ||
+			state->fingerprint_msg[0] != '\0');
 
 	if (draw_indicator) {
 		if (state->input_state == INPUT_STATE_CLEAR) {
@@ -183,6 +184,10 @@ static bool render_frame(struct swaylock_surface *surface) {
 					// will handle invalid index if none are active
 					layout_text = xkb_keymap_layout_get_name(state->xkb.keymap, curr_layout);
 				}
+			}
+
+			if (state->fingerprint_msg[0] != '\0') {
+				layout_text = state->fingerprint_msg;
 			}
 		}
 	}
