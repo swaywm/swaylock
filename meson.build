@@ -129,7 +129,7 @@ executable('swaylock',
 if libpam.found()
 	install_data(
 		'pam/swaylock',
-		install_dir: get_option('sysconfdir') / 'pam.d'
+		install_dir: get_option('prefix') / 'lib' / 'pam.d'
 	)
 endif
 
