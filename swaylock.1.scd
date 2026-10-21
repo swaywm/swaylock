@@ -109,6 +109,20 @@ Locks your Wayland session.
 *--indicator-idle-visible*
 	Sets the indicator to show even if idle.
 
+*--indicator-dots*
+	Scatters dots at random places around the screen, in addition to the
+	highlight segments. Every key press adds a few dots and every backspace
+	removes a few, and the dots are placed anew each time. The count follows
+	your typing but is not the password length: see *--indicator-dots-step*.
+	Off by default.
+
+*--indicator-dots-step* <n|min-max>
+	Sets how many dots one key press adds or one backspace removes, chosen at
+	random each time. A single number means exactly that many. The default is
+	1-3. The values must satisfy 1 <= min <= max <= 20. A smaller range makes
+	the dot count follow the password length more closely, which reveals it to
+	anyone who can see the screen.
+
 *--indicator-radius* <radius>
 	Sets the indicator radius. The default value is 50.
 

@@ -69,6 +69,9 @@ struct swaylock_args {
 	bool daemonize;
 	int ready_fd;
 	bool indicator_idle_visible;
+	bool indicator_dots;
+	int indicator_dots_step_min;
+	int indicator_dots_step_max;
 };
 
 struct swaylock_password {
@@ -96,6 +99,8 @@ struct swaylock_state {
 	enum auth_state auth_state; // state of the authentication attempt
 	enum input_state input_state; // state of the password buffer and key inputs
 	uint32_t highlight_start; // position of highlight; 2048 = 1 full turn
+	uint32_t dot_seed; // reshuffled on every input; drives --indicator-dots
+	uint32_t dot_count; // dots shown; random steps up and down, not the password length
 	int failed_attempts;
 	bool run_display, locked;
 	struct ext_session_lock_manager_v1 *ext_session_lock_manager_v1;
