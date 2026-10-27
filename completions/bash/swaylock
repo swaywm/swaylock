@@ -42,6 +42,8 @@ _swaylock()
     --ignore-empty-password
     --image
     --indicator-caps-lock
+    --indicator-dots
+    --indicator-dots-step
     --indicator-idle-visible
     --indicator-radius
     --indicator-thickness

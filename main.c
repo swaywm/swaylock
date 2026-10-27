@@ -454,6 +454,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		LO_FONT,
 		LO_FONT_SIZE,
 		LO_IND_IDLE_VISIBLE,
+		LO_IND_DOTS,
+		LO_IND_DOTS_STEP,
 		LO_IND_RADIUS,
 		LO_IND_X_POSITION,
 		LO_IND_Y_POSITION,
@@ -511,6 +513,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"font", required_argument, NULL, LO_FONT},
 		{"font-size", required_argument, NULL, LO_FONT_SIZE},
 		{"indicator-idle-visible", no_argument, NULL, LO_IND_IDLE_VISIBLE},
+		{"indicator-dots", no_argument, NULL, LO_IND_DOTS},
+		{"indicator-dots-step", required_argument, NULL, LO_IND_DOTS_STEP},
 		{"indicator-radius", required_argument, NULL, LO_IND_RADIUS},
 		{"indicator-thickness", required_argument, NULL, LO_IND_THICKNESS},
 		{"indicator-x-position", required_argument, NULL, LO_IND_X_POSITION},
@@ -594,6 +598,10 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Sets a fixed font size for the indicator text.\n"
 		"  --indicator-idle-visible         "
 			"Sets the indicator to show even if idle.\n"
+		"  --indicator-dots                 "
+			"Scatters dots around the screen that grow as you type.\n"
+		"  --indicator-dots-step <min-max>  "
+			"How many dots one key press adds or removes (default 1-3).\n"
 		"  --indicator-radius <radius>      "
 			"Sets the indicator radius.\n"
 		"  --indicator-thickness <thick>    "
@@ -794,6 +802,28 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		case LO_IND_IDLE_VISIBLE:
 			if (state) {
 				state->args.indicator_idle_visible = true;
+			}
+			break;
+		case LO_IND_DOTS:
+			if (state) {
+				state->args.indicator_dots = true;
+			}
+			break;
+		case LO_IND_DOTS_STEP:
+			if (state) {
+				char *end = NULL;
+				long lo = strtol(optarg, &end, 10);
+				long hi = lo;
+				if (end != optarg && *end == '-') {
+					hi = strtol(end + 1, &end, 10);
+				}
+				if (end == optarg || *end != '\0' || lo < 1 || hi < lo || hi > 20) {
+					swaylock_log(LOG_ERROR, "Invalid --indicator-dots-step '%s': "
+						"use N or MIN-MAX with 1 <= MIN <= MAX <= 20", optarg);
+					return 1;
+				}
+				state->args.indicator_dots_step_min = lo;
+				state->args.indicator_dots_step_max = hi;
 			}
 			break;
 		case LO_IND_RADIUS:
@@ -1112,6 +1142,9 @@ int main(int argc, char **argv) {
 		.hide_keyboard_layout = false,
 		.show_failed_attempts = false,
 		.indicator_idle_visible = false,
+		.indicator_dots = false,
+		.indicator_dots_step_min = 1,
+		.indicator_dots_step_max = 3,
 		.ready_fd = -1,
 	};
 	wl_list_init(&state.images);

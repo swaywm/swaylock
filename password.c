@@ -132,6 +132,28 @@ static void update_highlight(struct swaylock_state *state) {
 	// Advance a random amount between 1/4 and 3/4 of a full turn
 	state->highlight_start =
 		(state->highlight_start + (rand() % 1024) + 512) % 2048;
+	// Scatter the dots anew
+	state->dot_seed = (uint32_t)rand();
+}
+
+// Moves the dot count by a random step. The count follows typing and
+// backspacing, but is not the password length. Never below 1 while there is
+// something typed.
+static void update_dots(struct swaylock_state *state, bool grow, bool first) {
+	int lo = state->args.indicator_dots_step_min;
+	int hi = state->args.indicator_dots_step_max;
+	uint32_t step = lo + rand() % (hi - lo + 1);
+	if (first) {
+		state->dot_count = 0;
+	}
+	if (grow) {
+		state->dot_count += step;
+	} else {
+		state->dot_count = state->dot_count > step ? state->dot_count - step : 0;
+	}
+	if (state->dot_count < 1) {
+		state->dot_count = 1;
+	}
 }
 
 void swaylock_handle_key(struct swaylock_state *state,
@@ -153,6 +175,7 @@ void swaylock_handle_key(struct swaylock_state *state,
 				state->input_state = INPUT_STATE_BACKSPACE;
 				schedule_password_clear(state);
 				update_highlight(state);
+				update_dots(state, false, false);
 			} else {
 				state->input_state = INPUT_STATE_CLEAR;
 				cancel_password_clear(state);
@@ -205,11 +228,13 @@ void swaylock_handle_key(struct swaylock_state *state,
 		// fallthrough
 	default:
 		if (codepoint) {
+			bool first = state->password.len == 0;
 			append_ch(&state->password, codepoint);
 			state->input_state = INPUT_STATE_LETTER;
 			schedule_password_clear(state);
 			schedule_input_idle(state);
 			update_highlight(state);
+			update_dots(state, true, first);
 			damage_state(state);
 		}
 		break;

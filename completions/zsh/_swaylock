@@ -19,6 +19,8 @@ _arguments -s \
 	'(--ignore-empty-password -e)'{--ignore-empty-password,-e}'[When an empty password is provided, do not validate it]' \
 	'(--image -i)'{--image,-i}'[Display the given image, optionally only on the given output]:filename:_files' \
 	'(--indicator-caps-lock -l)'{--indicator-caps-lock,-l}'[Show the current Caps Lock state also on the indicator]' \
+	'(--indicator-dots)'--indicator-dots'[Scatters dots around the screen that grow as you type]' \
+	'(--indicator-dots-step)'--indicator-dots-step'[How many dots one key press adds or removes]:n|min-max:' \
 	'(--indicator-idle-visible)'--indicator-idle-visible'[Sets the indicator to show even if idle]' \
 	'(--indicator-radius)'--indicator-radius'[Sets the indicator radius]:radius:' \
 	'(--indicator-thickness)'--indicator-thickness'[Sets the indicator thickness]:thickness:' \

@@ -9,6 +9,7 @@
 
 #define M_PI 3.14159265358979323846
 const float TYPE_INDICATOR_RANGE = M_PI / 3.0f;
+#define MAX_DOTS 512
 
 static void set_color_for_state(cairo_t *cairo, struct swaylock_state *state,
 		struct swaylock_colorset *colorset) {
@@ -131,6 +132,45 @@ static void configure_font_drawing(cairo_t *cairo, struct swaylock_state *state,
 	cairo_font_options_destroy(fo);
 }
 
+// Draws state->dot_count dots at pseudo-random places in the buffer, keeping
+// clear of the indicator. The count is only drawn while something is typed. The places derive from state->dot_seed, so
+// they are stable between redraws and change on every key press.
+static void draw_dots(cairo_t *cairo, struct swaylock_state *state,
+		struct swaylock_surface *surface, int width, int height,
+		int cx, int cy, int arc_radius, int arc_thickness) {
+	size_t count = state->password.len > 0 ? state->dot_count : 0;
+	if (count > MAX_DOTS) {
+		count = MAX_DOTS;
+	}
+	double dot_radius = arc_thickness / 2.0;
+	if (dot_radius < 2.0 * surface->scale) {
+		dot_radius = 2.0 * surface->scale;
+	}
+	double margin = 4.0 * dot_radius;
+	double keep_clear = arc_radius + arc_thickness + 4.0 * dot_radius;
+	if (width <= 2 * margin || height <= 2 * margin) {
+		return;
+	}
+
+	set_color_for_state(cairo, state, &state->args.colors.text);
+	uint32_t rng = state->dot_seed;
+	for (size_t i = 0; i < count; ++i) {
+		for (int attempt = 0; attempt < 16; ++attempt) {
+			rng = rng * 1664525u + 1013904223u;
+			double x = margin + (width - 2 * margin) * ((rng >> 8) / 16777216.0);
+			rng = rng * 1664525u + 1013904223u;
+			double y = margin + (height - 2 * margin) * ((rng >> 8) / 16777216.0);
+			if (hypot(x - cx, y - cy) < keep_clear) {
+				continue;
+			}
+			cairo_new_sub_path(cairo);
+			cairo_arc(cairo, x, y, dot_radius, 0, 2 * M_PI);
+			cairo_fill(cairo);
+			break;
+		}
+	}
+}
+
 static bool render_frame(struct swaylock_surface *surface) {
 	struct swaylock_state *state = surface->state;
 
@@ -221,6 +261,10 @@ static bool render_frame(struct swaylock_surface *surface) {
 	buffer_height += surface->scale - (buffer_height % surface->scale);
 	buffer_width += surface->scale - (buffer_width % surface->scale);
 
+	// Where the circle is centered inside the buffer
+	int cx = buffer_width / 2;
+	int cy = buffer_diameter / 2;
+
 	int subsurf_xpos;
 	int subsurf_ypos;
 
@@ -239,6 +283,22 @@ static bool render_frame(struct swaylock_surface *surface) {
 	} else {
 		subsurf_ypos = surface->height / 2 -
 			(state->args.radius + state->args.thickness);
+	}
+
+	// The dots are scattered around the whole output, so the indicator
+	// surface has to cover it. Then the circle is centered inside of it.
+	bool draw_dots_now = draw_indicator && state->args.indicator_dots;
+	if (draw_dots_now) {
+		buffer_width = surface->width * surface->scale;
+		buffer_height = surface->height * surface->scale;
+		cx = (state->args.override_indicator_x_position ?
+			state->args.indicator_x_position : surface->width / 2) *
+			surface->scale;
+		cy = (state->args.override_indicator_y_position ?
+			state->args.indicator_y_position : surface->height / 2) *
+			surface->scale;
+		subsurf_xpos = 0;
+		subsurf_ypos = 0;
 	}
 
 	struct pool_buffer *buffer = get_next_buffer(state->shm,
@@ -262,9 +322,14 @@ static bool render_frame(struct swaylock_surface *surface) {
 	cairo_restore(cairo);
 
 	if (draw_indicator) {
+		if (draw_dots_now) {
+			draw_dots(cairo, state, surface, buffer_width, buffer_height,
+				cx, cy, arc_radius, arc_thickness);
+		}
+
 		// Fill inner circle
 		cairo_set_line_width(cairo, 0);
-		cairo_arc(cairo, buffer_width / 2, buffer_diameter / 2,
+		cairo_arc(cairo, cx, cy,
 				arc_radius - arc_thickness / 2, 0, 2 * M_PI);
 		set_color_for_state(cairo, state, &state->args.colors.inside);
 		cairo_fill_preserve(cairo);
@@ -272,7 +337,7 @@ static bool render_frame(struct swaylock_surface *surface) {
 
 		// Draw ring
 		cairo_set_line_width(cairo, arc_thickness);
-		cairo_arc(cairo, buffer_width / 2, buffer_diameter / 2, arc_radius,
+		cairo_arc(cairo, cx, cy, arc_radius,
 				0, 2 * M_PI);
 		set_color_for_state(cairo, state, &state->args.colors.ring);
 		cairo_stroke(cairo);
@@ -287,9 +352,9 @@ static bool render_frame(struct swaylock_surface *surface) {
 			double x, y;
 			cairo_text_extents(cairo, text, &extents);
 			cairo_font_extents(cairo, &fe);
-			x = (buffer_width / 2) -
+			x = (cx) -
 				(extents.width / 2 + extents.x_bearing);
-			y = (buffer_diameter / 2) +
+			y = (cy) +
 				(fe.height / 2 - fe.descent);
 
 			cairo_move_to(cairo, x, y);
@@ -302,7 +367,7 @@ static bool render_frame(struct swaylock_surface *surface) {
 		if (state->input_state == INPUT_STATE_LETTER ||
 				state->input_state == INPUT_STATE_BACKSPACE) {
 			double highlight_start = state->highlight_start * (M_PI / 1024.0);
-			cairo_arc(cairo, buffer_width / 2, buffer_diameter / 2,
+			cairo_arc(cairo, cx, cy,
 					arc_radius, highlight_start,
 					highlight_start + TYPE_INDICATOR_RANGE);
 			if (state->input_state == INPUT_STATE_LETTER) {
@@ -321,28 +386,28 @@ static bool render_frame(struct swaylock_surface *surface) {
 			cairo_stroke(cairo);
 
 			// Draw borders
-			double inner_radius = buffer_diameter / 2.0 - arc_thickness * 1.5;
-			double outer_radius = buffer_diameter / 2.0 - arc_thickness / 2.0;
+			double inner_radius = arc_radius + arc_thickness - arc_thickness * 1.5;
+			double outer_radius = arc_radius + arc_thickness - arc_thickness / 2.0;
 
 			cairo_set_line_width(cairo, 2.0 * surface->scale);
 			cairo_set_source_u32(cairo, state->args.colors.separator);
 			cairo_move_to(cairo,
-				buffer_width / 2.0 + cos(highlight_start) * inner_radius,
-				buffer_diameter / 2.0 + sin(highlight_start) * inner_radius
+				cx + cos(highlight_start) * inner_radius,
+				cy + sin(highlight_start) * inner_radius
 			);
 			cairo_line_to(cairo,
-				buffer_width / 2.0 + cos(highlight_start) * outer_radius,
-				buffer_diameter / 2.0 + sin(highlight_start) * outer_radius
+				cx + cos(highlight_start) * outer_radius,
+				cy + sin(highlight_start) * outer_radius
 			);
 			cairo_stroke(cairo);
 
 			cairo_move_to(cairo,
-				buffer_width / 2.0 + cos(highlight_start + TYPE_INDICATOR_RANGE) * inner_radius,
-				buffer_diameter / 2.0 + sin(highlight_start + TYPE_INDICATOR_RANGE) * inner_radius
+				cx + cos(highlight_start + TYPE_INDICATOR_RANGE) * inner_radius,
+				cy + sin(highlight_start + TYPE_INDICATOR_RANGE) * inner_radius
 			);
 			cairo_line_to(cairo,
-				buffer_width / 2.0 + cos(highlight_start + TYPE_INDICATOR_RANGE) * outer_radius,
-				buffer_diameter / 2.0 + sin(highlight_start + TYPE_INDICATOR_RANGE) * outer_radius
+				cx + cos(highlight_start + TYPE_INDICATOR_RANGE) * outer_radius,
+				cy + sin(highlight_start + TYPE_INDICATOR_RANGE) * outer_radius
 			);
 			cairo_stroke(cairo);
 		}
@@ -350,10 +415,10 @@ static bool render_frame(struct swaylock_surface *surface) {
 		// Draw inner + outer border of the circle
 		set_color_for_state(cairo, state, &state->args.colors.line);
 		cairo_set_line_width(cairo, 2.0 * surface->scale);
-		cairo_arc(cairo, buffer_width / 2, buffer_diameter / 2,
+		cairo_arc(cairo, cx, cy,
 				arc_radius - arc_thickness / 2, 0, 2 * M_PI);
 		cairo_stroke(cairo);
-		cairo_arc(cairo, buffer_width / 2, buffer_diameter / 2,
+		cairo_arc(cairo, cx, cy,
 				arc_radius + arc_thickness / 2, 0, 2 * M_PI);
 		cairo_stroke(cairo);
 
@@ -366,8 +431,8 @@ static bool render_frame(struct swaylock_surface *surface) {
 			cairo_text_extents(cairo, layout_text, &extents);
 			cairo_font_extents(cairo, &fe);
 			// upper left coordinates for box
-			x = (buffer_width / 2) - (extents.width / 2) - box_padding;
-			y = buffer_diameter;
+			x = (cx) - (extents.width / 2) - box_padding;
+			y = cy + arc_radius + arc_thickness;
 
 			// background box
 			cairo_rectangle(cairo, x, y,
