@@ -364,7 +364,7 @@ static void load_image(char *arg, struct swaylock_state *state) {
 						image->path);
 			}
 			wl_list_remove(&iter_image->link);
-			free(iter_image->cairo_surface);
+			cairo_surface_destroy(iter_image->cairo_surface);
 			free(iter_image->output_name);
 			free(iter_image->path);
 			free(iter_image);
