@@ -383,14 +383,20 @@ static void load_image(char *arg, struct swaylock_state *state) {
 		*ptr = '\\';
 	}
 	if (wordexp(image->path, &p, 0) == 0) {
+		// An expansion can yield no words (e.g. an empty or unset variable).
+		// Use an empty path then: loading it fails below, without falling
+		// back to the unexpanded string.
 		free(image->path);
-		image->path = join_args(p.we_wordv, p.we_wordc);
+		image->path = p.we_wordc > 0 ?
+			join_args(p.we_wordv, p.we_wordc) : strdup("");
 		wordfree(&p);
 	}
 
 	// Load the actual image
 	image->cairo_surface = load_background_image(image->path);
 	if (!image->cairo_surface) {
+		free(image->output_name);
+		free(image->path);
 		free(image);
 		return;
 	}
