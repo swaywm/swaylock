@@ -72,7 +72,7 @@ static void keyboard_repeat(void *data) {
 	struct swaylock_state *state = seat->state;
 	seat->repeat_timer = loop_add_timer(
 		state->eventloop, seat->repeat_period_ms, keyboard_repeat, seat);
-	swaylock_handle_key(state, seat->repeat_sym, seat->repeat_codepoint);
+	swaylock_handle_key(state, seat->repeat_sym, seat->repeat_codepoint, true);
 }
 
 static void keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
@@ -89,7 +89,7 @@ static void keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
 		key + 8 : 0;
 	uint32_t codepoint = xkb_state_key_get_utf32(state->xkb.state, keycode);
 	if (key_state == WL_KEYBOARD_KEY_STATE_PRESSED) {
-		swaylock_handle_key(state, sym, codepoint);
+		swaylock_handle_key(state, sym, codepoint, false);
 	}
 
 	stop_repeat(seat);

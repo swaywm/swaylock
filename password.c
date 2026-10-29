@@ -135,12 +135,14 @@ static void update_highlight(struct swaylock_state *state) {
 }
 
 void swaylock_handle_key(struct swaylock_state *state,
-		xkb_keysym_t keysym, uint32_t codepoint) {
+		xkb_keysym_t keysym, uint32_t codepoint, bool repeat) {
 
 	switch (keysym) {
 	case XKB_KEY_KP_Enter: /* fallthrough */
 	case XKB_KEY_Return:
-		submit_password(state);
+		if (!repeat) {
+			submit_password(state);
+		}
 		break;
 	case XKB_KEY_Delete:
 	case XKB_KEY_BackSpace:
@@ -188,7 +190,9 @@ void swaylock_handle_key(struct swaylock_state *state,
 	case XKB_KEY_d:
 	case XKB_KEY_j:
 		if (state->xkb.control) {
-			submit_password(state);
+			if (!repeat) {
+				submit_password(state);
+			}
 			break;
 		}
 		// fallthrough
