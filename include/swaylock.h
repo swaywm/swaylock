@@ -69,6 +69,7 @@ struct swaylock_args {
 	bool daemonize;
 	int ready_fd;
 	bool indicator_idle_visible;
+	bool fingerprint;
 };
 
 struct swaylock_password {
@@ -97,6 +98,7 @@ struct swaylock_state {
 	enum input_state input_state; // state of the password buffer and key inputs
 	uint32_t highlight_start; // position of highlight; 2048 = 1 full turn
 	int failed_attempts;
+	char fingerprint_msg[128];
 	bool run_display, locked;
 	struct ext_session_lock_manager_v1 *ext_session_lock_manager_v1;
 	struct ext_session_lock_v1 *ext_session_lock_v1;
@@ -140,8 +142,15 @@ void damage_state(struct swaylock_state *state);
 void clear_password_buffer(struct swaylock_password *pw);
 void schedule_auth_idle(struct swaylock_state *state);
 
+struct fingerprint_result {
+	bool success;
+	char msg[128];
+};
+
 void initialize_pw_backend(int argc, char **argv);
 void run_pw_backend_child(void);
 void clear_buffer(char *buf, size_t size);
+bool spawn_fingerprint_child(void);
+int get_fingerprint_fd(void);
 
 #endif
